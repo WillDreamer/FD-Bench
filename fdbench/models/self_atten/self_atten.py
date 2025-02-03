@@ -271,10 +271,11 @@ class self_atten(nn.Module):
         x = self.unpatch(x)
         return x
 
-    def forward(self, x):
+    def forward(self, x, target, criterion=None):
         x = self.forward_features(x)
         x = self.final_dropout(x)
-        return x
+        loss = criterion(x, target)
+        return x, loss
 
 
 def resize_pos_embed(posemb, posemb_new):

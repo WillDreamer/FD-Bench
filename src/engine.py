@@ -41,11 +41,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
         # compute output
         if use_amp:  # 使用混合精度训练
             with torch.cuda.amp.autocast():
-                outputs = model(samples)
-                loss = criterion(outputs, targets)
+                outputs, loss = model(samples,targets,criterion)
+                
         else:  # 使用全精度训练
-            outputs = model(samples)
-            loss = criterion(outputs, targets)
+            outputs, loss = model(samples,targets,criterion)
+            
 
         loss_value = loss.item()
         if not math.isfinite(loss_value):
@@ -97,11 +97,9 @@ def evaluate(data_loader, model, device, use_amp):
         # compute output
         if use_amp:  # 使用混合精度训练
             with torch.cuda.amp.autocast():
-                outputs = model(images)
-                loss = criterion(outputs, target)
+                outputs, loss = model(images,target,criterion)
         else:  # 使用全精度训练
-            outputs = model(images)
-            loss = criterion(outputs, target)
+            outputs, loss = model(images,target,criterion)
 
         batch_size = images.shape[0]
         metric_logger.update(loss=loss.item())

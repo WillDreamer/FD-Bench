@@ -212,7 +212,7 @@ class fourier(nn.Module):
         self.fc1 = nn.Linear(self.width, 128)
         self.fc2 = nn.Linear(128, num_channels)
 
-    def forward(self, x):
+    def forward(self, x, target, creterion=None):
         # x dim = [b, x1, x2, t*v]
         x = x.permute(0, 2, 3, 1)
         x = self.fc0(x)
@@ -248,8 +248,9 @@ class fourier(nn.Module):
         x = self.fc2(x)
         x = x.permute(0, 3, 1, 2)
 
+        loss = creterion(x, target)
         
-        return x
+        return x,loss
     
 
 class SpectralConv3d(nn.Module):
