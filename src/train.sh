@@ -2,12 +2,11 @@
 #!/bin/bash
 
 
-# SPATIAL_REP="self_atten"
-SPATIAL_REP="fourier"
+SPATIAL_REP="diffusion"
 TEMPORAL_REP="next_step"
 TARGET="var"
 CONFIG_PATH="config/${SPATIAL_REP}+${TEMPORAL_REP}+${TARGET}.yaml"
 
 
 # 运行训练
-python src/train.py --config "$CONFIG_PATH"
+CUDA_LAUNCH_BLOCKING=1 python src/train.py --config "$CONFIG_PATH"

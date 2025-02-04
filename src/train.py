@@ -272,7 +272,7 @@ def main(args):
                         'args': args,
                     }, checkpoint_path)
 
-        test_stats = evaluate(data_loader_val, model, device, args.use_amp)
+        test_stats = evaluate(data_loader_val, model, device, args.use_amp, args)
 
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
