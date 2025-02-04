@@ -81,8 +81,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
 
 
 @torch.no_grad()
-def evaluate(data_loader, model, device, use_amp):
-    criterion = torch.nn.CrossEntropyLoss()
+def evaluate(data_loader, model, device, use_amp, args):
+    criterion = torch.nn.MSELoss()
 
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
@@ -94,12 +94,25 @@ def evaluate(data_loader, model, device, use_amp):
         images = images.permute(0, 3, 1, 2).to(device, non_blocking=True)
         target = target.permute(0, 3, 1, 2).to(device, non_blocking=True)
 
-        # compute output
-        if use_amp:  # 使用混合精度训练
-            with torch.cuda.amp.autocast():
+        if args.spa_mod == "diffusion":
+            if args.sample_method == "ddpm":
+                samp_algo = model.ddpm_sample
+            else:
+                samp_algo = model.ddim_sample
+            
+            if use_amp:  # 使用混合精度训练
+                with torch.cuda.amp.autocast():
+                    outputs, loss = samp_algo(images,target,criterion)
+            else:  # 使用全精度训练
+                outputs, loss = samp_algo(images,target,criterion)
+
+        else:
+            # compute output
+            if use_amp:  # 使用混合精度训练
+                with torch.cuda.amp.autocast():
+                    outputs, loss = model(images,target,criterion)
+            else:  # 使用全精度训练
                 outputs, loss = model(images,target,criterion)
-        else:  # 使用全精度训练
-            outputs, loss = model(images,target,criterion)
 
         batch_size = images.shape[0]
         metric_logger.update(loss=loss.item())
