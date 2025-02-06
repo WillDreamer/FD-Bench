@@ -27,6 +27,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
     model.train(set_training_mode)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('grad_norm', utils.SmoothedValue(window_size=1, fmt='{value:.8f}'))
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
@@ -45,7 +46,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
                 
         else:  # 使用全精度训练
             outputs, loss = model(samples,targets,criterion)
-            
 
         loss_value = loss.item()
         if not math.isfinite(loss_value):
@@ -58,6 +58,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
             is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
             loss_scaler(loss, optimizer, clip_grad=max_norm,
                             parameters=model.parameters(), create_graph=is_second_order)
+        else:
+            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+            loss.backward(create_graph=is_second_order)  # Compute gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)  # Clip gradients
+            optimizer.step()  # Update parameters
         
         # Calculate gradient norm
         total_norm = 0.0
@@ -117,9 +122,13 @@ def evaluate(data_loader, model, device, use_amp, args):
         batch_size = images.shape[0]
         metric_logger.update(loss=loss.item())
 
+        nrmse = torch.sqrt(torch.mean((outputs - target) ** 2)) / (target.max() - target.min())
+        metric_logger.update(nrmse=nrmse.item())
+
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
-    tprint('* loss {losses.global_avg:.3f}'
-          .format(losses=metric_logger.loss))
+    tprint('* MSE loss {losses.global_avg:.3f}, nRMSE {nrmse.global_avg:.3f}'.format(
+        losses=metric_logger.loss, nrmse=metric_logger.nrmse))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}

@@ -9,7 +9,7 @@ training:
   epochs: 100
   start_epoch: 0
   eval: false
-  use_amp: true
+  use_amp: false
   dist_eval: true
   device: 'cuda'
   seed: 0

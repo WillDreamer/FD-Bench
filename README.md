@@ -53,7 +53,8 @@ FD-Bench/
 │   │   │   ├── ls.py
 │   │   │   ├── self_atten.py
 │   │   │   └── bfno2d.py
-│   │   └── graph/         # Graph-based models (future support)
+│   │   │── graph/         # Graph-based models 
+│   │   └── diffusion/         # denoising-based models 
 │   ├── data/              # Dataset utilities and samplers
 │   │   ├── samplers.py
 │   │   ├── datasets.py

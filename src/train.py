@@ -126,66 +126,13 @@ def main(args):
     # mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
     mixup_active = False
     if mixup_active:
-        print('standard mix up')
+        tprint('standard mix up')
         mixup_fn = Mixup(
             mixup_alpha=args.mixup, cutmix_alpha=args.cutmix, cutmix_minmax=args.cutmix_minmax,
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
     else:
-        print('mix up is not used')
-
-    if args.finetune:
-        if args.finetune.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                args.finetune, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(args.finetune, map_location='cpu')
-
-        checkpoint_model = checkpoint['model']
-        state_dict = model.state_dict()
-        for k in ['head.weight', 'head.bias', 'head_dist.weight', 'head_dist.bias']:
-            if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
-                print(f"Removing key {k} from pretrained checkpoint")
-                del checkpoint_model[k]
-
-        # interpolate position embedding
-        pos_embed_checkpoint = checkpoint_model['pos_embed']
-        embedding_size = pos_embed_checkpoint.shape[-1]
-
-        if args.arch in ['gfnet-ti', 'gfnet-xs', 'gfnet-s', 'gfnet-b']:
-            num_patches = (args.input_size // 16) ** 2
-        elif args.arch in ['gfnet-h-ti', 'gfnet-h-s', 'gfnet-h-b']:
-            num_patches = (args.input_size // 4) ** 2
-        else:
-            raise NotImplementedError
-                
-        num_extra_tokens = 0
-        # height (== width) for the checkpoint position embedding
-        orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
-        # height (== width) for the new position embedding
-        new_size = int(num_patches ** 0.5)
-
-        scale_up_ratio = new_size / orig_size
-        # class_token and dist_token are kept unchanged
-        # only the position tokens are interpolated
-        pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
-        pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
-        pos_tokens = torch.nn.functional.interpolate(
-            pos_tokens, size=(new_size, new_size), mode='bicubic', align_corners=False)
-        pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
-        checkpoint_model['pos_embed'] = pos_tokens
-
-        for name in checkpoint_model.keys():
-            if 'complex_weight' in name:
-                h, w, num_heads = checkpoint_model[name].shape[0:3] # h, w, c, 2
-                origin_weight = checkpoint_model[name]
-                upsample_h = h * new_size // orig_size
-                upsample_w = upsample_h // 2 + 1
-                origin_weight = origin_weight.reshape(1, h, w, num_heads * 2).permute(0, 3, 1, 2)
-                new_weight = torch.nn.functional.interpolate(
-                    origin_weight, size=(upsample_h, upsample_w), mode='bicubic', align_corners=True).permute(0, 2, 3, 1).reshape(upsample_h, upsample_w, num_heads, 2)
-                checkpoint_model[name] = new_weight
-        model.load_state_dict(checkpoint_model, strict=True)
+        tprint('mix up is not used')
 
     model.to(device)
 
@@ -284,10 +231,11 @@ def main(args):
             writer.add_scalar("train_lr", log_stats["train_lr"], log_stats["epoch"])
             writer.add_scalar("train_loss", log_stats["train_loss"], log_stats["epoch"])
             writer.add_scalar("test_loss", log_stats["test_loss"], log_stats["epoch"])
-            writer.add_scalar("n_parameters", log_stats["n_parameters"], log_stats["epoch"])
 
         if args.output_dir and utils.is_main_process():
-            with (output_dir / "log.txt").open("a") as f:
+            log_file_path = os.path.join(args.tensorboard_dir, f"{args.spa_mod}_{args.tem_mod}", "log.txt")
+            os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+            with open(log_file_path, 'a') as f:  
                 f.write(json.dumps(log_stats) + "\n")
 
         # # AutoResume

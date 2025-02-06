@@ -2,5 +2,6 @@
 /__pycache__
 /ckpt
 /runs
-/*/__pycache__
+**/__pycache__/
+
 

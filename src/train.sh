@@ -2,7 +2,7 @@
 #!/bin/bash
 
 
-SPATIAL_REP="diffusion"
+SPATIAL_REP="self_atten"
 TEMPORAL_REP="next_step"
 TARGET="var"
 CONFIG_PATH="config/${SPATIAL_REP}+${TEMPORAL_REP}+${TARGET}.yaml"
