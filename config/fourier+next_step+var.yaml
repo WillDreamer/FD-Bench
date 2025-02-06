@@ -1,5 +1,5 @@
 paths:
-  output_dir: '../ckpt'  #* your path to save ckpt
+  output_dir: '/home/whx/FD-Bench/ckpt'  #* your path to save ckpt
   tensorboard_dir: '/home/whx/FD-Bench/runs/' #* your path to save logs
   autoresume: false
   resume: false
