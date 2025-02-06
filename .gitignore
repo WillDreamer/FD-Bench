@@ -3,5 +3,6 @@
 /ckpt
 /runs
 **/__pycache__/
+/log
 
 

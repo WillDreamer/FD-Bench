@@ -1,17 +1,20 @@
 
 import torch
 from torch.utils.data import Dataset, IterableDataset
-from torch.utils.data import DataLoader
+from fdbench.utils.utils import tprint
 import os
 import glob
 import h5py
 import numpy as np
 import math as mt
+import random
 
 class DatasetSingle(Dataset):
     def __init__(self, 
                  if_test=False,
+                 if_valid=False,
                  test_ratio=0.1,
+                 valid_ratio=0.1,
                  num_samples_max = -1,
                  args={}
                  ):
@@ -35,15 +38,14 @@ class DatasetSingle(Dataset):
 
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
         if filename[-2:] != 'h5':
-            print(f".HDF5 file extension is assumed hereafter")
             with h5py.File(root_path, 'r') as f:
                 keys = list(f.keys())
-                print(keys)
+                tprint(keys)
                 keys.sort()
                 if 'tensor' not in keys:
                     _data = np.array(f['density'], dtype=np.float32)  # batch, time, x,...
                     idx_cfd = _data.shape
-                    print('len(idx_cfd)',len(idx_cfd))
+                    tprint('len of data shape:',len(idx_cfd)+1)
                     if len(idx_cfd)==3:  # 1D
                         self.data = np.zeros([idx_cfd[0]//reduced_batch,
                                               idx_cfd[2]//reduced_resolution,
@@ -201,7 +203,6 @@ class DatasetSingle(Dataset):
                         self.grid = torch.stack((X, Y), axis=-1)[::reduced_resolution, ::reduced_resolution]
 
         elif filename[-2:] == 'h5':  # SWE-2D (RDB)
-            print(f".H5 file extension is assumed hereafter")
         
             with h5py.File(root_path, 'r') as f:
                 keys = list(f.keys())
@@ -220,16 +221,19 @@ class DatasetSingle(Dataset):
                 self.grid = _grid
                 self.tsteps_t = tsteps_t
 
-        if num_samples_max>0:
-            num_samples_max  = min(num_samples_max, self.data.shape[0])
-        else:
-            num_samples_max = self.data.shape[0]
+        total_samples = self.data.shape[0]
+        indices = np.arange(total_samples)
+        np.random.shuffle(indices)
 
-        test_idx = int(num_samples_max * test_ratio)
+        test_size = int(total_samples * test_ratio)
+        valid_size = int(total_samples * valid_ratio)
+
         if if_test:
-            self.data = self.data[:test_idx]
+            self.data = self.data[indices[:test_size]]
+        elif if_valid:
+            self.data = self.data[indices[test_size:test_size + valid_size]]
         else:
-            self.data = self.data[test_idx:num_samples_max]
+            self.data = self.data[indices[test_size + valid_size:]]
 
         # Time steps used as initial conditions
         self.initial_step = initial_step
@@ -240,7 +244,7 @@ class DatasetSingle(Dataset):
         return len(self.data)
     
     def __getitem__(self, idx):
-        import random
+        
         rand_idx = random.randint(0,int(self.data.shape[-2])-2)
         return self.data[idx,...,rand_idx,:], self.data[idx,...,rand_idx+1,:], self.grid
         # return self.data[idx,...,:self.initial_step,:], self.data[idx], self.grid
