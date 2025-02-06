@@ -16,6 +16,11 @@ import os
 import yaml
 from argparse import Namespace
 
+def tprint(*args, **kwargs):
+    """print with time"""
+    time_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f'[{time_str}]', *args, **kwargs)
+
 def load_config(config_path):
     """加载YAML配置文件"""
     with open(config_path, 'r') as f:

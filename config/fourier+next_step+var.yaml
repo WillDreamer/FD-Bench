@@ -7,11 +7,12 @@ paths:
 training:
   batch_size: 16
   epochs: 100
+  eval_step: 2
   start_epoch: 0
   eval: false
   use_amp: false
   dist_eval: true
-  device: 'cuda'
+  device: 'cuda:0'
   seed: 0
   num_workers: 4
   pin_mem: true
