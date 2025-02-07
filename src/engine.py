@@ -37,10 +37,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
         # compute output
         if use_amp:  # 使用混合精度训练
             with torch.cuda.amp.autocast():
-                outputs, loss = model(samples,targets,criterion)
+                outputs, loss = model(samples,targets,grid,criterion)
                 
         else:  # 使用全精度训练
-            outputs, loss = model(samples,targets,criterion)
+            outputs, loss = model(samples,targets,grid,criterion)
 
         loss_value = loss.item()
         if not math.isfinite(loss_value):
@@ -102,17 +102,16 @@ def evaluate(data_loader, model, device, use_amp, args):
             
             if use_amp:  # 使用混合精度训练
                 with torch.cuda.amp.autocast():
-                    outputs, loss = samp_algo(input_test,target_test,criterion)
+                    outputs, loss = samp_algo(input_test,target_test,grid,criterion)
             else:  # 使用全精度训练
-                outputs, loss = samp_algo(input_test,target_test,criterion)
-
+                outputs, loss = samp_algo(input_test,target_test,grid,criterion)
         else:
             # compute output
             if use_amp:  # 使用混合精度训练
                 with torch.cuda.amp.autocast():
-                    outputs, loss = model(input_test,target_test,criterion)
+                    outputs, loss = model(input_test,target_test,grid,criterion)
             else:  # 使用全精度训练
-                outputs, loss = model(input_test,target_test,criterion)
+                outputs, loss = model(input_test,target_test,grid,criterion)
 
         batch_size = input_test.shape[0]
         metric_logger.update(loss=loss.item())
