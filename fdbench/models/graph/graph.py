@@ -27,7 +27,7 @@ class GNN_Layer(MessagePassing):
                  out_features: int,
                  hidden_features: int,
                  time_window: int,
-                 input_var_num: int,
+                 in_chans: int,
                  n_variables: int):
         """
         Initialize message passing layers
@@ -42,9 +42,9 @@ class GNN_Layer(MessagePassing):
         self.in_features = in_features
         self.out_features = out_features
         self.hidden_features = hidden_features
-        self.input_var_num = input_var_num
+        self.in_chans = in_chans
 
-        self.message_net_1 = nn.Sequential(nn.Linear(2 * in_features + time_window*self.input_var_num + 2, hidden_features),
+        self.message_net_1 = nn.Sequential(nn.Linear(2 * in_features + time_window*self.in_chans + 2, hidden_features),
                                            Swish()
                                            )
         self.message_net_2 = nn.Sequential(nn.Linear(hidden_features, hidden_features),
@@ -92,13 +92,9 @@ class graph(torch.nn.Module):
     """
     def __init__(self,
                  time_window: int = 1,
-                 input_var_num: int = 3, 
-                 hidden_features: int = 128,
-                 hidden_layer: int = 6,
-                 forecast_horizon: int = 5,
-                 pred_var: int = -3,
-                 eq_variables: dict = {}
-    ):
+                 pred_var: int = -4,
+                 eq_variables: dict = {},
+                 args={}):
         """
         Initialize MP-PDE solver class.
         It contains 6 MP-PDE layers with skip connections
@@ -112,20 +108,25 @@ class graph(torch.nn.Module):
         """
         super(graph, self).__init__()
         # 1D decoder CNN is so far designed time_window = [20,25,50]
-        self.out_features = time_window
-        self.hidden_features = hidden_features
-        self.hidden_layer = hidden_layer
-        self.time_window = time_window
+        self.hidden_features = args.hidden_features
+        self.hidden_layer = args.hidden_layer
+        self.pred_var = args.pred_var
         self.eq_variables = eq_variables
-        self.input_var_num = input_var_num
-        self.forecast_horizon = forecast_horizon
-        self.pred_var = pred_var
+        self.in_chans = args.in_chans
+        
+        if args.tem_mod == 'next_step':
+            self.forecast_horizon = 1
+            self.time_window = 1
+        elif args.tem_mod == 'temporal_bundling':
+            self.forecast_horizon = 5
+            self.time_window = 5
+
         self.gnn_layers = torch.nn.ModuleList(modules=(GNN_Layer(
             in_features=self.hidden_features,
             hidden_features=self.hidden_features,
             out_features=self.hidden_features,
             time_window=self.time_window,
-            input_var_num = self.input_var_num,
+            in_chans = self.in_chans,
             n_variables=len(self.eq_variables) + 1  # variables = eq_variables + time
         ) for _ in range(self.hidden_layer - 1)))
 
@@ -134,13 +135,13 @@ class graph(torch.nn.Module):
                                          hidden_features=self.hidden_features,
                                          out_features=self.hidden_features,
                                          time_window=self.time_window,
-                                         input_var_num = self.input_var_num,
+                                         in_chans = self.in_chans,
                                          n_variables=len(self.eq_variables) + 1
                                         )
                                )
 
         self.embedding_mlp = nn.Sequential(
-            nn.Linear(self.time_window*self.input_var_num + 2 + len(self.eq_variables), self.hidden_features),
+            nn.Linear(self.time_window*self.in_chans + 2 + len(self.eq_variables), self.hidden_features),
             Swish(),
             nn.Linear(self.hidden_features, self.hidden_features),
             Swish()
@@ -173,7 +174,7 @@ class graph(torch.nn.Module):
     def __repr__(self):
         return f'GNN'
 
-    def forward(self, data: Data) -> torch.Tensor:
+    def forward(self, data, target, grid, creterion=None) -> torch.Tensor:
         """
         Forward pass of MP-PDE solver class.
         The input graph has the shape [batch*n_nodes, time_window].
@@ -183,6 +184,8 @@ class graph(torch.nn.Module):
         Returns:
             torch.Tensor: data output
         """
+        # x dim = [b, c, x1, x2]
+        print(data.shape,grid.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2])
         pos = data.x[:,0,:2]
         u = data.x[:,:,2:].reshape(data.x.shape[0],-1)
         

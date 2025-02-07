@@ -221,7 +221,7 @@ def main(args):
                         'args': args,
                     }, checkpoint_path)
 
-        if (epoch +1) // args.eval_step == 0: 
+        if (epoch +1) % args.eval_step == 0: 
             val_stats = evaluate(data_loader_val, model, device, args.use_amp, args)
             test_stats = evaluate(data_loader_test, model, device, args.use_amp, args)
 
@@ -244,11 +244,11 @@ def main(args):
                 writer.add_scalar("val_nrmse", log_stats["val_nrmse"], log_stats["epoch"])
                 writer.add_scalar("val_frmse", log_stats["val_frmse"], log_stats["epoch"])
 
-        if args.output_dir and utils.is_main_process():
-            log_file_path = os.path.join(args.tensorboard_dir, f"{args.spa_mod}_{args.tem_mod}", "log.txt")
-            os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
-            with open(log_file_path, 'a') as f:  
-                f.write(json.dumps(log_stats) + "\n")
+            if args.output_dir and utils.is_main_process():
+                log_file_path = os.path.join(args.tensorboard_dir, f"{args.spa_mod}_{args.tem_mod}", "log.txt")
+                os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+                with open(log_file_path, 'a') as f:  
+                    f.write(json.dumps(log_stats) + "\n")
 
         # # AutoResume
         # if args.autoresume and AutoResume.termination_requested():
