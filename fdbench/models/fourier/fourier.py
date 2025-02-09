@@ -212,7 +212,7 @@ class fourier(nn.Module):
         self.fc1 = nn.Linear(self.width, 128)
         self.fc2 = nn.Linear(128, num_channels)
 
-    def forward(self, x, target, creterion=None):
+    def forward(self, x, target, grid, creterion=None):
         # x dim = [b, x1, x2, t*v]
         x = x.permute(0, 2, 3, 1)
         x = self.fc0(x)

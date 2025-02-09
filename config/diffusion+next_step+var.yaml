@@ -5,13 +5,14 @@ paths:
   resume: false
 
 training:
-  batch_size: 2
-  epochs: 100
+  batch_size: 16
+  epochs: 300
+  eval_step: 2
   start_epoch: 0
   eval: false
   use_amp: true
   dist_eval: true
-  device: 'cuda'
+  device: 'cuda:7'
   seed: 0
   num_workers: 4
   pin_mem: true
@@ -29,11 +30,12 @@ model:
   beta_max: 0.02
   timesteps: 1000
   sample_method: "ddpm"
+  denoiser_type: "unet"
 
-  denoiser_ch: 64
+  denoiser_ch: 128
   denoiser_out_ch: 4
-  denoiser_ch_mult: [1, 1, 1, 2]
-  denoiser_num_res_blocks: 1
+  denoiser_ch_mult: [1, 1, 1, 2, 4]
+  denoiser_num_res_blocks: 3
   denoiser_attn_resolutions: [16,]
   denoiser_dropout: 0.0
   denoiser_in_channels: 8

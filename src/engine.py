@@ -10,14 +10,9 @@ import torch
 from timm.data import Mixup
 from timm.utils import ModelEma
 from fdbench.utils import utils
+from fdbench.utils.utils import tprint
+from fdbench.utils import metrics
 import random
-from datetime import datetime
-
-def tprint(*args, **kwargs):
-    """print with time"""
-    time_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f'[{time_str}]', *args, **kwargs)
-
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -27,6 +22,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
     model.train(set_training_mode)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('grad_norm', utils.SmoothedValue(window_size=1, fmt='{value:.8f}'))
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
@@ -41,11 +37,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
         # compute output
         if use_amp:  # 使用混合精度训练
             with torch.cuda.amp.autocast():
-                outputs, loss = model(samples,targets,criterion)
+                outputs, loss = model(samples,targets,grid,criterion)
                 
         else:  # 使用全精度训练
-            outputs, loss = model(samples,targets,criterion)
-            
+            outputs, loss = model(samples,targets,grid,criterion)
 
         loss_value = loss.item()
         if not math.isfinite(loss_value):
@@ -58,6 +53,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
             is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
             loss_scaler(loss, optimizer, clip_grad=max_norm,
                             parameters=model.parameters(), create_graph=is_second_order)
+        else:
+            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+            loss.backward(create_graph=is_second_order)  # Compute gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)  # Clip gradients
+            optimizer.step()  # Update parameters
         
         # Calculate gradient norm
         total_norm = 0.0
@@ -90,11 +90,11 @@ def evaluate(data_loader, model, device, use_amp, args):
     # switch to evaluation mode
     model.eval()
 
-    for images, target, grid in metric_logger.log_every(data_loader, 10, header):
-        images = images.permute(0, 3, 1, 2).to(device, non_blocking=True)
-        target = target.permute(0, 3, 1, 2).to(device, non_blocking=True)
+    for input_test, target_test, grid in metric_logger.log_every(data_loader, 10, header):
+        input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+        target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
 
-        if args.spa_mod == "diffusion":
+        if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
             if args.sample_method == "ddpm":
                 samp_algo = model.ddpm_sample
             else:
@@ -102,24 +102,33 @@ def evaluate(data_loader, model, device, use_amp, args):
             
             if use_amp:  # 使用混合精度训练
                 with torch.cuda.amp.autocast():
-                    outputs, loss = samp_algo(images,target,criterion)
+                    outputs, loss = samp_algo(input_test,target_test,grid,criterion)
             else:  # 使用全精度训练
-                outputs, loss = samp_algo(images,target,criterion)
-
+                outputs, loss = samp_algo(input_test,target_test,grid,criterion)
         else:
             # compute output
             if use_amp:  # 使用混合精度训练
                 with torch.cuda.amp.autocast():
-                    outputs, loss = model(images,target,criterion)
+                    outputs, loss = model(input_test,target_test,grid,criterion)
             else:  # 使用全精度训练
-                outputs, loss = model(images,target,criterion)
+                outputs, loss = model(input_test,target_test,grid,criterion)
 
-        batch_size = images.shape[0]
+        batch_size = input_test.shape[0]
         metric_logger.update(loss=loss.item())
+        Lx, Ly, Lz = 1., 1., 1.
+        _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
+        = metrics.metric_func(outputs, target_test, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+
+        metric_logger.update(rmse=_err_RMSE.item())
+        metric_logger.update(nrmse=_err_nRMSE.item())
+        metric_logger.update(frmse=_err_F[0].item())
+
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
-    tprint('* loss {losses.global_avg:.3f}'
-          .format(losses=metric_logger.loss))
+    tprint('* MSE loss {losses.global_avg:.3f}, RMSE {rmse.global_avg:.3f}, \
+        nRMSE {nrmse.global_avg:.3f}, fRMSE {frmse.global_avg:.3f}'.format( \
+        losses=metric_logger.loss, rmse=metric_logger.rmse, \
+        nrmse=metric_logger.nrmse, frmse=metric_logger.frmse))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}

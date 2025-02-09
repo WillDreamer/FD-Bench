@@ -17,11 +17,11 @@ from functools import partial
 import torch.nn as nn
 import importlib
 import random
-# from fdbench.data.datasets import build_dataset
-# from fdbench.data.samplers import RASampler
 from fdbench.utils import utils
 from fdbench.utils.metrics import *
 from engine import train_one_epoch, evaluate
+import warnings
+warnings.filterwarnings('ignore')
 
 
 def tprint(*args, **kwargs):
@@ -33,7 +33,6 @@ def main(args):
 
     utils.init_distributed_mode(args)
     tprint(args)
-
     # Tensorboard Initialization
     if utils.is_main_process():
         writer = SummaryWriter(
@@ -75,11 +74,15 @@ def main(args):
     data_module_name = 'fdbench.data.' + args.PDE_type + '_data_utils'
     data_module = getattr(importlib.import_module(data_module_name),'DatasetSingle')
     train_data = data_module(args = args)
-    val_data = data_module(if_test=True,args = args)
+    test_data = data_module(if_test=True,args = args)
+    val_data = data_module(if_valid=True,args = args)
     data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
-                                               num_workers=args.num_workers, shuffle=True)
-    data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
-                                             num_workers=args.num_workers, shuffle=False)
+                                               num_workers=args.num_workers)
+    data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size//2,
+                                             num_workers=args.num_workers)
+
+    data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size//2,
+                                             num_workers=args.num_workers)
 
         # if args.distributed:  
     #     num_tasks = utils.get_world_size()
@@ -126,66 +129,13 @@ def main(args):
     # mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
     mixup_active = False
     if mixup_active:
-        print('standard mix up')
+        tprint('standard mix up')
         mixup_fn = Mixup(
             mixup_alpha=args.mixup, cutmix_alpha=args.cutmix, cutmix_minmax=args.cutmix_minmax,
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
     else:
-        print('mix up is not used')
-
-    if args.finetune:
-        if args.finetune.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                args.finetune, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(args.finetune, map_location='cpu')
-
-        checkpoint_model = checkpoint['model']
-        state_dict = model.state_dict()
-        for k in ['head.weight', 'head.bias', 'head_dist.weight', 'head_dist.bias']:
-            if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
-                print(f"Removing key {k} from pretrained checkpoint")
-                del checkpoint_model[k]
-
-        # interpolate position embedding
-        pos_embed_checkpoint = checkpoint_model['pos_embed']
-        embedding_size = pos_embed_checkpoint.shape[-1]
-
-        if args.arch in ['gfnet-ti', 'gfnet-xs', 'gfnet-s', 'gfnet-b']:
-            num_patches = (args.input_size // 16) ** 2
-        elif args.arch in ['gfnet-h-ti', 'gfnet-h-s', 'gfnet-h-b']:
-            num_patches = (args.input_size // 4) ** 2
-        else:
-            raise NotImplementedError
-                
-        num_extra_tokens = 0
-        # height (== width) for the checkpoint position embedding
-        orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
-        # height (== width) for the new position embedding
-        new_size = int(num_patches ** 0.5)
-
-        scale_up_ratio = new_size / orig_size
-        # class_token and dist_token are kept unchanged
-        # only the position tokens are interpolated
-        pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
-        pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
-        pos_tokens = torch.nn.functional.interpolate(
-            pos_tokens, size=(new_size, new_size), mode='bicubic', align_corners=False)
-        pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
-        checkpoint_model['pos_embed'] = pos_tokens
-
-        for name in checkpoint_model.keys():
-            if 'complex_weight' in name:
-                h, w, num_heads = checkpoint_model[name].shape[0:3] # h, w, c, 2
-                origin_weight = checkpoint_model[name]
-                upsample_h = h * new_size // orig_size
-                upsample_w = upsample_h // 2 + 1
-                origin_weight = origin_weight.reshape(1, h, w, num_heads * 2).permute(0, 3, 1, 2)
-                new_weight = torch.nn.functional.interpolate(
-                    origin_weight, size=(upsample_h, upsample_w), mode='bicubic', align_corners=True).permute(0, 2, 3, 1).reshape(upsample_h, upsample_w, num_heads, 2)
-                checkpoint_model[name] = new_weight
-        model.load_state_dict(checkpoint_model, strict=True)
+        tprint('mix up is not used')
 
     model.to(device)
 
@@ -207,9 +157,7 @@ def main(args):
     args.lr = linear_scaled_lr
     optimizer = create_optimizer(args, model_without_ddp)
     loss_scaler = NativeScaler()
-
     lr_scheduler, _ = create_scheduler(args, optimizer)
-
     criterion = torch.nn.MSELoss()
 
     output_dir = Path(args.output_dir)
@@ -233,7 +181,8 @@ def main(args):
     if args.autoresume:
         AutoResume.init()
 
-    tprint(f"Start training for {args.epochs} epochs")
+    if utils.is_main_process():
+        tprint(f"Start training for {args.epochs} epochs")
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
@@ -272,23 +221,34 @@ def main(args):
                         'args': args,
                     }, checkpoint_path)
 
-        test_stats = evaluate(data_loader_val, model, device, args.use_amp, args)
+        if (epoch +1) % args.eval_step == 0: 
+            val_stats = evaluate(data_loader_val, model, device, args.use_amp, args)
+            test_stats = evaluate(data_loader_test, model, device, args.use_amp, args)
 
 
-        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                     **{f'test_{k}': v for k, v in test_stats.items()},
-                     'epoch': epoch,
-                     'n_parameters': n_parameters}
+            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                        **{f'test_{k}': v for k, v in test_stats.items()},
+                        **{f'val_{k}': v for k, v in val_stats.items()},
+                        'epoch': epoch,
+                        'n_parameters': n_parameters}
 
-        if utils.is_main_process():
-            writer.add_scalar("train_lr", log_stats["train_lr"], log_stats["epoch"])
-            writer.add_scalar("train_loss", log_stats["train_loss"], log_stats["epoch"])
-            writer.add_scalar("test_loss", log_stats["test_loss"], log_stats["epoch"])
-            writer.add_scalar("n_parameters", log_stats["n_parameters"], log_stats["epoch"])
+            if utils.is_main_process():
+                writer.add_scalar("train_lr", log_stats["train_lr"], log_stats["epoch"])
+                writer.add_scalar("train_loss", log_stats["train_loss"], log_stats["epoch"])
+                writer.add_scalar("test_loss", log_stats["test_loss"], log_stats["epoch"])
+                writer.add_scalar("test_rmse", log_stats["test_rmse"], log_stats["epoch"])
+                writer.add_scalar("test_nrmse", log_stats["test_nrmse"], log_stats["epoch"])
+                writer.add_scalar("test_frmse", log_stats["test_frmse"], log_stats["epoch"])
+                writer.add_scalar("val_rmse", log_stats["val_rmse"], log_stats["epoch"])
+                writer.add_scalar("val_loss", log_stats["val_loss"], log_stats["epoch"])
+                writer.add_scalar("val_nrmse", log_stats["val_nrmse"], log_stats["epoch"])
+                writer.add_scalar("val_frmse", log_stats["val_frmse"], log_stats["epoch"])
 
-        if args.output_dir and utils.is_main_process():
-            with (output_dir / "log.txt").open("a") as f:
-                f.write(json.dumps(log_stats) + "\n")
+            if args.output_dir and utils.is_main_process():
+                log_file_path = os.path.join(args.tensorboard_dir, f"{args.spa_mod}_{args.tem_mod}", "log.txt")
+                os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+                with open(log_file_path, 'a') as f:  
+                    f.write(json.dumps(log_stats) + "\n")
 
         # # AutoResume
         # if args.autoresume and AutoResume.termination_requested():

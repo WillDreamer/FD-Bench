@@ -1,46 +1,48 @@
 paths:
-  output_dir: '../ckpt'  #* your path to save ckpt
-  tensorboard_dir: '/home/whx/FD-Bench/runs/' #* your path to save logs
+  output_dir: '../ckpt'
+  tensorboard_dir: '../FD-Bench/runs/'
   autoresume: false
   resume: false
 
 training:
-  batch_size: 16
-  epochs: 150
+  batch_size: 2
+  epochs: 300
   eval_step: 2
   start_epoch: 0
   eval: false
-  use_amp: false
+  use_amp: true
   dist_eval: true
-  device: 'cuda:1'
+  device: 'cuda:5'
   seed: 0
   num_workers: 4
   pin_mem: true
 
 model:
-  spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']
-  tem_mod: 'next_step'      #* choices: ['linear', ]
+  spa_mod: 'diffusion'
+  tem_mod: 'next_step'
   drop: 0.0
   drop_path: 0.1
   model_ema: false
   model_ema_decay: 0.99996
   model_ema_force_cpu: false
   
-  # Self-atten
-  arch: 'deit_small'
-  patch_size: 4
-  num_attention_heads: 1
-  mixing_type: 'afno'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
-  
-  fno_bias: false
-  fno_blocks: 1
-  fno_softshrink: 0.00
-  double_skip: false
-  hidden_size: 256
-  num_layers: 12
-  checkpoint_activations: false
-  ls_w: 4
-  ls_dp_rank: 16
+  beta_min: 0.0001
+  beta_max: 0.02
+  timesteps: 1000
+  sample_method: "ddpm"
+  denoiser_type: "fourier"
+
+  denoiser_modes1: 64
+  denoiser_modes2: 64
+  denoiser_gamma:
+  denoiser_width: 128
+  denoiser_in_chans: 8
+  denoiser_time_dim: 16
+  denoiser_theta: 10000
+  denoiser_out_chans: 4
+  denoiser_gamma: 1
+
+
 
 data:
   PDE_type: 'CNS'      #* choices: ['CNS']

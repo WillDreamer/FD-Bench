@@ -16,6 +16,11 @@ import os
 import yaml
 from argparse import Namespace
 
+def tprint(*args, **kwargs):
+    """print with time"""
+    time_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f'[{time_str}]', *args, **kwargs)
+
 def load_config(config_path):
     """加载YAML配置文件"""
     with open(config_path, 'r') as f:
@@ -165,9 +170,9 @@ class MetricLogger(object):
             'data: {data}'
         ]
         if torch.cuda.is_available():
-            log_msg.append('max mem: {memory:.0f}')
+            log_msg.append('max mem (GB): {memory:.3f}')
         log_msg = self.delimiter.join(log_msg)
-        MB = 1024.0 * 1024.0
+        GB = 1024.0 * 1024.0 * 1024.0
         for obj in iterable:
             data_time.update(time.time() - end)
             yield obj
@@ -180,7 +185,7 @@ class MetricLogger(object):
                         i, len(iterable), eta=eta_string,
                         meters=str(self),
                         time=str(iter_time), data=str(data_time),
-                        memory=torch.cuda.max_memory_allocated() / MB))
+                        memory=torch.cuda.max_memory_allocated() / GB))
                 else:
                     print(log_msg.format(
                         i, len(iterable), eta=eta_string,

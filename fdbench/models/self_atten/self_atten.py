@@ -271,7 +271,7 @@ class self_atten(nn.Module):
         x = self.unpatch(x)
         return x
 
-    def forward(self, x, target, criterion=None):
+    def forward(self, x, target, grid, criterion=None):
         x = self.forward_features(x)
         x = self.final_dropout(x)
         loss = criterion(x, target)
