@@ -94,7 +94,7 @@ def evaluate(data_loader, model, device, use_amp, args):
         input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
         target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
 
-        if args.spa_mod == "diffusion":
+        if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
             if args.sample_method == "ddpm":
                 samp_algo = model.ddpm_sample
             else:
