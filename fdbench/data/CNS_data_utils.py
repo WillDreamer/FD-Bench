@@ -236,13 +236,6 @@ class DatasetSingle(Dataset):
         else:
             self.data = self.data[indices[test_size + valid_size:]]
         
-        if if_test:
-            self.data = self.data[indices[:test_size]]
-        elif if_valid:
-            self.data = self.data[indices[test_size:test_size + valid_size]]
-        else:
-            self.data = self.data[indices[test_size + valid_size:]]
-        
         if not if_test and not if_valid:
             self.train_mean = np.mean(self.data, axis=(0, 1, 2, 3), keepdims=True)
             self.train_std = np.std(self.data, axis=(0, 1, 2, 3), keepdims=True)
