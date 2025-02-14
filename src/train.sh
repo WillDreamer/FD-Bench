@@ -2,9 +2,9 @@
 #!/bin/bash
 
 
-SPATIAL_REP="graph"
+SPATIAL_REP="fourier"
 TEMPORAL_REP="next_step"
-TARGET="noise"
+TARGET="var"
 CONFIG_PATH="config/${SPATIAL_REP}+${TEMPORAL_REP}+${TARGET}.yaml"
 
 
