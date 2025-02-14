@@ -16,6 +16,7 @@ class DatasetSingle(Dataset):
                  test_ratio=0.1,
                  valid_ratio=0.1,
                  num_samples_max = -1,
+                 normalizer=None,
                  args={}
                  ):
         """
@@ -234,6 +235,23 @@ class DatasetSingle(Dataset):
             self.data = self.data[indices[test_size:test_size + valid_size]]
         else:
             self.data = self.data[indices[test_size + valid_size:]]
+        
+        if if_test:
+            self.data = self.data[indices[:test_size]]
+        elif if_valid:
+            self.data = self.data[indices[test_size:test_size + valid_size]]
+        else:
+            self.data = self.data[indices[test_size + valid_size:]]
+        
+        if not if_test and not if_valid:
+            self.train_mean = np.mean(self.data, axis=(0, 1, 2, 3), keepdims=True)
+            self.train_std = np.std(self.data, axis=(0, 1, 2, 3), keepdims=True)
+            self.train_std = np.where(self.train_std == 0, 1, self.train_std)
+            
+        else:
+            self.train_mean, self.train_std = normalizer
+        
+        self.data = (self.data - self.train_mean) / self.train_std
 
         # Time steps used as initial conditions
         self.initial_step = initial_step
@@ -242,6 +260,13 @@ class DatasetSingle(Dataset):
 
     def __len__(self):
         return len(self.data)
+    
+    @property
+    def __normalizer__(self):
+        """
+        mean and value
+        """
+        return self.train_mean, self.train_std
     
     def __getitem__(self, idx):
         

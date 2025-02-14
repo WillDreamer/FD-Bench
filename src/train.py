@@ -23,7 +23,6 @@ from engine import train_one_epoch, evaluate
 import warnings
 warnings.filterwarnings('ignore')
 
-
 def tprint(*args, **kwargs):
     """print with time"""
     time_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -74,13 +73,13 @@ def main(args):
     data_module_name = 'fdbench.data.' + args.PDE_type + '_data_utils'
     data_module = getattr(importlib.import_module(data_module_name),'DatasetSingle')
     train_data = data_module(args = args)
-    test_data = data_module(if_test=True,args = args)
-    val_data = data_module(if_valid=True,args = args)
+    normalizer = train_data.__normalizer__
+    test_data = data_module(if_test=True,args = args,normalizer=normalizer)
+    val_data = data_module(if_valid=True,args = args,normalizer=normalizer)
     data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
                                                num_workers=args.num_workers)
     data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size//2,
                                              num_workers=args.num_workers)
-
     data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size//2,
                                              num_workers=args.num_workers)
 
@@ -198,8 +197,8 @@ def main(args):
 
         lr_scheduler.step(epoch)
 
-        if args.output_dir:
-            checkpoint_paths = [output_dir / 'checkpoint_{}_last.pth'.format(args.spa_mod)]
+        if epoch > (args.epoch//2) and (epoch+1)%50==0 and args.output_dir:
+            checkpoint_paths = [output_dir / 'checkpoint_{}_ep{}.pth'.format(args.spa_mod,epoch)]
             for checkpoint_path in checkpoint_paths:
                 if model_ema is not None:
                     utils.save_on_master({
@@ -229,8 +228,7 @@ def main(args):
             log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                         **{f'test_{k}': v for k, v in test_stats.items()},
                         **{f'val_{k}': v for k, v in val_stats.items()},
-                        'epoch': epoch,
-                        'n_parameters': n_parameters}
+                        'epoch': epoch}
 
             if utils.is_main_process():
                 writer.add_scalar("train_lr", log_stats["train_lr"], log_stats["epoch"])
