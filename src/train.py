@@ -197,7 +197,7 @@ def main(args):
 
         lr_scheduler.step(epoch)
 
-        if epoch > (args.epoch//2) and (epoch+1)%50==0 and args.output_dir:
+        if epoch > (args.epochs//2) and (epoch+1)%50==0 and args.output_dir:
             checkpoint_paths = [output_dir / 'checkpoint_{}_ep{}.pth'.format(args.spa_mod,epoch)]
             for checkpoint_path in checkpoint_paths:
                 if model_ema is not None:
