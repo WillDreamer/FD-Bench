@@ -104,14 +104,6 @@ class DatasetSingle(Dataset):
                         ## convert to [x1, ..., xd, t, v]
                         _data = np.transpose(_data, (0, 2, 3, 1))
                         self.data[...,3] = _data   # batch, x, t, ch
-                        
-                        # Normalize each channel separately
-                        for i in range(self.data.shape[-1]):  # Iterate over the last dimension (channels)
-                            mean = np.mean(self.data[..., i], axis=(0, 1, 2, 3), keepdims=True)  # Compute mean across spatial and temporal dimensions
-                            std = np.std(self.data[..., i], axis=(0, 1, 2, 3), keepdims=True)  # Compute standard deviation
-                            # Avoid division by zero
-                            std = np.where(std == 0, 1, std)
-                            self.data[..., i] = (self.data[..., i] - mean) / std
 
                         x = np.array(f["x-coordinate"], dtype=np.float32)
                         y = np.array(f["y-coordinate"], dtype=np.float32)

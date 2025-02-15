@@ -6,7 +6,7 @@ paths:
 
 training:
   batch_size: 16
-  epochs: 100
+  epochs: 500
   eval_step: 2
   start_epoch: 0
   eval: false
@@ -36,7 +36,7 @@ model:
   fno_blocks: 1
   fno_softshrink: 0.00
   double_skip: false
-  hidden_size: 256
+  hidden_size: 512
   num_layers: 12
   checkpoint_activations: false
   ls_w: 4
