@@ -5,6 +5,7 @@ import numpy as np
 from torch_cluster import radius_graph
 from torch_geometric.data import Data
 from torch_geometric.nn import MessagePassing, global_mean_pool, InstanceNorm, avg_pool_x, BatchNorm
+from torchdiffeq import odeint
 
 class Swish(nn.Module):
     """
@@ -147,29 +148,43 @@ class graph(torch.nn.Module):
             Swish()
         )
 
+        self.use_odeint = args.use_odeint
+        if self.use_odeint:
+            self.decoding_mlp = nn.Sequential(nn.Linear(self.hidden_features, self.hidden_features),
+                                              Swish(),
+                                              nn.Linear(self.hidden_features, 1),
+                                              Swish()
+                                              )
+            # ODEINT derivative network
+            self.derivative_net = nn.Sequential(nn.Linear(self.hidden_features, self.hidden_features),
+                                                Swish(),
+                                                nn.Linear(self.hidden_features, self.hidden_features),
+                                                Swish()
+                                                )
 
-        # Decoder CNN, maps to different outputs (temporal bundling)
-        if(self.time_window==20):
-            self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 15, stride=4),
-                                            Swish(),
-                                            nn.Conv1d(8, 1, 10, stride=1)
-                                            )
-        if self.time_window == 1:
-            self.output_mlp = nn.Sequential(
-                nn.Conv1d(1, 8, kernel_size=1, stride=1),  # 使用 kernel_size=1 保持输入大小
-                Swish(),
-                nn.Conv1d(8, 1, kernel_size=1, stride=1)  # 输出保持单通道
-            )
-        if (self.time_window == 25):
-            self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 16, stride=3),
-                                            Swish(),
-                                            nn.Conv1d(8, 1, 14, stride=1)
-                                            )
-        if(self.time_window==50):
-            self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 12, stride=2),
-                                            Swish(),
-                                            nn.Conv1d(8, 1, 10, stride=1)
-                                            )
+        else:
+            # Decoder CNN, maps to different outputs (temporal bundling)
+            if(self.time_window==20):
+                self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 15, stride=4),
+                                                Swish(),
+                                                nn.Conv1d(8, 1, 10, stride=1)
+                                                )
+            if self.time_window == 1:
+                self.output_mlp = nn.Sequential(
+                    nn.Conv1d(1, 8, kernel_size=1, stride=1),  # 使用 kernel_size=1 保持输入大小
+                    Swish(),
+                    nn.Conv1d(8, 1, kernel_size=1, stride=1)  # 输出保持单通道
+                )
+            if (self.time_window == 25):
+                self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 16, stride=3),
+                                                Swish(),
+                                                nn.Conv1d(8, 1, 14, stride=1)
+                                                )
+            if(self.time_window==50):
+                self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 12, stride=2),
+                                                Swish(),
+                                                nn.Conv1d(8, 1, 10, stride=1)
+                                                )
 
     def __repr__(self):
         return f'GNN'
@@ -198,13 +213,34 @@ class graph(torch.nn.Module):
         h = self.embedding_mlp(node_input)
         for i in range(self.hidden_layer):
             h = self.gnn_layers[i](h, u, pos, edge_index, batch)
-        
-        # Decoder (formula 10 in the paper)
-        dt = (torch.ones(1, self.time_window)).to(h.device)
-        dt = torch.cumsum(dt, dim=1)
-        # [batch*n_nodes, hidden_dim] -> 1DCNN([batch*n_nodes, 1, hidden_dim]) -> [batch*n_nodes, time_window]
-        diff = self.output_mlp(h[:, None]).squeeze(1)
-        out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
+
+        if self.use_odeint:
+            def ode_func(t, y):
+                return self.derivative_net(y)
+            
+            # timespan for odeint
+            t = torch.linspace(0, 1, self.forecast_horizon + 1).to(h.device)
+
+            # use h as initial condition
+            pred_z = odeint(ode_func, h, t, method='dopri5')
+
+            pred_z = (pred_z[1:]).permute(1, 0, 2)
+
+            print("pred_z shape (odeint):", pred_z.shape)
+
+            # TODO: figure out where to use self.pred_var... (just change -1 to self.predvar ?)
+            out = self.decoding_mlp(pred_z).squeeze(-1)
+            # at this point, out should have shape [batch * n_nodes, forecast_horizon]
+
+
+        else:
+            # Decoder (formula 10 in the paper)
+            dt = (torch.ones(1, self.time_window)).to(h.device)
+            dt = torch.cumsum(dt, dim=1)
+            # [batch*n_nodes, hidden_dim] -> 1DCNN([batch*n_nodes, 1, hidden_dim]) -> [batch*n_nodes, time_window]
+            diff = self.output_mlp(h[:, None]).squeeze(1)
+            print("diff shape (non-odeint):", diff.shape)
+            out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
 
         return out[:,:self.forecast_horizon]
 
