@@ -4,5 +4,3 @@
 /runs
 **/__pycache__/
 /log
-fdbench.egg-info/
-fdbench/
