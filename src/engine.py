@@ -28,6 +28,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
 
     for samples, targets, grid in metric_logger.log_every(data_loader, print_freq, header):
         #* data shape [batch_size, 128, 128, 4]
+        print("samples, targets, grid shape (in train_one_epoch)")
+        print(samples.shape,targets.shape,grid.shape,'++++++++'*10)
+
         samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
         targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
 
