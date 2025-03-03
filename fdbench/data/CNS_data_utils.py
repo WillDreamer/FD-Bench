@@ -36,6 +36,7 @@ class DatasetSingle(Dataset):
         saved_folder = args.data_path
         initial_step=args.initial_step
 
+        self.use_odeint = args.use_odeint
 
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
         if filename[-2:] != 'h5':
@@ -207,7 +208,7 @@ class DatasetSingle(Dataset):
                 gridx, gridy = np.array(f['0023']['grid']['x'], dtype=np.float32), np.array(f['0023']['grid']['y'], dtype=np.float32)
                 mgridX, mgridY = np.meshgrid(gridx, gridy, indexing='ij')
                 _grid = torch.stack((torch.from_numpy(mgridX), torch.from_numpy(mgridY)), axis=-1)
-                grid = _grid[::reduced_resolution, ::reduced_resolution, ...]
+                _grid = _grid[::reduced_resolution, ::reduced_resolution, ...]
                 _tsteps_t = torch.from_numpy(np.array(f['0023']['grid']['t'], dtype=np.float32))
                 tsteps_t = _tsteps_t[::reduced_resolution_t]
                 self.data = _data
@@ -254,10 +255,12 @@ class DatasetSingle(Dataset):
         return self.train_mean, self.train_std
     
     def __getitem__(self, idx):
-        
-        rand_idx = random.randint(0,int(self.data.shape[-2])-2)
-        return self.data[idx,...,rand_idx,:], self.data[idx,...,rand_idx+1,:], self.grid
-        # return self.data[idx,...,:self.initial_step,:], self.data[idx], self.grid
+        if self.use_odeint:
+            rand_idx = random.randint(5,int(self.data.shape[-2])-5)
+            return self.data[idx,...,rand_idx-5:rand_idx,:], self.data[idx,...,rand_idx:rand_idx+5,:], self.grid
+        else:
+            rand_idx = random.randint(0,int(self.data.shape[-2])-2)
+            return self.data[idx,...,rand_idx,:], self.data[idx,...,rand_idx+1,:], self.grid
 
 
 class DatasetMult(Dataset):
