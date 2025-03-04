@@ -6,8 +6,7 @@ import time
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import Data, DataLoader
-from scipy.spatial import distance_matrix
+from torch.utils.data import DataLoader
 import os
 import json
 from pathlib import Path
@@ -21,7 +20,7 @@ import importlib
 import random
 from fdbench.utils import utils
 from fdbench.utils.metrics import *
-from engine import train_one_epoch, evaluate
+from engine import train_one_epoch, evaluate, get_graph_dataloader
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -270,39 +269,6 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     tprint('Training time {}'.format(total_time_str))
 
-def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True):
-    data_list = []
-
-    for i in range(len(dataset)):
-        x, y, grid = dataset[i]
-
-        # calculate the distance matrix
-        points = grid[:, 0, :].numpy()
-        dist_matrix = distance_matrix(points, points)
-
-        # find the nearest neighbors, keep start and end nodes
-        start_nodes = []
-        end_nodes = []
-        for j in range(len(points)):
-            nearest_indices = np.argsort(dist_matrix[j])[1:k+1]
-            for index in nearest_indices:
-                start_nodes.append(j)
-                end_nodes.append(index)
-        start_nodes_tensor = torch.tensor(start_nodes, dtype=torch.long)
-        end_nodes_tensor = torch.tensor(end_nodes, dtype=torch.long)
-        edge_index = torch.stack([start_nodes_tensor, end_nodes_tensor], dim=0)
-
-        senders = edge_index[0].numpy()
-        receivers = edge_index[1].numpy()
-        crds_diff = points[senders] - points[receivers]
-        crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
-        edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
-        edge_attr = torch.from_numpy(edge_attr)
-
-        data_list.append(Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr))
-
-    dataloader = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    return dataloader
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Training Configuration")
