@@ -40,7 +40,7 @@ data:
   input_size: 128 
   in_chans: 4 
   finetune: ''
-  reduced_resolution: 4
+  reduced_resolution: 16 # 1/16 of original resolution
   reduced_resolution_t: 1 
   reduced_batch: 1
   initial_step: 1

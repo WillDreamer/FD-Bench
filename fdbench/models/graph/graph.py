@@ -201,11 +201,11 @@ class graph(torch.nn.Module):
         """
         # x dim = [b, c, x1, x2]
         print(data.shape,grid.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2])
-        pos = data.x[:,0,:2]
-        u = data.x[:,:,2:].reshape(data.x.shape[0],-1)
+        pos = data.x[:,0,:2] # pos is grid for us
+        u = data.x[:,:,2:].reshape(data.x.shape[0],-1) # u is input data
         
-        edge_index = data.edge_index
-        batch = data.batch
+        edge_index = data.edge_index # should have after applying temp.py
+        batch = data.batch 
 
         # Encoder and processor (message passing)
         node_input = torch.cat((pos, u), -1) 

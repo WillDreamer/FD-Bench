@@ -75,7 +75,7 @@ class DatasetSingle(Dataset):
                         self.grid = np.array(f["x-coordinate"], dtype=np.float32)
                         self.grid = torch.tensor(self.grid[::reduced_resolution], dtype=torch.float).unsqueeze(-1)
                         print(self.data.shape)
-                    if len(idx_cfd)==4:  # 2D
+                    if len(idx_cfd)==4:  # 2D -> CNS (this is set-up for initial neuralode exp)
                         self.data = np.zeros([idx_cfd[0]//reduced_batch,
                                               idx_cfd[2]//reduced_resolution,
                                               idx_cfd[3]//reduced_resolution,
