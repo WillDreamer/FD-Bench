@@ -34,8 +34,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
             samples = d.x
             targets = d.y
 
-            print("samples, targets, grid shape (in train_one_epoch)")
-            print(samples.shape,targets.shape,grid.shape,'++++++++'*10)
+            print("samples, targets")
+            print(samples.shape,targets.shape,'++++++++'*10)
 
             if mixup_fn is not None:
                 samples, targets = mixup_fn(samples, targets)
@@ -195,8 +195,15 @@ def evaluate(data_loader, model, device, use_amp, args):
 def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True):
     data_list = []
 
+    first_iter = True
+
     for i in range(len(dataset)):
         x, y, grid = dataset[i]
+
+        if first_iter:
+            print("x, y, grid shape (in get_graph_dataloader)")
+            print(x.shape,y.shape,grid.shape,'++++++++'*10)
+            first_iter = False
 
         # calculate the distance matrix
         points = grid[:, 0, :].numpy()
