@@ -12,6 +12,9 @@ from timm.utils import ModelEma
 from fdbench.utils import utils
 from fdbench.utils.utils import tprint
 from fdbench.utils import metrics
+from torch_geometric.data import Data, DataLoader
+from scipy.spatial import distance_matrix
+import numpy as np
 import random
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
@@ -135,3 +138,37 @@ def evaluate(data_loader, model, device, use_amp, args):
         nrmse=metric_logger.nrmse, frmse=metric_logger.frmse))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True):
+    data_list = []
+
+    for i in range(len(dataset)):
+        x, y, grid = dataset[i]
+
+        # calculate the distance matrix
+        points = grid[:, 0, :].numpy()
+        dist_matrix = distance_matrix(points, points)
+
+        # find the nearest neighbors, keep start and end nodes
+        start_nodes = []
+        end_nodes = []
+        for j in range(len(points)):
+            nearest_indices = np.argsort(dist_matrix[j])[1:k+1]
+            for index in nearest_indices:
+                start_nodes.append(j)
+                end_nodes.append(index)
+        start_nodes_tensor = torch.tensor(start_nodes, dtype=torch.long)
+        end_nodes_tensor = torch.tensor(end_nodes, dtype=torch.long)
+        edge_index = torch.stack([start_nodes_tensor, end_nodes_tensor], dim=0)
+
+        senders = edge_index[0].numpy()
+        receivers = edge_index[1].numpy()
+        crds_diff = points[senders] - points[receivers]
+        crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
+        edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
+        edge_attr = torch.from_numpy(edge_attr)
+
+        data_list.append(Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr))
+
+    dataloader = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    return dataloader
