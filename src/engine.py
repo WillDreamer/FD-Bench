@@ -21,7 +21,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, loss_scaler, max_norm: float = 0,
                     model_ema: Optional[ModelEma] = None, mixup_fn: Optional[Mixup] = None,
-                    use_amp=True, set_training_mode=True):
+                    use_amp=True, set_training_mode=True, use_odeint=False):
     model.train(set_training_mode)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -29,57 +29,110 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
-    for samples, targets, grid in metric_logger.log_every(data_loader, print_freq, header):
-        #* data shape [batch_size, 128, 128, 4]
-        print("samples, targets, grid shape (in train_one_epoch)")
-        print(samples.shape,targets.shape,grid.shape,'++++++++'*10)
+    if use_odeint:
+        for d in metric_logger.log_every(data_loader, print_freq, header):
+            samples = d.x
+            targets = d.y
 
-        samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
-        targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
+            print("samples, targets, grid shape (in train_one_epoch)")
+            print(samples.shape,targets.shape,grid.shape,'++++++++'*10)
 
-        if mixup_fn is not None:
-            samples, targets = mixup_fn(samples, targets)
+            if mixup_fn is not None:
+                samples, targets = mixup_fn(samples, targets)
 
-        # compute output
-        if use_amp:  # 使用混合精度训练
-            with torch.cuda.amp.autocast():
+            # compute output
+            if use_amp:  # 使用混合精度训练
+                with torch.cuda.amp.autocast():
+                    outputs, loss = model(samples,targets,grid,criterion)
+                    
+            else:  # 使用全精度训练
                 outputs, loss = model(samples,targets,grid,criterion)
-                
-        else:  # 使用全精度训练
-            outputs, loss = model(samples,targets,grid,criterion)
 
-        loss_value = loss.item()
-        if not math.isfinite(loss_value):
-            tprint("Loss is {}, stopping training".format(loss_value))
-            sys.exit(1)
-        optimizer.zero_grad()
+            loss_value = loss.item()
+            if not math.isfinite(loss_value):
+                tprint("Loss is {}, stopping training".format(loss_value))
+                sys.exit(1)
+            optimizer.zero_grad()
 
-        if use_amp:
-            # this attribute is added by timm on one optimizer (adahessian)
-            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
-            loss_scaler(loss, optimizer, clip_grad=max_norm,
-                            parameters=model.parameters(), create_graph=is_second_order)
-        else:
-            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
-            loss.backward(create_graph=is_second_order)  # Compute gradients
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)  # Clip gradients
-            optimizer.step()  # Update parameters
+            if use_amp:
+                # this attribute is added by timm on one optimizer (adahessian)
+                is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+                loss_scaler(loss, optimizer, clip_grad=max_norm,
+                                parameters=model.parameters(), create_graph=is_second_order)
+            else:
+                is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+                loss.backward(create_graph=is_second_order)  # Compute gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)  # Clip gradients
+                optimizer.step()  # Update parameters
+            
+            # Calculate gradient norm
+            total_norm = 0.0
+            for p in model.parameters():
+                if p.grad is not None:
+                    param_norm = p.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+            total_norm = total_norm ** 0.5  # L2 norm
+            metric_logger.update(grad_norm=total_norm)
         
-        # Calculate gradient norm
-        total_norm = 0.0
-        for p in model.parameters():
-            if p.grad is not None:
-                param_norm = p.grad.data.norm(2)
-                total_norm += param_norm.item() ** 2
-        total_norm = total_norm ** 0.5  # L2 norm
-        metric_logger.update(grad_norm=total_norm)
-    
-        torch.cuda.synchronize()
-        if model_ema is not None:
-            model_ema.update(model)
+            torch.cuda.synchronize()
+            if model_ema is not None:
+                model_ema.update(model)
 
-        metric_logger.update(loss=loss_value)
-        metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+            metric_logger.update(loss=loss_value)
+            metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+
+    else:
+        for samples, targets, grid in metric_logger.log_every(data_loader, print_freq, header):
+            #* data shape [batch_size, 128, 128, 4]
+            print("samples, targets, grid shape (in train_one_epoch)")
+            print(samples.shape,targets.shape,grid.shape,'++++++++'*10)
+
+            samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
+            targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
+
+            if mixup_fn is not None:
+                samples, targets = mixup_fn(samples, targets)
+
+            # compute output
+            if use_amp:  # 使用混合精度训练
+                with torch.cuda.amp.autocast():
+                    outputs, loss = model(samples,targets,grid,criterion)
+                    
+            else:  # 使用全精度训练
+                outputs, loss = model(samples,targets,grid,criterion)
+
+            loss_value = loss.item()
+            if not math.isfinite(loss_value):
+                tprint("Loss is {}, stopping training".format(loss_value))
+                sys.exit(1)
+            optimizer.zero_grad()
+
+            if use_amp:
+                # this attribute is added by timm on one optimizer (adahessian)
+                is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+                loss_scaler(loss, optimizer, clip_grad=max_norm,
+                                parameters=model.parameters(), create_graph=is_second_order)
+            else:
+                is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+                loss.backward(create_graph=is_second_order)  # Compute gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)  # Clip gradients
+                optimizer.step()  # Update parameters
+            
+            # Calculate gradient norm
+            total_norm = 0.0
+            for p in model.parameters():
+                if p.grad is not None:
+                    param_norm = p.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+            total_norm = total_norm ** 0.5  # L2 norm
+            metric_logger.update(grad_norm=total_norm)
+        
+            torch.cuda.synchronize()
+            if model_ema is not None:
+                model_ema.update(model)
+
+            metric_logger.update(loss=loss_value)
+            metric_logger.update(lr=optimizer.param_groups[0]["lr"])
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     tprint("Averaged stats:", metric_logger)

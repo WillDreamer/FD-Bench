@@ -199,7 +199,7 @@ def main(args):
             optimizer, device, epoch, loss_scaler,
             args.clip_grad, model_ema, mixup_fn,
             use_amp = args.use_amp,
-            set_training_mode=args.finetune == ''  # keep in eval mode during finetuning
+            set_training_mode=args.finetune == '', use_odeint=args.use_odeint  # keep in eval mode during finetuning
         )
 
         lr_scheduler.step(epoch)
