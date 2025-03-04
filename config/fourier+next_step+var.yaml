@@ -1,6 +1,6 @@
 paths:
-  output_dir: '/home/whx/FD-Bench/ckpt'  #* your path to save ckpt
-  tensorboard_dir: '/home/whx/FD-Bench/runs/' #* your path to save logs
+  output_dir: '/home/maxdalton/FD-Bench/ckpt'  #* your path to save ckpt
+  tensorboard_dir: '/home/maxdalton/FD-Bench/runs/' #* your path to save logs
   autoresume: false
   resume: false
 
@@ -12,7 +12,7 @@ training:
   eval: false
   use_amp: false
   dist_eval: true
-  device: 'cuda:0'
+  device: 'cuda:2'
   seed: 0
   num_workers: 4
   pin_mem: true
@@ -20,6 +20,7 @@ training:
 model:
   spa_mod: 'fourier'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'next_step'      #* choices: ['linear', ]
+  use_odeint: false
   drop: 0.0
   drop_path: 0.1
   model_ema: false

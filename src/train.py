@@ -6,7 +6,7 @@ import time
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import Data, DataLoader
+from torch.utils.data import Data, Dataloader
 from scipy.spatial import distance_matrix
 import os
 import json
