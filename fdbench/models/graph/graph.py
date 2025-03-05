@@ -189,7 +189,7 @@ class graph(torch.nn.Module):
     def __repr__(self):
         return f'GNN'
 
-    def forward(self, data, target, grid, creterion=None) -> torch.Tensor:
+    def forward(self, data, target, criterion=None) -> torch.Tensor:
         """
         Forward pass of MP-PDE solver class.
         The input graph has the shape [batch*n_nodes, time_window].
@@ -200,7 +200,7 @@ class graph(torch.nn.Module):
             torch.Tensor: data output
         """
         # x dim = [b, c, x1, x2]
-        print(data.shape,grid.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2])
+        print(data.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2])
         pos = data.x[:,0,:2] # pos is grid for us
         u = data.x[:,:,2:].reshape(data.x.shape[0],-1) # u is input data
         
