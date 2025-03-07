@@ -230,7 +230,7 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
         edge_attr = torch.from_numpy(edge_attr)
 
-        data_list.append(Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr))
+        data_list.append(Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr, grid=grid))
 
     dataloader = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return dataloader
