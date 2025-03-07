@@ -37,16 +37,18 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
             print("samples, targets")
             print(samples.shape,targets.shape,'++++++++'*10)
 
-            if mixup_fn is not None:
-                samples, targets = mixup_fn(samples, targets)
+            
+            #if mixup_fn is not None:
+            #    samples, targets = mixup_fn(samples, targets)
 
             # compute output
             if use_amp:  # 使用混合精度训练
                 with torch.cuda.amp.autocast():
-                    outputs, loss = model(samples,targets,grid,criterion)
+                    outputs, loss = model(d,targets,criterion)
                     
             else:  # 使用全精度训练
-                outputs, loss = model(samples,targets,grid,criterion)
+                outputs, loss = model(d,targets,criterion)
+
 
             loss_value = loss.item()
             if not math.isfinite(loss_value):
