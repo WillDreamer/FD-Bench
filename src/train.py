@@ -73,7 +73,7 @@ def main(args):
     #>>>>>> =============================Data Reading==========================
     data_module_name = 'fdbench.data.' + args.PDE_type + '_data_utils'
     data_module = getattr(importlib.import_module(data_module_name),'DatasetSingle')
-    train_data = data_module(args = args, if_test=True) # TODO: set back to original
+    train_data = data_module(args = args) # TODO: set back to original
     normalizer = train_data.__normalizer__
     test_data = data_module(if_test=True,args = args,normalizer=normalizer)
     val_data = data_module(if_valid=True,args = args,normalizer=normalizer)
