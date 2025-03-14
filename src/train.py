@@ -78,6 +78,8 @@ def main(args):
     test_data = data_module(if_test=True,args = args,normalizer=normalizer)
     val_data = data_module(if_valid=True,args = args,normalizer=normalizer)
 
+    print("use_odeint (train.py): ", args.use_odeint)
+
     if args.use_odeint:
         data_loader_train = get_graph_dataloader(train_data, batch_size=args.batch_size, num_workers=args.num_workers)
         data_loader_test = get_graph_dataloader(test_data, batch_size=args.batch_size//2, num_workers=args.num_workers)

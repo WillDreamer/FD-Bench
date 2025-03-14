@@ -149,6 +149,7 @@ class graph(torch.nn.Module):
         )
 
         self.use_odeint = args.use_odeint
+        print("use_odeint (graph.py): ", self.use_odeint)
         if self.use_odeint:
             self.decoding_mlp = nn.Sequential(nn.Linear(self.hidden_features, self.hidden_features),
                                               Swish(),
@@ -201,7 +202,8 @@ class graph(torch.nn.Module):
         """
         # x dim = [b, c, x1, x2]
         # TODO: pass in grid as well (or add to data?), print shapes for verification...
-        print(data.x.shape,data.grid.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2])
+        print(data.x.shape,data.grid.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2]) originally
+        # for us, data.x.shape: [256, 32, 5, 4], data.grid.shape: [256, 32, 2]
         pos = data.x[:,0,:2] # pos is grid for us
         u = data.x[:,:,2:].reshape(data.x.shape[0],-1) # u is input data
         

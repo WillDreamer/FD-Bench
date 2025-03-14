@@ -29,6 +29,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
+    print("use_odeint (train_one_epoch): ", use_odeint)
+
     if use_odeint:
         for d in metric_logger.log_every(data_loader, print_freq, header):
             samples = d.x
