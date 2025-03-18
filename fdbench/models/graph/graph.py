@@ -141,8 +141,11 @@ class graph(torch.nn.Module):
                                         )
                                )
 
+        # Calculate actual input dimensions: 2 (for position) + 5*4 (for features)
+        input_dim = 2 + 5 * self.in_chans
+        
         self.embedding_mlp = nn.Sequential(
-            nn.Linear(self.time_window*self.in_chans + 2 + len(self.eq_variables), self.hidden_features),
+            nn.Linear(input_dim, self.hidden_features),
             Swish(),
             nn.Linear(self.hidden_features, self.hidden_features),
             Swish()
