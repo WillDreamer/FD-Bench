@@ -44,8 +44,12 @@ class GNN_Layer(MessagePassing):
         self.out_features = out_features
         self.hidden_features = hidden_features
         self.in_chans = in_chans
+        
+        # Calculate actual feature sizes based on our data shape
+        # pos_diff (2) + x_i (in_features) + x_j (in_features) + u_diff (actual dimension)
+        feature_size = 2 + (2 * in_features) + (time_window * in_chans)
 
-        self.message_net_1 = nn.Sequential(nn.Linear(2 * in_features + time_window*self.in_chans + 2, hidden_features),
+        self.message_net_1 = nn.Sequential(nn.Linear(feature_size, hidden_features),
                                            Swish()
                                            )
         self.message_net_2 = nn.Sequential(nn.Linear(hidden_features, hidden_features),
