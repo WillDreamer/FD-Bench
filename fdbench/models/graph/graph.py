@@ -204,14 +204,22 @@ class graph(torch.nn.Module):
         # TODO: pass in grid as well (or add to data?), print shapes for verification...
         print(data.x.shape,data.grid.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2]) originally
         # for us, data.x.shape: [256, 32, 5, 4], data.grid.shape: [256, 32, 2]
-        pos = data.x[:,0,:2] # pos is grid for us
-        u = data.x[:,:,2:].reshape(data.x.shape[0],-1) # u is input data
         
-        edge_index = data.edge_index # should have after applying temp.py
-        batch = data.batch 
-
+        # Reshaping data to work with our model
+        batch_size, n_nodes = data.x.shape[0], data.x.shape[1]
+        
+        # Use grid data for positions
+        pos = data.grid.reshape(batch_size * n_nodes, 2)  # Reshape to [batch*n_nodes, 2]
+        
+        # Reshape features - take all channels from data.x
+        u = data.x.reshape(batch_size * n_nodes, -1)  # Reshape to [batch*n_nodes, 5*4]
+        
+        # Get edge indices and batch indices
+        edge_index = data.edge_index
+        batch = torch.repeat_interleave(torch.arange(batch_size, device=data.x.device), n_nodes)
+        
         # Encoder and processor (message passing)
-        node_input = torch.cat((pos, u), -1) 
+        node_input = torch.cat((pos, u), -1)
 
         h = self.embedding_mlp(node_input)
         for i in range(self.hidden_layer):
@@ -231,10 +239,9 @@ class graph(torch.nn.Module):
 
             print("pred_z shape (odeint):", pred_z.shape)
 
-            # TODO: figure out where to use self.pred_var... (just change -1 to self.predvar ?)
+            # Decode the outputs
             out = self.decoding_mlp(pred_z).squeeze(-1)
             # at this point, out should have shape [batch * n_nodes, forecast_horizon]
-
 
         else:
             # Decoder (formula 10 in the paper)
@@ -245,6 +252,21 @@ class graph(torch.nn.Module):
             print("diff shape (non-odeint):", diff.shape)
             out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
 
+        # Reshape output back to match target shape if needed
+        if self.forecast_horizon > 1:
+            out = out.reshape(batch_size, n_nodes, self.forecast_horizon)
+        else:
+            out = out.reshape(batch_size, n_nodes)
+        
+        # Calculate loss if criterion is provided
+        if criterion is not None:
+            if self.forecast_horizon > 1:
+                target_reshaped = target.reshape(batch_size, n_nodes, self.forecast_horizon)
+            else:
+                target_reshaped = target.reshape(batch_size, n_nodes)
+            loss = criterion(out, target_reshaped)
+            return out, loss
+        
         return out[:,:self.forecast_horizon]
 
 if __name__ == '__main__':
