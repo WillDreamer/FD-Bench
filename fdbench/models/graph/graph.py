@@ -75,7 +75,33 @@ class GNN_Layer(MessagePassing):
         """
         Message update following formula 8 of the paper
         """
-        message = self.message_net_1(torch.cat((pos_i - pos_j, x_i, x_j, u_i - u_j), dim=-1))
+        # Print shapes to debug
+        print(f"Message function shapes: pos_i: {pos_i.shape}, x_i: {x_i.shape}, u_i: {u_i.shape}")
+        
+        # Calculate actual feature size dynamically based on shapes
+        # Convert data types if needed
+        pos_diff = pos_i - pos_j  # Shape: [E, 2]
+        u_diff = u_i - u_j        # Shape: [E, 5*4]
+        
+        # Concatenate with the correct dimensions
+        concat_tensor = torch.cat((pos_diff, x_i, x_j, u_diff), dim=-1)
+        
+        # Update the message networks if needed
+        if hasattr(self, '_first_message_call') is False:
+            self._first_message_call = True
+            # Dynamically adjust the input size of message_net_1 if needed
+            actual_feature_size = concat_tensor.shape[-1]
+            print(f"Actual concatenated feature size: {actual_feature_size}")
+            
+            if actual_feature_size != self.message_net_1[0].in_features:
+                device = concat_tensor.device
+                # Create a new network with the correct input size
+                self.message_net_1 = nn.Sequential(
+                    nn.Linear(actual_feature_size, self.hidden_features).to(device),
+                    Swish().to(device)
+                )
+        
+        message = self.message_net_1(concat_tensor)
         message = self.message_net_2(message)
         return message
 
