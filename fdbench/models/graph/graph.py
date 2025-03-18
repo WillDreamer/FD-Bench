@@ -200,10 +200,21 @@ class graph(torch.nn.Module):
         Returns:
             torch.Tensor: data output
         """
+        # Get device from model parameters
+        device = next(self.parameters()).device
+        
+        # Move data to the correct device
+        if data.x.device != device:
+            data.x = data.x.to(device)
+        if data.grid.device != device:
+            data.grid = data.grid.to(device)
+        if data.edge_index.device != device:
+            data.edge_index = data.edge_index.to(device)
+        if target is not None and target.device != device:
+            target = target.to(device)
+        
         # x dim = [b, c, x1, x2]
-        # TODO: pass in grid as well (or add to data?), print shapes for verification...
-        print(data.x.shape,data.grid.shape,'++++++++'*10) # torch.Size([8, 4, 128, 128]) torch.Size([8, 128, 128, 2]) originally
-        # for us, data.x.shape: [256, 32, 5, 4], data.grid.shape: [256, 32, 2]
+        print(data.x.shape, data.grid.shape, '++++++++'*10)
         
         # Reshaping data to work with our model
         batch_size, n_nodes = data.x.shape[0], data.x.shape[1]
@@ -216,7 +227,7 @@ class graph(torch.nn.Module):
         
         # Get edge indices and batch indices
         edge_index = data.edge_index
-        batch = torch.repeat_interleave(torch.arange(batch_size, device=data.x.device), n_nodes)
+        batch = torch.repeat_interleave(torch.arange(batch_size, device=device), n_nodes)
         
         # Encoder and processor (message passing)
         node_input = torch.cat((pos, u), -1)
@@ -230,7 +241,7 @@ class graph(torch.nn.Module):
                 return self.derivative_net(y)
             
             # timespan for odeint
-            t = torch.linspace(0, 1, self.forecast_horizon + 1).to(h.device)
+            t = torch.linspace(0, 1, self.forecast_horizon + 1).to(device)
 
             # use h as initial condition
             pred_z = odeint(ode_func, h, t, method='dopri5')
@@ -241,13 +252,11 @@ class graph(torch.nn.Module):
 
             # Decode the outputs
             out = self.decoding_mlp(pred_z).squeeze(-1)
-            # at this point, out should have shape [batch * n_nodes, forecast_horizon]
-
+            
         else:
             # Decoder (formula 10 in the paper)
-            dt = (torch.ones(1, self.time_window)).to(h.device)
+            dt = (torch.ones(1, self.time_window)).to(device)
             dt = torch.cumsum(dt, dim=1)
-            # [batch*n_nodes, hidden_dim] -> 1DCNN([batch*n_nodes, 1, hidden_dim]) -> [batch*n_nodes, time_window]
             diff = self.output_mlp(h[:, None]).squeeze(1)
             print("diff shape (non-odeint):", diff.shape)
             out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
