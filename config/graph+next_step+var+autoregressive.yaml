@@ -12,7 +12,7 @@ training:
   eval: false
   use_amp: false
   dist_eval: true
-  device: 'cuda:2'
+  device: 'cuda:5'
   seed: 0
   num_workers: 4
   pin_mem: true
