@@ -153,9 +153,34 @@ def evaluate(data_loader, model, device, use_amp, args):
     # switch to evaluation mode
     model.eval()
 
-    for input_test, target_test, grid in metric_logger.log_every(data_loader, 10, header):
-        input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-        target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+    if args.use_odeint:  # For graph model with odeint
+        for data in metric_logger.log_every(data_loader, 10, header):
+            # Use the PyG data object directly
+            if use_amp:  # Use mixed precision
+                with torch.cuda.amp.autocast():
+                    outputs, loss = model(data, data.y, criterion)
+            else:  # Use full precision
+                outputs, loss = model(data, data.y, criterion)
+
+            batch_size = data.x.shape[0]
+            metric_logger.update(loss=loss.item())
+            
+            # Extract targets for metrics calculation
+            # Reshape outputs to match target if necessary
+            target_var = data.y[:, :, 0, args.pred_var if args.pred_var >= 0 else data.y.shape[3] + args.pred_var]
+            
+            Lx, Ly, Lz = 1., 1., 1.
+            _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
+            = metrics.metric_func(outputs, target_var, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+
+            metric_logger.update(rmse=_err_RMSE.item())
+            metric_logger.update(nrmse=_err_nRMSE.item())
+            metric_logger.update(frmse=_err_F[0].item())
+            
+    else:  # For non-graph models
+        for input_test, target_test, grid in metric_logger.log_every(data_loader, 10, header):
+            input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+            target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
 
         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
             if args.sample_method == "ddpm":
@@ -176,16 +201,15 @@ def evaluate(data_loader, model, device, use_amp, args):
             else:  # 使用全精度训练
                 outputs, loss = model(input_test,target_test,grid,criterion)
 
-        batch_size = input_test.shape[0]
-        metric_logger.update(loss=loss.item())
-        Lx, Ly, Lz = 1., 1., 1.
-        _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
-        = metrics.metric_func(outputs, target_test, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+            batch_size = input_test.shape[0]
+            metric_logger.update(loss=loss.item())
+            Lx, Ly, Lz = 1., 1., 1.
+            _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
+            = metrics.metric_func(outputs, target_test, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
 
-        metric_logger.update(rmse=_err_RMSE.item())
-        metric_logger.update(nrmse=_err_nRMSE.item())
-        metric_logger.update(frmse=_err_F[0].item())
-
+            metric_logger.update(rmse=_err_RMSE.item())
+            metric_logger.update(nrmse=_err_nRMSE.item())
+            metric_logger.update(frmse=_err_F[0].item())
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
