@@ -248,6 +248,8 @@ class graph(torch.nn.Module):
         
         # x dim = [b, c, x1, x2]
         print(data.x.shape, data.grid.shape, '++++++++'*10)
+        if target is not None:
+            print(f"Target shape: {target.shape}")
         
         # Reshaping data to work with our model
         batch_size, n_nodes = data.x.shape[0], data.x.shape[1]
@@ -294,22 +296,26 @@ class graph(torch.nn.Module):
             print("diff shape (non-odeint):", diff.shape)
             out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
 
-        # Reshape output back to match target shape if needed
-        if self.forecast_horizon > 1:
-            out = out.reshape(batch_size, n_nodes, self.forecast_horizon)
-        else:
-            out = out.reshape(batch_size, n_nodes)
+        # Reshape output to match desired format
+        out = out.reshape(batch_size, n_nodes)
+        print(f"Output shape after reshape: {out.shape}")
         
         # Calculate loss if criterion is provided
         if criterion is not None:
-            if self.forecast_horizon > 1:
-                target_reshaped = target.reshape(batch_size, n_nodes, self.forecast_horizon)
+            # For targets, we need to extract the relevant variable we're predicting
+            # The target tensor has shape [batch_size, n_nodes, timesteps, features]
+            if len(target.shape) == 4:  # [batch, nodes, time, features]
+                # Take the first timestep of the target's pred_var feature
+                target_var = target[:, :, 0, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
+                print(f"Target var shape for loss: {target_var.shape}")
+                loss = criterion(out, target_var)
             else:
-                target_reshaped = target.reshape(batch_size, n_nodes)
-            loss = criterion(out, target_reshaped)
+                # If target is already processed, use as is
+                print(f"Using target as is for loss: {target.shape}")
+                loss = criterion(out, target)
             return out, loss
         
-        return out[:,:self.forecast_horizon]
+        return out
 
 if __name__ == '__main__':
     model = graph()
