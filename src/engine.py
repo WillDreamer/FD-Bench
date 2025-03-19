@@ -169,9 +169,14 @@ def evaluate(data_loader, model, device, use_amp, args):
             # Reshape outputs to match target if necessary
             target_var = data.y[:, :, 0, args.pred_var if args.pred_var >= 0 else data.y.shape[3] + args.pred_var]
             
+            # Reshape for metrics calculation - add appropriate dimensions
+            # [batch, nodes] -> [batch, 1, nodes, 1] format expected by metrics function
+            outputs_reshaped = outputs.unsqueeze(1).unsqueeze(-1)  # [batch, 1, nodes, 1]
+            target_reshaped = target_var.unsqueeze(1).unsqueeze(-1)  # [batch, 1, nodes, 1]
+            
             Lx, Ly, Lz = 1., 1., 1.
             _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
-            = metrics.metric_func(outputs, target_var, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+            = metrics.metric_func(outputs_reshaped, target_reshaped, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
 
             metric_logger.update(rmse=_err_RMSE.item())
             metric_logger.update(nrmse=_err_nRMSE.item())
@@ -182,24 +187,24 @@ def evaluate(data_loader, model, device, use_amp, args):
             input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
             target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
 
-        if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
-            if args.sample_method == "ddpm":
-                samp_algo = model.ddpm_sample
-            else:
-                samp_algo = model.ddim_sample
-            
-            if use_amp:  # 使用混合精度训练
-                with torch.cuda.amp.autocast():
+            if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                if args.sample_method == "ddpm":
+                    samp_algo = model.ddpm_sample
+                else:
+                    samp_algo = model.ddim_sample
+                
+                if use_amp:  # 使用混合精度训练
+                    with torch.cuda.amp.autocast():
+                        outputs, loss = samp_algo(input_test,target_test,grid,criterion)
+                else:  # 使用全精度训练
                     outputs, loss = samp_algo(input_test,target_test,grid,criterion)
-            else:  # 使用全精度训练
-                outputs, loss = samp_algo(input_test,target_test,grid,criterion)
-        else:
-            # compute output
-            if use_amp:  # 使用混合精度训练
-                with torch.cuda.amp.autocast():
+            else:
+                # compute output
+                if use_amp:  # 使用混合精度训练
+                    with torch.cuda.amp.autocast():
+                        outputs, loss = model(input_test,target_test,grid,criterion)
+                else:  # 使用全精度训练
                     outputs, loss = model(input_test,target_test,grid,criterion)
-            else:  # 使用全精度训练
-                outputs, loss = model(input_test,target_test,grid,criterion)
 
             batch_size = input_test.shape[0]
             metric_logger.update(loss=loss.item())
