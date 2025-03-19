@@ -75,23 +75,22 @@ class GNN_Layer(MessagePassing):
         """
         Message update following formula 8 of the paper
         """
-        # Print shapes to debug
-        print(f"Message function shapes: pos_i: {pos_i.shape}, x_i: {x_i.shape}, u_i: {u_i.shape}")
+        # for debugging
+        # print(f"Message function shapes: pos_i: {pos_i.shape}, x_i: {x_i.shape}, u_i: {u_i.shape}")
         
         # Calculate actual feature size dynamically based on shapes
-        # Convert data types if needed
         pos_diff = pos_i - pos_j  # Shape: [E, 2]
         u_diff = u_i - u_j        # Shape: [E, 5*4]
         
         # Concatenate with the correct dimensions
         concat_tensor = torch.cat((pos_diff, x_i, x_j, u_diff), dim=-1)
         
-        # Update the message networks if needed
+        # Update the message networks if needed, only print on first call
         if hasattr(self, '_first_message_call') is False:
             self._first_message_call = True
             # Dynamically adjust the input size of message_net_1 if needed
             actual_feature_size = concat_tensor.shape[-1]
-            print(f"Actual concatenated feature size: {actual_feature_size}")
+            print(f"[ONCE] Actual concatenated feature size: {actual_feature_size}")
             
             if actual_feature_size != self.message_net_1[0].in_features:
                 device = concat_tensor.device
@@ -226,12 +225,6 @@ class graph(torch.nn.Module):
     def forward(self, data, target, criterion=None) -> torch.Tensor:
         """
         Forward pass of MP-PDE solver class.
-        The input graph has the shape [batch*n_nodes, time_window].
-        The output tensor has the shape [batch*n_nodes, time_window].
-        Args:
-            data (Data): Pytorch Geometric data graph
-        Returns:
-            torch.Tensor: data output
         """
         # Get device from model parameters
         device = next(self.parameters()).device
@@ -246,10 +239,10 @@ class graph(torch.nn.Module):
         if target is not None and target.device != device:
             target = target.to(device)
         
-        # x dim = [b, c, x1, x2]
-        print(data.x.shape, data.grid.shape, '++++++++'*10)
-        if target is not None:
-            print(f"Target shape: {target.shape}")
+        # for debugging
+        # print(data.x.shape, data.grid.shape, '++++++++'*10)
+        # if target is not None:
+        #     print(f"Target shape: {target.shape}")
         
         # Reshaping data to work with our model
         batch_size, n_nodes = data.x.shape[0], data.x.shape[1]
@@ -280,10 +273,10 @@ class graph(torch.nn.Module):
 
             # use h as initial condition
             pred_z = odeint(ode_func, h, t, method='dopri5')
-
             pred_z = (pred_z[1:]).permute(1, 0, 2)
 
-            print("pred_z shape (odeint):", pred_z.shape)
+            # for debugging
+            # print("pred_z shape (odeint):", pred_z.shape)
 
             # Decode the outputs
             out = self.decoding_mlp(pred_z).squeeze(-1)
@@ -293,25 +286,23 @@ class graph(torch.nn.Module):
             dt = (torch.ones(1, self.time_window)).to(device)
             dt = torch.cumsum(dt, dim=1)
             diff = self.output_mlp(h[:, None]).squeeze(1)
-            print("diff shape (non-odeint):", diff.shape)
+            # print("diff shape (non-odeint):", diff.shape)
             out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
 
         # Reshape output to match desired format
         out = out.reshape(batch_size, n_nodes)
-        print(f"Output shape after reshape: {out.shape}")
+        # print(f"Output shape after reshape: {out.shape}")
         
         # Calculate loss if criterion is provided
         if criterion is not None:
             # For targets, we need to extract the relevant variable we're predicting
-            # The target tensor has shape [batch_size, n_nodes, timesteps, features]
             if len(target.shape) == 4:  # [batch, nodes, time, features]
-                # Take the first timestep of the target's pred_var feature
                 target_var = target[:, :, 0, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                print(f"Target var shape for loss: {target_var.shape}")
+                # print(f"Target var shape for loss: {target_var.shape}")
                 loss = criterion(out, target_var)
             else:
                 # If target is already processed, use as is
-                print(f"Using target as is for loss: {target.shape}")
+                # print(f"Using target as is for loss: {target.shape}")
                 loss = criterion(out, target)
             return out, loss
         
