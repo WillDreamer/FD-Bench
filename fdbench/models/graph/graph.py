@@ -287,30 +287,40 @@ class graph(torch.nn.Module):
             diff = self.output_mlp(h[:, None]).squeeze(1)
             out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
 
-        # Reshape output to match desired format for temporal bundling
-        # For temporal bundling, we need [batch_size, n_nodes, time_steps]
+        # Reshape output initially to [batch_size, n_nodes, time_steps]
         out = out.reshape(batch_size, n_nodes, -1)
         
-        # Store the original output shape for loss calculation
-        out_original = out
-        
-        # Only transpose for evaluation metrics, not for loss calculation
-        out_transposed = out.transpose(1, 2)
-        
-        # Calculate loss if criterion is provided
-        if criterion is not None:
-            # For targets, we need to extract the relevant variable we're predicting
-            if len(target.shape) == 4:  # [batch, nodes, time, features]
-                target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                # Use the original shape for loss calculation
-                loss = criterion(out_original, target_var)
-            else:
-                loss = criterion(out_original, target)
-            # Return the transposed output for evaluation metrics
-            return out_transposed, loss
-        
-        # Return the transposed output for evaluation
-        return out_transposed
+        # For the neural ODE case, reshape for metrics compatibility
+        if self.use_odeint:
+            # Reshape to format compatible with metrics: [batch, feature=1, nodes, timesteps]
+            # This matches the expected 4D format for metrics
+            metric_out = out.unsqueeze(1)  # [batch, 1, nodes, timesteps]
+            
+            # Calculate loss if criterion is provided
+            if criterion is not None:
+                # For targets, we need to extract the relevant variable we're predicting
+                if len(target.shape) == 4:  # [batch, nodes, time, features]
+                    # Extract target's relevant variable
+                    target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
+                    # Match dimensions for loss calculation
+                    loss = criterion(out, target_var[:, :, 0].unsqueeze(-1).repeat(1, 1, out.shape[2]))
+                else:
+                    loss = criterion(out, target)
+                return metric_out, loss
+            
+            return metric_out
+        else:
+            # For non-ODE case, keep original behavior
+            if criterion is not None:
+                # For targets, we need to extract the relevant variable we're predicting
+                if len(target.shape) == 4:  # [batch, nodes, time, features]
+                    target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
+                    loss = criterion(out, target_var)
+                else:
+                    loss = criterion(out, target)
+                return out, loss
+            
+            return out
 
 if __name__ == '__main__':
     model = graph()
