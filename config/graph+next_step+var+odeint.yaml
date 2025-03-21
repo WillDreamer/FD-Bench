@@ -20,7 +20,7 @@ training:
 model:
   spa_mod: 'graph'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'next_step'      #* choices: ['linear', ]
-  use_odeint: true
+  use_odeint: true # neural ODE defaults to temporal bundling (5->5 prediction task)
   drop: 0.0
   drop_path: 0.1
   model_ema: false

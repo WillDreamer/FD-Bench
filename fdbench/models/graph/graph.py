@@ -152,8 +152,11 @@ class graph(torch.nn.Module):
             self.time_window = 5
 
         if args.use_odeint: # if using neural ODE, default 5->5 prediction task
+            print("using neural ODE (default 5->5 prediction task)")
             self.forecast_horizon = 5
             self.time_window = 5
+        else:
+            print("using autoregressive approach")
 
         self.gnn_layers = torch.nn.ModuleList(modules=(GNN_Layer(
             in_features=self.hidden_features,
