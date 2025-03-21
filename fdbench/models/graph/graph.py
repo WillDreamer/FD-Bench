@@ -243,11 +243,6 @@ class graph(torch.nn.Module):
         if target is not None and target.device != device:
             target = target.to(device)
         
-        # for debugging
-        # print(data.x.shape, data.grid.shape, '++++++++'*10)
-        # if target is not None:
-        #     print(f"Target shape: {target.shape}")
-        
         # Reshaping data to work with our model
         batch_size, n_nodes = data.x.shape[0], data.x.shape[1]
         
@@ -255,7 +250,7 @@ class graph(torch.nn.Module):
         pos = data.grid.reshape(batch_size * n_nodes, 2)  # Reshape to [batch*n_nodes, 2]
         
         # Reshape features - take all channels from data.x
-        u = data.x.reshape(batch_size * n_nodes, -1)  # Reshape to [batch*n_nodes, 5*4]
+        u = data.x.reshape(batch_size * n_nodes, -1)  # Reshape to [batch*n_nodes, channels*time_steps]
         
         # Get edge indices and batch indices
         edge_index = data.edge_index
@@ -279,9 +274,6 @@ class graph(torch.nn.Module):
             pred_z = odeint(ode_func, h, t, method='dopri5')
             pred_z = (pred_z[1:]).permute(1, 0, 2)
 
-            # for debugging
-            # print("pred_z shape (odeint):", pred_z.shape)
-
             # Decode the outputs
             out = self.decoding_mlp(pred_z).squeeze(-1)
             
@@ -290,23 +282,19 @@ class graph(torch.nn.Module):
             dt = (torch.ones(1, self.time_window)).to(device)
             dt = torch.cumsum(dt, dim=1)
             diff = self.output_mlp(h[:, None]).squeeze(1)
-            # print("diff shape (non-odeint):", diff.shape)
             out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
 
-        # Reshape output to match desired format
-        out = out.reshape(batch_size, n_nodes)
-        # print(f"Output shape after reshape: {out.shape}")
+        # Reshape output to match desired format for temporal bundling
+        # For temporal bundling, we need [batch_size, n_nodes, time_steps]
+        out = out.reshape(batch_size, n_nodes, -1)
         
         # Calculate loss if criterion is provided
         if criterion is not None:
             # For targets, we need to extract the relevant variable we're predicting
             if len(target.shape) == 4:  # [batch, nodes, time, features]
-                target_var = target[:, :, 0, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                # print(f"Target var shape for loss: {target_var.shape}")
+                target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
                 loss = criterion(out, target_var)
             else:
-                # If target is already processed, use as is
-                # print(f"Using target as is for loss: {target.shape}")
                 loss = criterion(out, target)
             return out, loss
         
