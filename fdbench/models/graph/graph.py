@@ -291,19 +291,26 @@ class graph(torch.nn.Module):
         # For temporal bundling, we need [batch_size, n_nodes, time_steps]
         out = out.reshape(batch_size, n_nodes, -1)
         
-        out = out.transpose(1, 2)
+        # Store the original output shape for loss calculation
+        out_original = out
+        
+        # Only transpose for evaluation metrics, not for loss calculation
+        out_transposed = out.transpose(1, 2)
         
         # Calculate loss if criterion is provided
         if criterion is not None:
             # For targets, we need to extract the relevant variable we're predicting
             if len(target.shape) == 4:  # [batch, nodes, time, features]
                 target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                loss = criterion(out, target_var)
+                # Use the original shape for loss calculation
+                loss = criterion(out_original, target_var)
             else:
-                loss = criterion(out, target)
-            return out, loss
+                loss = criterion(out_original, target)
+            # Return the transposed output for evaluation metrics
+            return out_transposed, loss
         
-        return out
+        # Return the transposed output for evaluation
+        return out_transposed
 
 if __name__ == '__main__':
     model = graph()
