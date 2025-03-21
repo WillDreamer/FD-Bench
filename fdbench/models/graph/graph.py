@@ -291,6 +291,8 @@ class graph(torch.nn.Module):
         # For temporal bundling, we need [batch_size, n_nodes, time_steps]
         out = out.reshape(batch_size, n_nodes, -1)
         
+        out = out.transpose(1, 2)
+        
         # Calculate loss if criterion is provided
         if criterion is not None:
             # For targets, we need to extract the relevant variable we're predicting
