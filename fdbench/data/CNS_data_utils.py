@@ -37,6 +37,7 @@ class DatasetSingle(Dataset):
         initial_step=args.initial_step
 
         self.use_odeint = args.use_odeint
+        print("use_odeint (in data utils):", self.use_odeint)
 
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
         if filename[-2:] != 'h5':

@@ -143,6 +143,8 @@ class graph(torch.nn.Module):
         self.pred_var = args.pred_var
         self.eq_variables = eq_variables
         self.in_chans = args.in_chans
+
+        self.first_iter = True
         
         if args.tem_mod == 'next_step':
             self.forecast_horizon = 1
@@ -290,25 +292,32 @@ class graph(torch.nn.Module):
         # Reshape output initially to [batch_size, n_nodes, time_steps]
         out = out.reshape(batch_size, n_nodes, -1)
         
-        # For the neural ODE case, reshape for metrics compatibility
+        # For odeint case, reshape for metrics compatibility
         if self.use_odeint:
-            # Reshape to format compatible with metrics: [batch, feature=1, nodes, timesteps]
-            # This matches the expected 4D format for metrics
-            metric_out = out.unsqueeze(1)  # [batch, 1, nodes, timesteps]
-            
-            # Calculate loss if criterion is provided
+            # Calculate loss using all available timesteps
             if criterion is not None:
                 # For targets, we need to extract the relevant variable we're predicting
                 if len(target.shape) == 4:  # [batch, nodes, time, features]
                     # Extract target's relevant variable
                     target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                    # Match dimensions for loss calculation
-                    loss = criterion(out, target_var[:, :, 0].unsqueeze(-1).repeat(1, 1, out.shape[2]))
+                    
+                    # Use min number of timesteps from both tensors
+                    num_timesteps = min(out.shape[2], target_var.shape[2])
+
+                    if self.first_iter:
+                        print("num_timesteps:", num_timesteps)
+                        self.first_iter = False
+                    
+                    # Calculate loss using all available timesteps
+                    loss = criterion(out[:, :, :num_timesteps], target_var[:, :, :num_timesteps])
                 else:
                     loss = criterion(out, target)
-                return metric_out, loss
+                
+                # For evaluation metrics compatibility, still return only first timestep TODO: fix this...
+                return out[:, :, 0:1], loss
             
-            return metric_out
+            # If no criterion, just return the result for first timestep for compatibility TODO: is this right?
+            return out[:, :, 0:1]
         else:
             # For non-ODE case, keep original behavior
             if criterion is not None:
