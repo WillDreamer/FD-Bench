@@ -292,44 +292,41 @@ class graph(torch.nn.Module):
         # Reshape output initially to [batch_size, n_nodes, time_steps]
         out = out.reshape(batch_size, n_nodes, -1)
         
-        # For odeint case, reshape for metrics compatibility
-        if self.use_odeint:
-            # Calculate loss using all available timesteps
-            if criterion is not None:
-                # For targets, we need to extract the relevant variable we're predicting
-                if len(target.shape) == 4:  # [batch, nodes, time, features]
-                    # Extract target's relevant variable
-                    target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                    
-                    # Use min number of timesteps from both tensors
-                    num_timesteps = min(out.shape[2], target_var.shape[2])
-
-                    if self.first_iter:
-                        print("num_timesteps:", num_timesteps)
-                        self.first_iter = False
-                    
-                    # Calculate loss using all available timesteps
-                    loss = criterion(out[:, :, :num_timesteps], target_var[:, :, :num_timesteps])
-                else:
-                    loss = criterion(out, target)
+        # Calculate loss using all available timesteps
+        if criterion is not None:
+            # For targets, we need to extract the relevant variable we're predicting
+            if len(target.shape) == 4:  # [batch, nodes, time, features]
+                # Extract target's relevant variable
+                target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
                 
-                # For evaluation metrics compatibility, still return only first timestep TODO: fix this...
-                return out[:, :, 0:1], loss
+                # Use min number of timesteps from both tensors
+                num_timesteps = min(out.shape[2], target_var.shape[2])
+
+                if self.first_iter:
+                    print("num_timesteps:", num_timesteps)
+                    self.first_iter = False
+                
+                # Calculate loss using all available timesteps
+                loss = criterion(out[:, :, :num_timesteps], target_var[:, :, :num_timesteps])
+            else:
+                loss = criterion(out, target)
             
-            # If no criterion, just return the result for first timestep for compatibility TODO: is this right?
-            return out[:, :, 0:1]
-        else:
-            # For non-ODE case, keep original behavior
-            if criterion is not None:
-                # For targets, we need to extract the relevant variable we're predicting
-                if len(target.shape) == 4:  # [batch, nodes, time, features]
-                    target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                    loss = criterion(out, target_var)
-                else:
-                    loss = criterion(out, target)
+            # For evaluation metrics compatibility, return a 2D tensor [batch, nodes]
+            # The metrics function expects 4D input, and engine.py will add two dimensions with unsqueeze operations
+            if self.use_odeint:
+                # Return the first timestep prediction as a flat tensor [batch, nodes]
+                # This will become [batch, 1, nodes, 1] after engine.py's transforms
+                eval_out = out[:, :, 0]  # [batch, nodes] - no extra dimension
+                return eval_out, loss
+            else:
                 return out, loss
-            
-            return out
+        
+        # If no criterion, return appropriate format for inference
+        if self.use_odeint:
+            # Return just the first timestep as a flat tensor [batch, nodes]
+            return out[:, :, 0]
+        
+        return out
 
 if __name__ == '__main__':
     model = graph()
