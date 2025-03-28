@@ -316,6 +316,7 @@ class graph(torch.nn.Module):
             if self.use_odeint:
                 # Return the first timestep prediction as a flat tensor [batch, nodes]
                 # This will become [batch, 1, nodes, 1] after engine.py's transforms
+                # TODO: get to return all timesteps (will have to update evaluation metrics in engine.py)
                 eval_out = out[:, :, 0]  # [batch, nodes] - no extra dimension
                 return eval_out, loss
             else:
@@ -324,6 +325,7 @@ class graph(torch.nn.Module):
         # If no criterion, return appropriate format for inference
         if self.use_odeint:
             # Return just the first timestep as a flat tensor [batch, nodes]
+            # TODO: get to return all timesteps (will have to update evaluation metrics in engine.py)
             return out[:, :, 0]
         
         return out

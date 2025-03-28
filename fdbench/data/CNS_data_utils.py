@@ -256,6 +256,8 @@ class DatasetSingle(Dataset):
         return self.train_mean, self.train_std
     
     def __getitem__(self, idx):
+        # if use_odeint, return 5->5 task, else return 1->1 task
+        # TODO: change to 1->5 task for odeint?
         if self.use_odeint:
             rand_idx = random.randint(5,int(self.data.shape[-2])-5)
             return self.data[idx,...,rand_idx-5:rand_idx,:], self.data[idx,...,rand_idx:rand_idx+5,:], self.grid
