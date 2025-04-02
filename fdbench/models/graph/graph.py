@@ -153,8 +153,8 @@ class graph(torch.nn.Module):
             self.forecast_horizon = 5
             self.time_window = 5
 
-        if args.use_odeint: # if using neural ODE, default 5->5 prediction task
-            print("using neural ODE (default 5->5 prediction task)")
+        if args.use_odeint or args.graph_baseline: # if using neural ODE, default 5->5 prediction task
+            print("using neural ODE / graph baseline [conv] (default 5->5 prediction task)")
             self.forecast_horizon = 5
             self.time_window = 5
         else:
@@ -190,7 +190,9 @@ class graph(torch.nn.Module):
         )
 
         self.use_odeint = args.use_odeint
+        self.graph_baseline = args.graph_baseline
         print("use_odeint (graph.py): ", self.use_odeint)
+        print("graph_baseline (graph.py): ", self.graph_baseline)
         if self.use_odeint:
             self.decoding_mlp = nn.Sequential(nn.Linear(self.hidden_features, self.hidden_features),
                                               Swish(),
@@ -204,25 +206,40 @@ class graph(torch.nn.Module):
                                                 Swish()
                                                 )
 
+        elif self.graph_baseline:
+            # convnet for 5->5 prediction task
+            # TODO: verify shapes...
+            self.output_mlp = nn.Sequential(
+                nn.Conv1d(1, 8, kernel_size=1, stride=1),
+                Swish(),
+                nn.Conv1d(8, 4, kernel_size=1, stride=1)
+            )
         else:
-            # Decoder CNN, maps to different outputs (temporal bundling)
+            # Decoder CNN, maps to different outputs (temporal bundling or next step)
             if(self.time_window==20):
                 self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 15, stride=4),
                                                 Swish(),
                                                 nn.Conv1d(8, 1, 10, stride=1)
                                                 )
-            if self.time_window == 1:
+            elif self.time_window == 1:
                 self.output_mlp = nn.Sequential(
                     nn.Conv1d(1, 8, kernel_size=1, stride=1),  # 使用 kernel_size=1 保持输入大小
                     Swish(),
                     nn.Conv1d(8, 1, kernel_size=1, stride=1)  # 输出保持单通道
                 )
-            if (self.time_window == 25):
+            elif self.time_window == 5:
+                # TODO: are these shapes correct?
+                self.output_mlp = nn.Sequential(
+                    nn.Conv1d(4, 8, kernel_size=1, stride=1),
+                    Swish(),
+                    nn.Conv1d(8, 4, kernel_size=1, stride=1)
+                )
+            elif (self.time_window == 25):
                 self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 16, stride=3),
                                                 Swish(),
                                                 nn.Conv1d(8, 1, 14, stride=1)
                                                 )
-            if(self.time_window==50):
+            elif(self.time_window==50):
                 self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, 12, stride=2),
                                                 Swish(),
                                                 nn.Conv1d(8, 1, 10, stride=1)
@@ -267,6 +284,8 @@ class graph(torch.nn.Module):
         h = self.embedding_mlp(node_input)
         for i in range(self.hidden_layer):
             h = self.gnn_layers[i](h, u, pos, edge_index, batch)
+        
+        # h shape: [batch_size * n_nodes, hidden_features]
 
         if self.use_odeint:
             def ode_func(t, y):
@@ -282,11 +301,41 @@ class graph(torch.nn.Module):
             # Decode the outputs
             out = self.decoding_mlp(pred_z).squeeze(-1)
             
-        else:
+        elif self.graph_baseline:
             # Decoder (formula 10 in the paper)
             dt = (torch.ones(1, self.time_window)).to(device)
             dt = torch.cumsum(dt, dim=1)
+            # dt shape: [1, time_window]
+            # h shape: [batch_size * n_nodes, hidden_features]
+            if self.first_iter:
+                print("h shape: ", h.shape)
+                print("h[:, None] shape: ", h[:, None].shape)
+            # h[:, None] shape: [batch_size * n_nodes, 1, hidden_features]
             diff = self.output_mlp(h[:, None]).squeeze(1)
+            if self.first_iter:
+                print("diff shape: ", diff.shape)
+            # diff shape: [batch_size * n_nodes, 1] ?
+            # want all channels...
+            # u shape: [batch_size * n_nodes, channels*time_steps] ?
+            if self.first_iter:
+                print("u shape: ", u.shape)
+                print("u[:, -self.in_chans:] shape: ", u[:, -self.in_chans:].shape)
+                print("dt * diff shape: ", (dt * diff).shape)
+            # TODO: is u[:, -self.in_chans:] correct?
+            
+            out = u[:, -self.in_chans:].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
+            if self.first_iter:
+                # out shape: [batch_size * n_nodes, time_window, channels] ?
+                print("out shape: ", out.shape)
+            
+        else:
+            # TODO: get this running on 5->5 task
+            # Decoder (formula 10 in the paper)
+            dt = (torch.ones(1, self.time_window)).to(device)
+            dt = torch.cumsum(dt, dim=1)
+            # dt shape: [1, time_window]
+            diff = self.output_mlp(h[:, None]).squeeze(1)
+            # diff shape: [batch_size * n_nodes, 1]
             out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
 
         # Reshape output initially to [batch_size, n_nodes, time_steps]

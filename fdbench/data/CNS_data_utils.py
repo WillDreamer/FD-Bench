@@ -37,7 +37,9 @@ class DatasetSingle(Dataset):
         initial_step=args.initial_step
 
         self.use_odeint = args.use_odeint
+        self.graph_baseline = args.graph_baseline
         print("use_odeint (in data utils):", self.use_odeint)
+        print("graph_baseline (in data utils):", self.graph_baseline)
 
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
         if filename[-2:] != 'h5':
@@ -258,7 +260,7 @@ class DatasetSingle(Dataset):
     def __getitem__(self, idx):
         # if use_odeint, return 5->5 task, else return 1->1 task
         # TODO: change to 1->5 task for odeint?
-        if self.use_odeint:
+        if self.use_odeint or self.graph_baseline:
             rand_idx = random.randint(5,int(self.data.shape[-2])-5)
             return self.data[idx,...,rand_idx-5:rand_idx,:], self.data[idx,...,rand_idx:rand_idx+5,:], self.grid
         else:

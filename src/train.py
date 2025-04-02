@@ -79,8 +79,9 @@ def main(args):
     val_data = data_module(if_valid=True,args = args,normalizer=normalizer)
 
     print("use_odeint (train.py): ", args.use_odeint)
+    print("graph_baseline (train.py): ", args.graph_baseline)
 
-    if args.use_odeint:
+    if args.use_odeint or args.graph_baseline:
         data_loader_train = get_graph_dataloader(train_data, batch_size=args.batch_size, num_workers=args.num_workers)
         data_loader_test = get_graph_dataloader(test_data, batch_size=args.batch_size//2, num_workers=args.num_workers)
         data_loader_val = get_graph_dataloader(val_data, batch_size=args.batch_size//2, num_workers=args.num_workers)  
@@ -201,7 +202,8 @@ def main(args):
             optimizer, device, epoch, loss_scaler,
             args.clip_grad, model_ema, mixup_fn,
             use_amp = args.use_amp,
-            set_training_mode=args.finetune == '', use_odeint=args.use_odeint  # keep in eval mode during finetuning
+            set_training_mode=args.finetune == '', use_odeint=args.use_odeint,  # keep in eval mode during finetuning
+            graph_baseline=args.graph_baseline
         )
 
         lr_scheduler.step(epoch)

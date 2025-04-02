@@ -21,7 +21,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, loss_scaler, max_norm: float = 0,
                     model_ema: Optional[ModelEma] = None, mixup_fn: Optional[Mixup] = None,
-                    use_amp=True, set_training_mode=True, use_odeint=False):
+                    use_amp=True, set_training_mode=True, use_odeint=False, graph_baseline=False):
     model.train(set_training_mode)
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -31,7 +31,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
 
     #print("use_odeint (train_one_epoch): ", use_odeint)
 
-    if use_odeint:
+    if use_odeint or graph_baseline:
         for d in metric_logger.log_every(data_loader, print_freq, header):
             samples = d.x
             targets = d.y
@@ -153,7 +153,7 @@ def evaluate(data_loader, model, device, use_amp, args):
     # switch to evaluation mode
     model.eval()
 
-    if args.use_odeint:  # For graph model with odeint
+    if args.use_odeint or args.graph_baseline:  # For graph model with odeint
         for data in metric_logger.log_every(data_loader, 10, header):
             # Use the PyG data object directly
             if use_amp:  # Use mixed precision
@@ -241,6 +241,13 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         # calculate the distance matrix
         points = grid[:, 0, :].numpy()
         dist_matrix = distance_matrix(points, points)
+        # compare with grid
+        # eg coord of number 2 and number 3, check if dist_matrix[2, 3] equals distance shown in grid[2,3]
+
+        # TODO: look into downsampling (see graph-pde RandomMultiMeshGenerator sample method)
+        # make sure that we drop indices
+
+        # 
 
         # find the nearest neighbors, keep start and end nodes
         start_nodes = []
@@ -262,6 +269,17 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         edge_attr = torch.from_numpy(edge_attr)
 
         data_list.append(Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr, grid=grid))
+
+        # TODO: apply virtual node transform
+        """
+        data = Data(x=x, edge_index=edge_index)
+
+
+        # Apply the VirtualNode transform
+        transform = VirtualNode()
+        data = transform(data)
+        """
+        
 
     dataloader = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return dataloader
