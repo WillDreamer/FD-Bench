@@ -208,11 +208,10 @@ class graph(torch.nn.Module):
 
         elif self.graph_baseline:
             # convnet for 5->5 prediction task
-            # TODO: verify shapes...
             self.output_mlp = nn.Sequential(
-                nn.Conv1d(1, 8, kernel_size=3, stride=1, padding=1),
+                nn.Conv1d(1, 8, kernel_size=1, stride=1),
                 Swish(),
-                nn.Conv1d(8, self.time_window, kernel_size=3, stride=1, padding=1)
+                nn.Conv1d(8, 1, kernel_size=1, stride=1)
             )
         else:
             # Decoder CNN, maps to different outputs (temporal bundling or next step)
@@ -311,9 +310,13 @@ class graph(torch.nn.Module):
                 print("h shape: ", h.shape)  # [batch*n_nodes, hidden_features]
                 print("h[:, None] shape: ", h[:, None].shape)  # [batch*n_nodes, 1, hidden_features]
             
-            # Run through CNN to get temporal evolution factors
-            # [batch*n_nodes, 1, hidden_features] -> [batch*n_nodes, time_window]
+            # Run h through CNN to get temporal evolution factors
+            # [batch*n_nodes, 1, hidden_features] -> [batch*n_nodes, 1, 1]
             diff = self.output_mlp(h[:, None]).squeeze(1)
+            
+            # Create a single diff value per node that will be applied to all channels
+            # Repeat to match time_window dimension
+            diff = diff.repeat(1, self.time_window)
             
             if self.first_iter:
                 print("diff shape: ", diff.shape)  # Should be [batch*n_nodes, time_window]
