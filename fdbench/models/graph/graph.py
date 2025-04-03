@@ -207,11 +207,12 @@ class graph(torch.nn.Module):
                                                 )
 
         elif self.graph_baseline:
-            # convnet for 5->5 prediction task
+            # Input: [N, 1, hidden_features]
+            # Output: [N, time_window, 1] -> Squeezed to [N, time_window]
             self.output_mlp = nn.Sequential(
-                nn.Conv1d(1, 8, kernel_size=1, stride=1),
+                nn.Conv1d(1, 8, kernel_size=1, stride=1), # Output: [N, 8, hidden_features]
                 Swish(),
-                nn.Conv1d(8, 1, kernel_size=1, stride=1)
+                nn.Conv1d(8, self.time_window, kernel_size=self.hidden_features) # Output: [N, time_window, 1]
             )
         else:
             # Decoder CNN, maps to different outputs (temporal bundling or next step)
@@ -308,18 +309,16 @@ class graph(torch.nn.Module):
             
             if self.first_iter:
                 print("h shape: ", h.shape)  # [batch*n_nodes, hidden_features]
-                print("h[:, None] shape: ", h[:, None].shape)  # [batch*n_nodes, 1, hidden_features]
+                print("h[:, None] shape: ", h[:, None].shape) # [batch*n_nodes, 1, hidden_features]
             
-            # Run h through CNN to get temporal evolution factors
-            # [batch*n_nodes, 1, hidden_features] -> [batch*n_nodes, 1, 1]
-            diff = self.output_mlp(h[:, None]).squeeze(1)
             
-            # Create a single diff value per node that will be applied to all channels
-            # Repeat to match time_window dimension
-            diff = diff.repeat(1, self.time_window)
+            # h: [N, hidden_features] -> h[:, None]: [N, 1, hidden_features]
+            # output_mlp([N, 1, hidden_features]) -> [N, time_window, 1]
+            # squeeze(-1) -> diff: [N, time_window]
+            diff = self.output_mlp(h[:, None]).squeeze(-1)
             
             if self.first_iter:
-                print("diff shape: ", diff.shape)  # Should be [batch*n_nodes, time_window]
+                print("diff shape: ", diff.shape) # Should be [batch*n_nodes, time_window]
                 print("u shape: ", u.shape)
                 print("u[:, -self.in_chans:] shape: ", u[:, -self.in_chans:].shape)
             
@@ -336,14 +335,16 @@ class graph(torch.nn.Module):
                 # Repeat across time dimension
                 u_channel_repeated = u_channel.repeat(self.time_window, 1).transpose(0, 1)  # [batch*n_nodes, time_window]
                 
-                # Add temporal evolution
+                # Add temporal evolution: dt * diff -> [1, time_window] * [batch*n_nodes, time_window] -> broadcasts correctly
                 out_channel = u_channel_repeated + dt * diff
                 
                 # Add to list
                 out_list.append(out_channel)
             
             # Stack all channels
-            out = torch.stack(out_list, dim=-1)  # [batch*n_nodes, time_window, in_chans]
+            # Each element in out_list is [batch*n_nodes, time_window]
+            # Stack along a new dimension -> [batch*n_nodes, time_window, in_chans]
+            out = torch.stack(out_list, dim=-1) 
             
             if self.first_iter:
                 print("out shape: ", out.shape)  # Should be [batch*n_nodes, time_window, in_chans]
