@@ -83,12 +83,12 @@ FD-Bench/
 
 ## 🧑‍💻 Usage
 
-### 🧪 Training
+### 🧪 Training the model
 
 1. You can start training by providing the following arguments in `src/train.sh`:
-- `SPATIAL_REP`: Spatial representation (choices include *graph*, *fourier*, *self-atten*).
-- `TEMPORAL_REP`: Temporal representation (choices include *next_step*, *n-ode*).
-- `TARGET`: Target variable or field.
+- `SPATIAL_REP`: Spatial representation (choices include *graph*, *fourier*, *self-atten* and so on).
+- `TEMPORAL_REP`: Temporal representation (choices include *next_step*, *n-ode* and so on).
+- `TARGET`: Prediction target of the model (choices include *physical variable*, *random noise* *flow field*.
 
 2. Model configurations are stored in the `config/` directory. You can modify `TARGET/SPATIAL_REP+TEMPORAL_REP.yaml` to adjust model hyperparameters, architecture, or training settings.
 
