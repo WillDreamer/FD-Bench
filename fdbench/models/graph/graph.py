@@ -390,7 +390,11 @@ class graph(torch.nn.Module):
                 eval_out = out[:, :, 0]  # [batch, nodes] - no extra dimension
                 return eval_out, loss
             else:
-                return out, loss
+                # Reshape 'out' ([batch, nodes, time*channels]) back to [batch, nodes, time, channels]
+                out_reshaped = out.reshape(batch_size, n_nodes, self.time_window, self.in_chans)
+                # Extract the first timestep and the target prediction variable
+                eval_out = out_reshaped[:, :, 0, self.pred_var if self.pred_var >= 0 else out_reshaped.shape[3] + self.pred_var] # Shape: [batch, nodes]
+                return eval_out, loss
         
         # If no criterion, return appropriate format for inference
         if self.use_odeint:
