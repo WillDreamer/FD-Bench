@@ -56,13 +56,13 @@ class Block(nn.Module):
         if args.mixing_type == "afno":
             self.filter = AFNO2D(hidden_size=args.hidden_size, num_blocks=args.fno_blocks, sparsity_threshold=0.01, hard_thresholding_fraction=1, hidden_size_factor=1)
         elif args.mixing_type == "bfno":
-            self.filter = BFNO2D(hidden_size=768, num_blocks=8, hard_thresholding_fraction=1)
+            self.filter = BFNO2D(hidden_size=args.hidden_size, num_blocks=args.num_attention_heads, hard_thresholding_fraction=1)
         elif args.mixing_type == "sa":
-            self.filter = SelfAttention(dim=768, h=14, w=8)
+            self.filter = SelfAttention(dim=args.hidden_size, heads=args.num_attention_heads)
         if args.mixing_type == "gfn":
-            self.filter = GlobalFilter(dim=768, h=14, w=8)
+            self.filter = GlobalFilter(dim=args.hidden_size, h=14, w=8)
         elif args.mixing_type == "ls":
-            self.filter = AttentionLS(dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., rpe=False, nglo=1, dp_rank=2, w=2)
+            self.filter = AttentionLS(dim=args.hidden_size, num_heads=args.num_attention_heads, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., rpe=False, nglo=1, dp_rank=2, w=2)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)

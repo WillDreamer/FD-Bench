@@ -1,11 +1,13 @@
 import torch
 import torch.nn as nn
+from einops import rearrange, repeat
+from einops.layers.torch import Rearrange
 
 class SelfAttention(nn.Module):
-    def __init__(self, dim, h=14, w=8):
+    def __init__(self, dim, heads=8):
         super().__init__()
         dropout = 0.0
-        heads = 8
+        heads = heads
         dim_head = dim // heads
         inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)

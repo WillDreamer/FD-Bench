@@ -110,7 +110,7 @@ class graph(torch.nn.Module):
         # 1D decoder CNN is so far designed time_window = [20,25,50]
         self.hidden_features = args.hidden_features
         self.hidden_layer = args.hidden_layer
-        self.pred_var = args.pred_var
+        self.pred_var = pred_var
         self.eq_variables = eq_variables
         self.in_chans = args.in_chans
         
@@ -209,11 +209,18 @@ class graph(torch.nn.Module):
         return out[:,:self.forecast_horizon]
 
 if __name__ == '__main__':
-    model = graph()
+    args = {
+        'hidden_features': 64,
+        'hidden_layer': 6,
+        'in_chans': 4,
+        'tem_mod': "next_step"
+    }
+    from argparse import Namespace
+    args = Namespace(**args)
+    model = graph(args=args)
     
     from torch_geometric.data import Data
     num_nodes = 100
-
     edges = []
     for node in range(num_nodes):
         num_edges = np.random.randint(0, 4) 
@@ -221,10 +228,9 @@ if __name__ == '__main__':
         for conn in connections:
             edges.append((node, conn))
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-
     node_features = torch.randn(num_nodes, 1, 5) 
 
     graphs = Data(x=node_features, edge_index=edge_index)
     print(graphs.x.shape)
-    out = model(graphs)
+    out = model(graphs,graphs.x,None,None)
     print(out.shape)

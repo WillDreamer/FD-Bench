@@ -46,7 +46,6 @@ class DatasetSingle(Dataset):
                 if 'tensor' not in keys:
                     _data = np.array(f['density'], dtype=np.float32)  # batch, time, x,...
                     idx_cfd = _data.shape
-                    tprint('len of data shape:',len(idx_cfd)+1)
                     if len(idx_cfd)==3:  # 1D
                         self.data = np.zeros([idx_cfd[0]//reduced_batch,
                                               idx_cfd[2]//reduced_resolution,
