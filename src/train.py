@@ -16,17 +16,13 @@ from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import ProjectConfiguration, set_seed
 
-from fdbench.utils import utils
+from fdbench.utils.utils import *
 from fdbench.utils.metrics import metric_func
 import warnings
 warnings.filterwarnings('ignore')
 
 logger = get_logger(__name__)
 
-def tprint(*args, **kwargs):
-    """print with time"""
-    time_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f'[{time_str}]', *args, **kwargs)
 
 def create_logger(logging_dir):
     """
@@ -141,13 +137,20 @@ def main(args):
     normalizer = train_data.__normalizer__
     # test_data = data_module(if_test=True,args = args,normalizer=normalizer)
     val_data = data_module(if_valid=True,args = args,normalizer=normalizer)
-    
-    data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
-                        num_workers=args.num_workers)
-    # data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size//2,
-    #                     num_workers=args.num_workers)
-    data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size//2,
-                        num_workers=args.num_workers)
+
+    if not args.spa_mod == 'graph':
+        data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
+                            num_workers=args.num_workers)
+        # data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size,
+        #                     num_workers=args.num_workers)
+        data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
+                            num_workers=args.num_workers)
+    else:
+        num_nodes = 1024
+        rand_idx = torch.randperm(args.input_size ** 2)[:num_nodes]  # Random select N nodes
+        from fdbench.data.graph_data import get_graph_dataloader
+        data_loader_train = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size,k=args.neighbor)
+        data_loader_val = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size,k=args.neighbor)
     #<<<<<< =================================================================
 
     if args.opt == 'adamw':
@@ -166,7 +169,7 @@ def main(args):
     elif args.scheduler == 'cyc':
         scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=args.lr//5, max_lr=args.lr,
                                               mode = 'triangular2', gamma = 0.95,
-                                              step_size_up=2000, step_size_down=1000,cycle_momentum=False)  
+                                              step_size_up=args.step_size_up, step_size_down=args.step_size_down,cycle_momentum=False)  
 
     criterion = torch.nn.MSELoss()
 
@@ -208,12 +211,24 @@ def main(args):
     )
     ##### Start Training
     for epoch in range(args.start_epoch, args.epochs):
-        model.train()
         
-        for samples, targets, grid in data_loader_train:
-            samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
-            targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
+        #### =========1. Data Loading=========
+        for batch in data_loader_train:
+            if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                data = batch.to(device)
+                samples = data
+                targets = data.y
+                grid = getattr(data, 'grid', None)
+            else:
+                samples, targets, grid = batch
+                if len(samples.shape) == 4:
+                    samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                    targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                grid = grid.to(device) if grid is not None else None
 
+            model.train()
+
+            #### =========2. Model Training=========
             with accelerator.accumulate(model):
                 outputs, loss = model(samples,targets,grid,criterion)
                 optimizer.zero_grad()
@@ -228,28 +243,25 @@ def main(args):
                 if accelerator.sync_gradients:
                     update_ema(ema, model) # change ema function
 
-             ### enter
             if accelerator.sync_gradients:
                 progress_bar.update(1)
                 global_step += 1   
 
-            #### Save_ckpt
+            #### =========3. CKPT Saving=========
             if global_step % args.checkpointing_steps == 0 and global_step > (max_train_steps//2):
                 if accelerator.is_main_process:
-
                     checkpoint = {
                         "model": model.state_dict(),
                         "ema": ema.state_dict(),
                         "opt": optimizer.state_dict(),
                         "args": args,
-                        "steps": global_step,
-                    }
+                        "steps": global_step,}
                    
                     checkpoint_path = f"{checkpoint_dir}/{global_step:07d}.pt"
                     torch.save(checkpoint, checkpoint_path)
                     logger.info(f"Saved checkpoint to {checkpoint_path}")
             
-            #### Evaluation
+            #### =========4. Model Testing=========
             if global_step == 1 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
                 
@@ -259,9 +271,18 @@ def main(args):
                 _err_csv_avg = 0
                 _err_F_avg = 0
                 with torch.no_grad():
-                    for input_test, target_test, grid in data_loader_val:
-                        input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-                        target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                    for batch in data_loader_val:
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            data = batch.to(device)
+                            input_test = data
+                            target_test = data.y
+                            grid = getattr(data, 'grid', None)
+                        else:
+                            input_test, target_test, grid = batch
+                            input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            grid = grid.to(device) if grid is not None else None
+
                         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
                             if args.sample_method == "ddpm":
                                 samp_algo = model.ddpm_sample
@@ -270,10 +291,16 @@ def main(args):
                             outputs, loss = samp_algo(input_test,target_test,grid,criterion)
                         else:
                             outputs, loss = model(input_test,target_test,grid,criterion)
-
+                        
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            target_test = target_test.unsqueeze(-1).unsqueeze(-1)
+                            outputs = outputs.unsqueeze(-1).unsqueeze(-1)
+                            outputs, target_test, mask = remove_virtual_nodes(outputs, target_test, batch.ptr)
+                        
                         Lx, Ly, Lz = 1., 1., 1.
                         _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
                         = metric_func(outputs, target_test, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+                        
                         _err_RMSE_avg += _err_RMSE.item()
                         _err_nRMSE_avg += _err_nRMSE.item()
                         _err_max_avg += _err_Max.item()
@@ -295,6 +322,7 @@ def main(args):
             }
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)
+        
         scheduler.step()
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
@@ -308,9 +336,12 @@ if __name__ == '__main__':
     parser.add_argument("--remark", type=str, default=' ', help="Training remark")
     default_args = parser.parse_args()
     
-    args = utils.get_config(config_path=default_args.config_file)
+    args = get_config(config_path=default_args.config_file)
     args = Namespace(**vars(default_args), **vars(args))
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    ## ComplexData <-> DDP
+    if args.spa_mod == 'fourier' or args.spa_mod == 'frequency':
+        args.mixed_precision = "no"
     main(args) 
     

@@ -215,13 +215,12 @@ class conv(nn.Module):
         super(conv, self).__init__()
 
         self.N_layers = int(args.N_layers)         # Number od (D) & (U) Blocks
-        channel_multiplier = args.channel_multiplier
-        self.lift_dim = channel_multiplier//2 # Input is lifted to the half of channel_multiplier dimension
+        self.channel_multiplier = args.channel_multiplier
+        self.lift_dim = self.channel_multiplier//2 # Input is lifted to the half of channel_multiplier dimension
         self.in_dim   = args.in_dim
         self.out_dim  = args.out_dim
         size = args.size
         N_res = args.N_res
-        self.channel_multiplier = channel_multiplier  # The growth of the channels
 
         ######## Num of channels/features - evolution ########
 

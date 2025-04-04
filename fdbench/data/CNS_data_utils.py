@@ -35,8 +35,7 @@ class DatasetSingle(Dataset):
         reduced_batch=args.reduced_batch
         saved_folder = args.data_path
         initial_step=args.initial_step
-
-
+        
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
         if filename[-2:] != 'h5':
             with h5py.File(root_path, 'r') as f:
@@ -238,7 +237,10 @@ class DatasetSingle(Dataset):
         self.data = (self.data - self.train_mean) / self.train_std
 
         # Time steps used as initial conditions
-        self.initial_step = initial_step
+        if args.tem_mod == 'next_step':
+            self.window_size = 1
+        else:
+            self.window_size = 4
 
         self.data = self.data if torch.is_tensor(self.data) else torch.tensor(self.data)
 
@@ -251,12 +253,26 @@ class DatasetSingle(Dataset):
         mean and value
         """
         return self.train_mean, self.train_std
-    
+
     def __getitem__(self, idx):
+        max_start = self.data.shape[-2] - 2 * self.window_size
+        if max_start <= 0:
+            raise ValueError("Data length is too short for the given window size.")
         
-        rand_idx = random.randint(0,int(self.data.shape[-2])-2)
-        return self.data[idx,...,rand_idx,:], self.data[idx,...,rand_idx+1,:], self.grid
-        # return self.data[idx,...,:self.initial_step,:], self.data[idx], self.grid
+        rand_idx = random.randint(0, max_start)
+        input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
+        target_seq = self.data[idx, ..., rand_idx + self.window_size : rand_idx + 2 * self.window_size, :]
+        if self.window_size == 1:
+            input_seq = input_seq.squeeze(-2)
+            target_seq = target_seq.squeeze(-2)
+
+        return input_seq, target_seq, self.grid
+    
+    # def __getitem__(self, idx):
+        
+    #     rand_idx = random.randint(0,int(self.data.shape[-2])-2)
+    #     return self.data[idx,...,rand_idx,:], self.data[idx,...,rand_idx+1,:], self.grid
+    #     # return self.data[idx,...,:self.initial_step,:], self.data[idx], self.grid
 
 
 class DatasetMult(Dataset):
