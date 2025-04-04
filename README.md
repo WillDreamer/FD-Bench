@@ -106,7 +106,13 @@ The default setting starts with distributed training with multiple GPUs. Note th
 
 - Pretrained checkpoints are stored in the `ckpt/` directory. Use these checkpoints to resume training or evaluate pre-trained models.
 - Training logs and outputs are saved in the `runs/` directory.
-- Wandb logs are saved in the `wandb/` directory (optional).
+- Wandb logs are saved in the `wandb/` directory (optional). You need to claim the `WANDB_ENTITY`, `WANDB_PROJECT` and `WANDB_API_KEY` in the `train.sh`.
+```bash
+export WANDB_ENTITY="xxx"
+export WANDB_PROJECT="xxx"
+export WANDB_NAME="xxx"
+export WANDB_API_KEY="xxx"
+```
 
 ---
 
