@@ -160,19 +160,23 @@ def metric_func(pred, target, if_mean=True, Lx=1., Ly=1., Lz=1., iLow=4, iHigh=1
     RMSE, normalized RMSE, max error, RMSE at the boundaries, conserved variables, RMSE in Fourier space, temporal sensitivity
     """
     pred, target = pred.to(device), target.to(device)
-    # (batch, nx^i..., timesteps, nc)
+    # (batch, nc, nx^i..., timesteps)
     idxs = target.size()
     if len(idxs) == 4:
-        pred = pred.permute(0, 3, 1, 2)
-        target = target.permute(0, 3, 1, 2)
+        # B C H W
+        idxs = target.size()
+        nb, nc, nt = idxs[0], idxs[1], 1
     if len(idxs) == 5:
-        pred = pred.permute(0, 4, 1, 2, 3)
-        target = target.permute(0, 4, 1, 2, 3)
+        pred = pred.permute(0, 2, 3, 4, 1)
+        target = target.permute(0, 2, 3, 4, 1)
+        idxs = target.size()
+        nb, nc, nt = idxs[0], idxs[1], idxs[-1]
     elif len(idxs) == 6:
         pred = pred.permute(0, 5, 1, 2, 3, 4)
         target = target.permute(0, 5, 1, 2, 3, 4)
-    idxs = target.size()
-    nb, nc, nt = idxs[0], idxs[1], idxs[-1]
+        idxs = target.size()
+        nb, nc, nt = idxs[0], idxs[1], idxs[-1]
+    
 
     # RMSE
     err_mean = torch.sqrt(torch.mean((pred.view([nb, nc, -1, nt]) - target.view([nb, nc, -1, nt])) ** 2, dim=2))
@@ -222,12 +226,12 @@ def metric_func(pred, target, if_mean=True, Lx=1., Ly=1., Lz=1., iLow=4, iHigh=1
         err_BD = err_BD / (2 * nx * ny + 2 * ny * nz + 2 * nz * nx)
         err_BD = torch.mean(torch.sqrt(err_BD), dim=0)
 
-    if len(idxs) == 4:  # 1D
-        nx = idxs[2]
-        pred_F = torch.fft.rfft(pred, dim=2)
-        target_F = torch.fft.rfft(target, dim=2)
-        _err_F = torch.sqrt(torch.mean(torch.abs(pred_F - target_F) ** 2, axis=0)) / nx * Lx
-    if len(idxs) == 5:  # 2D
+    # if len(idxs) == 4:
+    #     nx = idxs[2]
+    #     pred_F = torch.fft.rfft(pred, dim=2)
+    #     target_F = torch.fft.rfft(target, dim=2)
+    #     _err_F = torch.sqrt(torch.mean(torch.abs(pred_F - target_F) ** 2, axis=0)) / nx * Lx
+    if len(idxs) == 4:  # 2D
         pred_F = torch.fft.fftn(pred, dim=[2, 3])
         target_F = torch.fft.fftn(target, dim=[2, 3])
         nx, ny = idxs[2:4]

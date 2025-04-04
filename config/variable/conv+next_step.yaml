@@ -58,6 +58,8 @@ optimizer:
 
 lr_scheduler:
   scheduler: 'cyc'
+  step_size_up: 1000
+  step_size_down: 1000
   lr: 1.0e-3
   lr_noise: null
   lr_noise_pct: 0.67

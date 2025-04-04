@@ -50,7 +50,6 @@ data:
 
 optimizer:
   opt: 'adamw'
-  scheduler: 'CosineAnnealing'
   opt_eps: 1.0e-8
   opt_betas: null
   clip_grad: 1
@@ -63,7 +62,9 @@ optimizer:
 
 
 lr_scheduler:
-  sched: 'cosine'
+  scheduler: 'CosineAnnealing'
+  step_size_up: 1000
+  step_size_down: 1000
   lr: 1.0e-3
   lr_noise: null
   lr_noise_pct: 0.67

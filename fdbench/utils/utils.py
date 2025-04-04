@@ -21,6 +21,19 @@ def tprint(*args, **kwargs):
     time_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print(f'[{time_str}]', *args, **kwargs)
 
+def remove_virtual_nodes(output, batch_y, batch_ptr):
+
+    device = output.device
+    num_nodes = output.size(0)
+
+    virtual_node_indices = batch_ptr[1:] - 1  # 每个图的最后一个节点
+    mask = torch.ones(num_nodes, dtype=torch.bool, device=device)
+    mask[virtual_node_indices] = False  # 去掉虚拟节点
+
+    output_clean = output[mask]
+    y_clean = batch_y[mask]
+    return output_clean, y_clean, mask
+
 def load_config(config_path):
     """加载YAML配置文件"""
     with open(config_path, 'r') as f:
