@@ -1,12 +1,12 @@
 # A Fair Benchmark for AI-powered Fluid Dynamics Modeling (FD-Bench)
 
-## 🧭 Overview
+## 🧭  Overview
 
 FD-Bench is the most fair and comprehensive framework for benchmarking and training fluid dynamics models, tracing hundreds of papers and decomposing all of the methods into modules. It includes prebuilt datasets, model architectures, and utilities designed for fluid dynamics-related tasks. The repository is structured to support ease of use and scalability for both researchers and practitioners.
 
 ---
 
-## 💻 Requirements
+## 💻  Requirements
 
 Dependencies are listed in **requirements.txt**. You can install them using the following command:
 
@@ -19,7 +19,7 @@ All our experiments are based on 2 $\times$ A100 (80G).
 
 ---
 
-## 🔧 Installation
+## 🔧  Installation
 
 To install FD-Bench in editable mode:
 
@@ -31,14 +31,14 @@ pip install -e .
 
 ---
 
-## 📊 Data Preparation
+## 📊  Data Preparation
 
 Our benchmark is validated on various types of PDE from multiple data sources.
 - For `CNS` (compressible N-S Equation) data, we follow the setting of [**PDEBench**](https://github.com/pdebench/PDEBench).
 
 ---
 
-## 📖 Directory Structure
+## 📖  Directory Structure
 
 ```
 FD-Bench/
@@ -81,9 +81,9 @@ FD-Bench/
 
 ---
 
-## 🧑‍💻 Usage
+## 🧑‍💻  Usage
 
-### 🧪 Training the model
+### 🧪  Training the model
 
 1. You can start training by providing the following arguments in `src/train.sh`:
 - `SPATIAL_REP`: Spatial representation (choices include *graph*, *fourier*, *self-atten* and so on).
@@ -102,7 +102,7 @@ The default setting starts with distributed training with multiple GPUs. Note th
 
 ---
 
-### 🔝 Checkpoints and Logs
+### 🔝  Checkpoints and Logs
 
 - Pretrained checkpoints are stored in the `ckpt/` directory. Use these checkpoints to resume training or evaluate pre-trained models.
 - Training logs and outputs are saved in the `runs/` directory.
@@ -110,16 +110,16 @@ The default setting starts with distributed training with multiple GPUs. Note th
 
 ---
 
-## 🔥 Contributing
+## 🔥  Contributing
 
-### Extension
+### 🚀  Extension
 If you add your own model within this benchmark framework, you should:
 - Add a folder under `models` with the name **your_module**.
 - Create `module.py` under `FD-Bench/fdbench/models/your_module`
 - Output the `output` and `loss` within the *forward* function in your model class.
 
 
-### Collaboration
+### 🤝  Collaboration
 Feel free to open issues or submit pull requests for improvements and bug fixes. Contributions are welcome! Drop me a line at `whx@cs.ucla.edu'📮📮📮
 
 ---

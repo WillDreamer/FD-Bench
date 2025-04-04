@@ -232,11 +232,11 @@ def metric_func(pred, target, if_mean=True, Lx=1., Ly=1., Lz=1., iLow=4, iHigh=1
     #     target_F = torch.fft.rfft(target, dim=2)
     #     _err_F = torch.sqrt(torch.mean(torch.abs(pred_F - target_F) ** 2, axis=0)) / nx * Lx
     if len(idxs) == 4:  # 2D
-        pred_F = torch.fft.fftn(pred, dim=[2, 3])
-        target_F = torch.fft.fftn(target, dim=[2, 3])
+        pred_F = torch.fft.rfftn(pred, dim=[2, 3])
+        target_F = torch.fft.rfftn(target, dim=[2, 3])
         nx, ny = idxs[2:4]
         _err_F = torch.abs(pred_F - target_F) ** 2
-        err_F = torch.zeros([nb, nc, min(nx // 2, ny // 2), nt]).to(device)
+        err_F = torch.zeros([nb, nc, min(nx // 2, ny // 2)]).to(device)
         for i in range(nx // 2):
             for j in range(ny // 2):
                 it = mt.floor(mt.sqrt(i ** 2 + j ** 2))
@@ -260,6 +260,7 @@ def metric_func(pred, target, if_mean=True, Lx=1., Ly=1., Lz=1., iLow=4, iHigh=1
         _err_F = torch.sqrt(torch.mean(err_F, axis=0)) / (nx * ny * nz) * Lx * Ly * Lz
 
     err_F = torch.zeros([nc, 3, nt]).to(device)
+    print(err_F.shape, _err_F.shape,'+++')
     err_F[:,0] += torch.mean(_err_F[:,:iLow], dim=1)  # low freq
     err_F[:,1] += torch.mean(_err_F[:,iLow:iHigh], dim=1)  # middle freq
     err_F[:,2] += torch.mean(_err_F[:,iHigh:], dim=1)  # high freq
