@@ -149,8 +149,8 @@ def main(args):
         num_nodes = 1024
         rand_idx = torch.randperm(args.input_size ** 2)[:num_nodes]  # Random select N nodes
         from fdbench.data.graph_data import get_graph_dataloader
-        data_loader_train = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size,k=args.neighbor)
-        data_loader_val = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size,k=args.neighbor)
+        data_loader_train, normalizer_new = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=None, is_train=True, k=args.neighbor)
+        data_loader_val, _ = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
     #<<<<<< =================================================================
 
     if args.opt == 'adamw':
@@ -262,7 +262,7 @@ def main(args):
                     logger.info(f"Saved checkpoint to {checkpoint_path}")
             
             #### =========4. Model Testing=========
-            if global_step == 1 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
+            if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
                 
                 _err_RMSE_avg = 0

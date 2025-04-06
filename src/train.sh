@@ -10,7 +10,8 @@ TARGET="variable"
 CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 
 # REMARK="ViTL_Dim_768_Epoch_2k_Cyc_up_1k_down_1k_lr_1e-3"
-REMARK='CosineAnnealingWarmRestarts_k_10'
+REMARK='cyc_1k_up_2k_down_k_15_hidden_256_epo2k'
+# REMARK='cyc_epo2k'
 
 export WANDB_ENTITY="FD-Bench"
 export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"

@@ -5,7 +5,7 @@ paths:
 
 training:
   batch_size: 128
-  epochs: 1000
+  epochs: 2000
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -21,7 +21,7 @@ model:
   drop: 0.0
   drop_path: 0.1
   neighbor: 15
-  hidden_features: 128
+  hidden_features: 256
   hidden_layer: 6
   pred_var: -4
   checkpoint_activations: false
@@ -53,9 +53,9 @@ optimizer:
 
 
 lr_scheduler:
-  scheduler: 'CosineAnnealingWarmRestarts'
+  scheduler: 'cyc' #*'CosineAnnealingWarmRestarts','cyc'
   step_size_up: 1000
-  step_size_down: 1000
+  step_size_down: 2000
   lr: 1.0e-3
   lr_noise: null
   lr_noise_pct: 0.67
