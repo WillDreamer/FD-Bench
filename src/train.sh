@@ -2,16 +2,15 @@
 #!/bin/bash
 
 # SPATIAL_REP="self_atten"
-SPATIAL_REP="conv"
-# SPATIAL_REP="graph"
+# SPATIAL_REP="conv"
+SPATIAL_REP="graph"
 
 TEMPORAL_REP="next_step"
 TARGET="variable"
 CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 
 # REMARK="ViTL_Dim_768_Epoch_2k_Cyc_up_1k_down_1k_lr_1e-3"
-REMARK='test'
-# REMARK='CosineAnnealingWarmRestarts_k_30'
+REMARK='CosineAnnealingWarmRestarts_k_10'
 
 export WANDB_ENTITY="FD-Bench"
 export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"

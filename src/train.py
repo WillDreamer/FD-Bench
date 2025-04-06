@@ -293,25 +293,27 @@ def main(args):
                             outputs, loss = model(input_test,target_test,grid,criterion)
                         
                         if hasattr(batch, 'x') and hasattr(batch, 'y'):
-                            target_test = target_test.unsqueeze(-1).unsqueeze(-1)
-                            outputs = outputs.unsqueeze(-1).unsqueeze(-1)
-                            outputs, target_test, mask = remove_virtual_nodes(outputs, target_test, batch.ptr)
+                            batch_size = batch.num_graphs
+                        else:
+                            batch_size = input_test.shape[0]
+                        #     outputs = outputs.unsqueeze(-1).unsqueeze(-1)
+                        #     # outputs, target_test, mask = remove_virtual_nodes(outputs, target_test, batch.ptr)
                         
                         Lx, Ly, Lz = 1., 1., 1.
                         _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
-                        = metric_func(outputs, target_test, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
-                        
+                        = metric_func(outputs, target_test, batch_size, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+
                         _err_RMSE_avg += _err_RMSE.item()
                         _err_nRMSE_avg += _err_nRMSE.item()
                         _err_max_avg += _err_Max.item()
                         _err_csv_avg += _err_CSV.item()
-                        _err_F_avg += _err_F[0].item()
+                        _err_F_avg += _err_F.item()
                     _err_RMSE_avg /= len(data_loader_val)
                     _err_nRMSE_avg /= len(data_loader_val)
                     _err_max_avg /= len(data_loader_val)
                     _err_csv_avg /= len(data_loader_val)
                     _err_F_avg /= len(data_loader_val)
-                    logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg}, MAX-ERR:{_err_max_avg:.4f}, CSV:{_err_csv_avg:.4f}')
+                    logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, CSV:{_err_csv_avg:.4f}')
                     val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg,}
                     accelerator.log(val_log, step=global_step)
 

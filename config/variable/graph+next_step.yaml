@@ -20,7 +20,7 @@ model:
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
-  neighbor: 30
+  neighbor: 15
   hidden_features: 128
   hidden_layer: 6
   pred_var: -4
