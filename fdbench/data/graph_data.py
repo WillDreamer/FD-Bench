@@ -18,10 +18,22 @@ def compute_knn_graph(coords, k):
     
     return edge_index
 
-def get_graph_dataloader(dataset, rand_idx, batch_size, k=20, num_workers=1, shuffle=True):
+def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_new=None, is_train=True, k=20, num_workers=1, shuffle=True):
     data_list = []
     first_iter = True
-    transform = VirtualNode()
+    # transform = VirtualNode()
+    train_mean, train_std = normalizer
+    dataset.data = (dataset.data * train_std) + train_mean
+
+    if is_train:
+        new_mean = dataset.data.mean(dim=(0, 1, 2, 3), keepdim=True)
+        new_std = dataset.data.std(dim=(0, 1, 2, 3), keepdim=True)
+        new_std = torch.where(new_std == 0, torch.ones_like(new_std), new_std)
+        dataset.data = (dataset.data - new_mean) / new_std
+    else:
+        new_mean, new_std = normalizer_new
+        dataset.data = (dataset.data - new_mean) / new_std
+
     for i in range(len(dataset)):
         x, y, grid = dataset[i]
         var_dim = x.shape[-1]
@@ -56,4 +68,4 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, k=20, num_workers=1, shu
         data_list.append(data)
         
     dataloader = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    return dataloader
+    return dataloader, (new_mean, new_std)
