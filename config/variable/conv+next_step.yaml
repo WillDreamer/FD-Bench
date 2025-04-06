@@ -1,10 +1,10 @@
 paths:
   output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
-  report_to: tensorboard    #* choices: ['wandb', 'tensorboard', 'all']
+  report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 64
+  batch_size: 128
   epochs: 1000
   resume_step: 0
   checkpointing_steps: 2000
@@ -57,7 +57,7 @@ optimizer:
 
 
 lr_scheduler:
-  scheduler: 'cyc'
+  scheduler: 'CosineAnnealingWarmRestarts'    # ['CosineAnnealing','cyc','CosineAnnealingWarmRestarts']
   step_size_up: 1000
   step_size_down: 1000
   lr: 1.0e-3

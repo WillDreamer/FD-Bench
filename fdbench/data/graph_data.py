@@ -51,7 +51,7 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, k=20, num_workers=1, shu
         edge_attr = torch.from_numpy(edge_attr)
 
         data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr, pos=node_coords)
-        data = transform(data)
+        # data = transform(data)
 
         data_list.append(data)
         
