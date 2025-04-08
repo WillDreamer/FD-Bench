@@ -118,7 +118,7 @@ class graph(torch.nn.Module):
             self.forecast_horizon = 1
             self.time_window = 1
             self.fc1 = nn.Linear(self.hidden_features, self.hidden_features//2)
-            self.fc2 = nn.Linear(self.hidden_features//2, args.in_chans)
+            self.fc2 = nn.Linear(self.hidden_features//2, args.out_chans)
 
         elif args.tem_mod == 'temporal_bundling':
             self.forecast_horizon = 5
@@ -189,7 +189,6 @@ class graph(torch.nn.Module):
 
         # Encoder and processor (message passing)
         node_input = torch.cat((pos, u), -1) 
-
         h = self.embedding_mlp(node_input)
         for i in range(self.hidden_layer):
             h = self.gnn_layers[i](h, u, pos, edge_index, batch)

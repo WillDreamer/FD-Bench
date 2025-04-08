@@ -1,7 +1,7 @@
 import argparse
 from argparse import Namespace
 import datetime
-from re import I
+import math
 import numpy as np
 import torch
 import os
@@ -152,6 +152,7 @@ def main(args):
         data_loader_train, normalizer_new = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=None, is_train=True, k=args.neighbor)
         data_loader_val, _ = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
     #<<<<<< =================================================================
+    max_train_steps = int(args.epochs * len(data_loader_train))
 
     if args.opt == 'adamw':
         optimizer = torch.optim.AdamW(
@@ -171,6 +172,16 @@ def main(args):
                                               mode = 'triangular2', gamma = 0.95,
                                               step_size_up=args.step_size_up, step_size_down=args.step_size_down,cycle_momentum=False)  
 
+    elif args.scheduler == 'lambda':
+        from torch.optim.lr_scheduler import LambdaLR
+        warm_up_steps = int(0.1*max_train_steps)
+        def lr_lambda(current_step):
+            if current_step < warm_up_steps:
+                return float(current_step)/float(max(1, warm_up_steps))
+            progress = float(current_step - warm_up_steps) / float(max(1, max_train_steps - warm_up_steps))
+            return 0.5*(1+math.cos(math.pi*progress))
+        scheduler = LambdaLR(optimizer, lr_lambda)
+        
     criterion = torch.nn.MSELoss()
 
     # Prepare models for training:
@@ -199,8 +210,6 @@ def main(args):
         accelerator.init_trackers(
             project_name=exp_name,  
         )
-
-    max_train_steps = int(args.epochs * len(data_loader_train))
 
     from tqdm import tqdm
     progress_bar = tqdm(

@@ -174,7 +174,7 @@ class SpectralConv2d_fast(nn.Module):
         return x
 
 class fourier(nn.Module):
-    def __init__(self, modes1=12, modes2=12, width=20, gamma=1, args={}):
+    def __init__(self, gamma=1, args={}):
         super(fourier, self).__init__()
 
         """
@@ -192,10 +192,10 @@ class fourier(nn.Module):
 
         num_channels = args.in_chans
         initial_step = args.initial_step
-        self.modes1 = modes1
-        self.modes2 = modes2
+        self.modes1 = args.modes1
+        self.modes2 = args.modes2
         self.gamma = gamma
-        self.width = width
+        self.width = args.width
         self.padding = 2 # pad the domain if input is non-periodic
         self.fc0 = nn.Linear(initial_step*num_channels, self.width)
         # input channel is 12: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)

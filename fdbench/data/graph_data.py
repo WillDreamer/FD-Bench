@@ -38,6 +38,20 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
         x, y, grid = dataset[i]
         var_dim = x.shape[-1]
 
+        all_grady = torch.cat([
+            x[:, 1:2, :] - x[:, 0:1, :],            
+            (x[:, 2:, :] - x[:, :-2, :]) / 2,        
+            x[:, -1:, :] - x[:, -2:-1, :],                    
+        ], dim=1)
+        all_gradx = torch.cat([
+            x[1:2,:,:] - x[0:1, :, :],            
+            (x[2:,:,:] - x[:-2,:,:]) / 2,        
+            x[-1:,:,:] - x[-2:-1,:,:],                    
+        ], dim=0)
+
+        x = torch.cat([x,all_gradx,all_grady],dim=-1)
+        all_var_dim = x.shape[-1]
+
         if first_iter:
             tprint("x, y, grid shape (in get_graph_dataloader)")
             tprint(x.shape,y.shape,grid.shape,'++++++++'*10)
@@ -50,7 +64,7 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
 
         coords = grid.reshape(-1, 2)  # shape: [16384, 2]
         node_coords = coords[rand_idx]  # shape: [1000, 2]
-        x = x.reshape(-1, temporal_dim*var_dim)[rand_idx]
+        x = x.reshape(-1, temporal_dim*all_var_dim)[rand_idx]
         y = y.reshape(-1, temporal_dim*var_dim)[rand_idx]
 
         edge_index = compute_knn_graph(node_coords, k=k)
