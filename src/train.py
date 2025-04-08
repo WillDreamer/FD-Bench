@@ -278,6 +278,7 @@ def main(args):
                 _err_nRMSE_avg = 0
                 _err_max_avg = 0
                 _err_csv_avg = 0
+                _err_BD_avg = 0
                 _err_F_avg = 0
                 with torch.no_grad():
                     for batch in data_loader_val:
@@ -317,13 +318,15 @@ def main(args):
                         _err_max_avg += _err_Max.item()
                         _err_csv_avg += _err_CSV.item()
                         _err_F_avg += _err_F.item()
+                        _err_BD_avg += _err_BD.item()
                     _err_RMSE_avg /= len(data_loader_val)
                     _err_nRMSE_avg /= len(data_loader_val)
                     _err_max_avg /= len(data_loader_val)
                     _err_csv_avg /= len(data_loader_val)
                     _err_F_avg /= len(data_loader_val)
-                    logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, CSV:{_err_csv_avg:.4f}')
-                    val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg,}
+                    _err_BD_avg /= len(data_loader_val)
+                    logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, BD:{_err_BD_avg:.4f}, CSV:{_err_csv_avg:.4f}')
+                    val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg, 'val/BD':_err_BD_avg}
                     accelerator.log(val_log, step=global_step)
 
             logs = {

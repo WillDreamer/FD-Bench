@@ -25,7 +25,7 @@ class DatasetSingle(Dataset):
         :type filename: STR
         :param filenum: array containing indices of filename included in the dataset
         :type filenum: ARRAY
-        :param initial_step: time steps taken as initial condition, defaults to 10
+        :param initial_step: time steps taken as initial condition, defaults to 1
         :type initial_step: INT, optional
 
         """
@@ -193,24 +193,6 @@ class DatasetSingle(Dataset):
                         X, Y = torch.meshgrid(x, y, indexing='ij')
                         self.grid = torch.stack((X, Y), axis=-1)[::reduced_resolution, ::reduced_resolution]
 
-        elif filename[-2:] == 'h5':  # SWE-2D (RDB)
-        
-            with h5py.File(root_path, 'r') as f:
-                keys = list(f.keys())
-                keys.sort()
-                data_arrays = [np.array(f[key]['data'], dtype=np.float32) for key in keys]
-                _data = torch.from_numpy(np.stack(data_arrays, axis=0))   # [batch, nt, nx, ny, nc]
-                _data = _data[::reduced_batch, ::reduced_resolution_t, ::reduced_resolution, ::reduced_resolution, ...]
-                _data = torch.permute(_data, (0, 2, 3, 1, 4))   # [batch, nx, ny, nt, nc]
-                gridx, gridy = np.array(f['0023']['grid']['x'], dtype=np.float32), np.array(f['0023']['grid']['y'], dtype=np.float32)
-                mgridX, mgridY = np.meshgrid(gridx, gridy, indexing='ij')
-                _grid = torch.stack((torch.from_numpy(mgridX), torch.from_numpy(mgridY)), axis=-1)
-                grid = _grid[::reduced_resolution, ::reduced_resolution, ...]
-                _tsteps_t = torch.from_numpy(np.array(f['0023']['grid']['t'], dtype=np.float32))
-                tsteps_t = _tsteps_t[::reduced_resolution_t]
-                self.data = _data
-                self.grid = _grid
-                self.tsteps_t = tsteps_t
 
         total_samples = self.data.shape[0]
         indices = np.arange(total_samples)
@@ -239,8 +221,10 @@ class DatasetSingle(Dataset):
         # Time steps used as initial conditions
         if args.tem_mod == 'next_step':
             self.window_size = 1
+        elif args.tem_mod == 'auto_regressive':
+            self.window_size = initial_step
         else:
-            self.window_size = 4
+            self.window_size = initial_step
 
         self.data = self.data if torch.is_tensor(self.data) else torch.tensor(self.data)
 
@@ -260,6 +244,7 @@ class DatasetSingle(Dataset):
             raise ValueError("Data length is too short for the given window size.")
         
         rand_idx = random.randint(0, max_start)
+        # shape [B, H, W, T, D]
         input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
         target_seq = self.data[idx, ..., rand_idx + self.window_size : rand_idx + 2 * self.window_size, :]
         if self.window_size == 1:
@@ -267,12 +252,6 @@ class DatasetSingle(Dataset):
             target_seq = target_seq.squeeze(-2)
 
         return input_seq, target_seq, self.grid
-    
-    # def __getitem__(self, idx):
-        
-    #     rand_idx = random.randint(0,int(self.data.shape[-2])-2)
-    #     return self.data[idx,...,rand_idx,:], self.data[idx,...,rand_idx+1,:], self.grid
-    #     # return self.data[idx,...,:self.initial_step,:], self.data[idx], self.grid
 
 
 class DatasetMult(Dataset):
