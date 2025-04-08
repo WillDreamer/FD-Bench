@@ -265,14 +265,13 @@ class graph(torch.nn.Module):
         if target is not None and target.device != device:
             target = target.to(device)
         
-        # Reshaping data to work with our model
         batch_size, n_nodes = data.x.shape[0], data.x.shape[1]
         
         # Use grid data for positions
-        pos = data.grid.reshape(batch_size * n_nodes, 2)  # Reshape to [batch*n_nodes, 2]
+        pos = data.grid.reshape(batch_size * n_nodes, 2)
         
-        # Reshape features - take all channels from data.x
-        u = data.x.reshape(batch_size * n_nodes, -1)  # Reshape to [batch*n_nodes, channels*time_steps]
+        # Reshape features
+        u = data.x.reshape(batch_size * n_nodes, -1)
         
         # Get edge indices and batch indices
         edge_index = data.edge_index
@@ -296,112 +295,91 @@ class graph(torch.nn.Module):
 
             # use h as initial condition
             pred_z = odeint(ode_func, h, t, method='dopri5')
-            pred_z = (pred_z[1:]).permute(1, 0, 2)
+            # Remove the initial state, permute to [batch*nodes, time, features]
+            pred_z = (pred_z[1:]).permute(1, 0, 2) 
 
-            # Decode the outputs
-            out = self.decoding_mlp(pred_z).squeeze(-1)
+            # Decode the outputs to 1 channel prediction
+            out = self.decoding_mlp(pred_z).squeeze(-1) # Shape: [batch*nodes, forecast_horizon]
             
         elif self.graph_baseline:
-            # Decoder (formula 10 in the paper)
-            dt = (torch.ones(1, self.time_window)).to(device)
-            dt = torch.cumsum(dt, dim=1)
-            # dt shape: [1, time_window]
+            # Calculate temporal difference using output MLP
+            # output should be [N, time_window, 1]
+            diff = self.output_mlp(h[:, None]).squeeze(-1) # Shape: [batch*nodes, forecast_horizon]
             
-            if self.first_iter:
-                print("h shape: ", h.shape)  # [batch*n_nodes, hidden_features]
-                print("h[:, None] shape: ", h[:, None].shape) # [batch*n_nodes, 1, hidden_features]
+            # Get the last known value for the target prediction variable
+            u_last_step = u.reshape(batch_size * n_nodes, self.time_window, self.in_chans)[:, -1, :] # Shape: [batch*nodes, in_chans]
+            u_pred_var = u_last_step[:, self.pred_var].unsqueeze(-1) # Shape: [batch*nodes, 1]
+
+            # Calculate dt for the forecast horizon
+            dt = (torch.ones(1, self.forecast_horizon)).to(device)
+            dt = torch.cumsum(dt, dim=1) # Shape: [1, forecast_horizon]
+
+            # Repeat base value across forecast horizon
+            u_pred_var_repeated = u_pred_var.repeat(1, self.forecast_horizon) 
+
+            # Add temporal evolution: dt * diff
+            temporal_evolution = dt * diff 
             
-            
-            # h: [N, hidden_features] -> h[:, None]: [N, 1, hidden_features]
-            # output_mlp([N, 1, hidden_features]) -> [N, time_window, 1]
-            # squeeze(-1) -> diff: [N, time_window]
-            diff = self.output_mlp(h[:, None]).squeeze(-1)
-            
-            if self.first_iter:
-                print("diff shape: ", diff.shape) # Should be [batch*n_nodes, time_window]
-                print("u shape: ", u.shape)
-                print("u[:, -self.in_chans:] shape: ", u[:, -self.in_chans:].shape)
-            
-            # Get the most recent value for each channel
-            u_last = u[:, -self.in_chans:]  # [batch*n_nodes, in_chans]
-            
-            # For each channel, we repeat the last value across time steps
-            # and add the temporal evolution (dt * diff)
-            out_list = []
-            for i in range(self.in_chans):
-                # Extract channel i
-                u_channel = u_last[:, i]  # [batch*n_nodes]
-                
-                # Repeat across time dimension
-                u_channel_repeated = u_channel.repeat(self.time_window, 1).transpose(0, 1)  # [batch*n_nodes, time_window]
-                
-                # Add temporal evolution: dt * diff -> [1, time_window] * [batch*n_nodes, time_window] -> broadcasts correctly
-                out_channel = u_channel_repeated + dt * diff
-                
-                # Add to list
-                out_list.append(out_channel)
-            
-            # Stack all channels
-            # Each element in out_list is [batch*n_nodes, time_window]
-            # Stack along a new dimension -> [batch*n_nodes, time_window, in_chans]
-            out = torch.stack(out_list, dim=-1) 
-            
-            if self.first_iter:
-                print("out shape: ", out.shape)  # Should be [batch*n_nodes, time_window, in_chans]
+            # Calculate final output for the specific channel
+            out = u_pred_var_repeated + temporal_evolution # Shape: [batch*nodes, forecast_horizon]
         
         else:
-            # TODO: get this running on 5->5 task
-            # Decoder (formula 10 in the paper)
-            dt = (torch.ones(1, self.time_window)).to(device)
-            dt = torch.cumsum(dt, dim=1)
-            # dt shape: [1, time_window]
-            diff = self.output_mlp(h[:, None]).squeeze(1)
-            # diff shape: [batch_size * n_nodes, 1]
-            out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
+            # Default case: predict single variable (pred_var) over forecast_horizon steps
+            
+            # Calculate dt for the forecast horizon
+            dt = (torch.ones(1, self.forecast_horizon)).to(device)
+            dt = torch.cumsum(dt, dim=1) 
+            
+            # Calculate difference using output MLP (expected output: [N, 1, 1])
+            diff = self.output_mlp(h[:, None]).squeeze(1) # Shape: [batch*nodes, 1]
+            
+            # Get the last known value for the target prediction variable
+            u_last_step = u.reshape(batch_size * n_nodes, self.time_window, self.in_chans)[:, -1, :] 
+            u_pred_var = u_last_step[:, self.pred_var].unsqueeze(-1) 
+            
+            # Calculate temporal evolution by broadcasting diff across dt
+            temporal_evolution = diff * dt 
+            
+            # Repeat base value across forecast horizon
+            u_pred_var_repeated = u_pred_var.repeat(1, self.forecast_horizon)
+            
+            # Calculate final output
+            out = u_pred_var_repeated + temporal_evolution # Shape: [batch*nodes, forecast_horizon]
 
-        # Reshape output initially to [batch_size, n_nodes, time_steps]
-        out = out.reshape(batch_size, n_nodes, -1)
-        
+        # --- Consistent Reshaping --- 
+        # Reshape to [batch, nodes, forecast_horizon, 1]
+        out = out.reshape(batch_size, n_nodes, self.forecast_horizon, 1)
+
         # Calculate loss using all available timesteps
         if criterion is not None:
-            # For targets, we need to extract the relevant variable we're predicting
-            if len(target.shape) == 4:  # [batch, nodes, time, features]
-                # Extract target's relevant variable
-                target_var = target[:, :, :, self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var]
-                
-                # Use min number of timesteps from both tensors
-                num_timesteps = min(out.shape[2], target_var.shape[2])
+            loss = 0 # Initialize loss
+            # Ensure target is 4D [batch, nodes, time, features]
+            if len(target.shape) == 4:  
+                # Extract target's relevant variable based on pred_var
+                target_var_idx = self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var
+                target_var = target[:, :, :, target_var_idx] # Shape: [batch, nodes, time]
 
-                if self.first_iter:
-                    print("num_timesteps:", num_timesteps)
-                    self.first_iter = False
-                
-                # Calculate loss using all available timesteps
-                loss = criterion(out[:, :, :num_timesteps], target_var[:, :, :num_timesteps])
-            else:
-                loss = criterion(out, target)
-            
-            # For evaluation metrics compatibility, return a 2D tensor [batch, nodes]
-            # The metrics function expects 4D input, and engine.py will add two dimensions with unsqueeze operations
-            if self.use_odeint:
-                # Return the first timestep prediction as a flat tensor [batch, nodes]
-                # This will become [batch, 1, nodes, 1] after engine.py's transforms
-                # TODO: get to return all timesteps (will have to update evaluation metrics in engine.py)
-                eval_out = out[:, :, 0]  # [batch, nodes] - no extra dimension
-                return eval_out, loss
-            else:
-                # Reshape 'out' ([batch, nodes, time*channels]) back to [batch, nodes, time, channels]
-                out_reshaped = out.reshape(batch_size, n_nodes, self.time_window, self.in_chans)
-                # Extract the first timestep and the target prediction variable
-                eval_out = out_reshaped[:, :, 0, self.pred_var if self.pred_var >= 0 else out_reshaped.shape[3] + self.pred_var] # Shape: [batch, nodes]
-                return eval_out, loss
-        
-        # If no criterion, return appropriate format for inference
-        if self.use_odeint:
-            # Return just the first timestep as a flat tensor [batch, nodes]
-            # TODO: get to return all timesteps (will have to update evaluation metrics in engine.py)
-            return out[:, :, 0]
-        
+                # Use minimum number of timesteps between prediction and target
+                num_pred_timesteps = out.shape[2] 
+                num_target_timesteps = target_var.shape[2]
+                num_timesteps = min(num_pred_timesteps, num_target_timesteps)
+
+                # Slice prediction (always has 1 channel)
+                pred_slice = out[:, :, :num_timesteps, 0] 
+
+                # Calculate loss
+                loss = criterion(pred_slice, target_var[:, :, :num_timesteps])
+
+            else: 
+                # Fallback if target is not 4D (may indicate unexpected input)
+                print(f"Warning: Target shape {target.shape} unexpected, attempting direct loss calculation.")
+                loss = criterion(out, target) 
+
+            # Return evaluation output (full prediction) and loss
+            eval_out = out
+            return eval_out, loss
+
+        # If no criterion, return the full prediction tensor 'out' for inference
         return out
 
 if __name__ == '__main__':

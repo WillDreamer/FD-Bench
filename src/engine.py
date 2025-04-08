@@ -153,7 +153,7 @@ def evaluate(data_loader, model, device, use_amp, args):
     # switch to evaluation mode
     model.eval()
 
-    if args.use_odeint or args.graph_baseline:  # For graph model with odeint
+    if args.use_odeint or args.graph_baseline:  # For graph models
         for data in metric_logger.log_every(data_loader, 10, header):
             # Use the PyG data object directly
             if use_amp:  # Use mixed precision
@@ -161,18 +161,26 @@ def evaluate(data_loader, model, device, use_amp, args):
                     outputs, loss = model(data, data.y, criterion)
             else:  # Use full precision
                 outputs, loss = model(data, data.y, criterion)
-
+            
             batch_size = data.x.shape[0]
             metric_logger.update(loss=loss.item())
             
-            # Extract targets for metrics calculation
-            # Reshape outputs to match target if necessary
-            target_var = data.y[:, :, 0, args.pred_var if args.pred_var >= 0 else data.y.shape[3] + args.pred_var]
+            # --- Target Processing for Metrics ---
+            target_var_idx = args.pred_var if args.pred_var >= 0 else data.y.shape[3] + args.pred_var
+            target_all_steps = data.y[:, :, :, target_var_idx] # Shape: [batch, nodes, time]
             
-            # Reshape for metrics calculation - add appropriate dimensions
-            # [batch, nodes] -> [batch, 1, nodes, 1] format expected by metrics function
-            outputs_reshaped = outputs.unsqueeze(1).unsqueeze(-1)  # [batch, 1, nodes, 1]
-            target_reshaped = target_var.unsqueeze(1).unsqueeze(-1)  # [batch, 1, nodes, 1]
+            # Slice target timesteps to match prediction horizon
+            num_target_timesteps = target_all_steps.shape[2]
+            num_pred_timesteps = outputs.shape[2]
+            num_timesteps = min(num_pred_timesteps, num_target_timesteps)
+            target_sliced = target_all_steps[:, :, :num_timesteps] # Shape: [batch, nodes, num_timesteps]
+
+            # Slice prediction timesteps if necessary
+            pred_sliced = outputs[:, :, :num_timesteps, :] # Shape: [batch, nodes, num_timesteps, 1]
+
+            # --- Reshape for metrics calculation ---
+            outputs_reshaped = pred_sliced.unsqueeze(1)  # Shape: [batch, 1, nodes, num_timesteps, 1]
+            target_reshaped = target_sliced.unsqueeze(1).unsqueeze(-1)  # Shape: [batch, 1, nodes, num_timesteps, 1]
             
             Lx, Ly, Lz = 1., 1., 1.
             _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
@@ -238,16 +246,16 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
             print(x.shape,y.shape,grid.shape,'++++++++'*10)
             first_iter = False
 
+        # Reshape grid to [n_nodes, n_dims] e.g. [nx*ny, 2] for 2D
+        num_spatial_dims = grid.shape[-1]
+        points = grid.reshape(-1, num_spatial_dims).numpy()
         # calculate the distance matrix
-        points = grid[:, 0, :].numpy()
         dist_matrix = distance_matrix(points, points)
         # compare with grid
         # eg coord of number 2 and number 3, check if dist_matrix[2, 3] equals distance shown in grid[2,3]
 
         # TODO: look into downsampling (see graph-pde RandomMultiMeshGenerator sample method)
         # make sure that we drop indices
-
-        # 
 
         # find the nearest neighbors, keep start and end nodes
         start_nodes = []
