@@ -253,7 +253,6 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         if first_iter:
             print("x, y, grid shape (in get_graph_dataloader)")
             print(x.shape,y.shape,grid.shape,'++++++++'*10)
-            print(f"Assuming reduced resolution: {dataset.S}x{dataset.S}")
             first_iter = False
 
         # --- Reshape tensors to be node-centric ---
