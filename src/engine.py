@@ -156,39 +156,48 @@ def evaluate(data_loader, model, device, use_amp, args):
     if args.use_odeint or args.graph_baseline:  # For graph models
         for data in metric_logger.log_every(data_loader, 10, header):
             # Use the PyG data object directly
+            data = data.to(device)
             if use_amp:  # Use mixed precision
                 with torch.cuda.amp.autocast():
-                    outputs, loss = model(data, data.y, criterion)
+                    # model expects [B*N, T, C]
+                    outputs, loss = model(data, data.y, criterion) # outputs shape: [B, N, T_pred, 1]
             else:  # Use full precision
-                outputs, loss = model(data, data.y, criterion)
+                outputs, loss = model(data, data.y, criterion) # outputs shape: [B, N, T_pred, 1]
             
-            batch_size = data.x.shape[0]
+            batch_size = data.num_graphs
+            n_nodes = data.num_nodes // batch_size
+            forecast_horizon = outputs.shape[2] 
             metric_logger.update(loss=loss.item())
             
-            # --- Target Processing for Metrics ---
-            target_var_idx = args.pred_var if args.pred_var >= 0 else data.y.shape[3] + args.pred_var
-            target_all_steps = data.y[:, :, :, target_var_idx] # Shape: [batch, nodes, time]
-            
+            # --- Target Processing for Metrics --- 
+            # data.y shape is [B*N, T_target, C]
+            target_var_idx = args.pred_var if args.pred_var >= 0 else data.y.shape[2] + args.pred_var
+            target_all_steps = data.y[:, :, target_var_idx] # Shape: [B*N, T_target]
+
             # Slice target timesteps to match prediction horizon
-            num_target_timesteps = target_all_steps.shape[2]
-            num_pred_timesteps = outputs.shape[2]
-            num_timesteps = min(num_pred_timesteps, num_target_timesteps)
-            target_sliced = target_all_steps[:, :, :num_timesteps] # Shape: [batch, nodes, num_timesteps]
+            num_target_timesteps = target_all_steps.shape[1] # T_target dim
+            num_pred_timesteps = forecast_horizon
+            num_timesteps = min(num_pred_timesteps, num_target_timesteps) # Use common timesteps
+            target_sliced = target_all_steps[:, :num_timesteps] # Shape: [B*N, num_timesteps]
 
             # Slice prediction timesteps if necessary
-            pred_sliced = outputs[:, :, :num_timesteps, :] # Shape: [batch, nodes, num_timesteps, 1]
+            # Reshape prediction [B, N, T_pred, 1] -> [B*N, T_pred]
+            pred_reshaped = outputs.reshape(batch_size * n_nodes, forecast_horizon)
+            pred_sliced = pred_reshaped[:, :num_timesteps] # Shape: [B*N, num_timesteps]
 
-            # --- Reshape for metrics calculation ---
-            outputs_reshaped = pred_sliced.unsqueeze(1)  # Shape: [batch, 1, nodes, num_timesteps, 1]
-            target_reshaped = target_sliced.unsqueeze(1).unsqueeze(-1)  # Shape: [batch, 1, nodes, num_timesteps, 1]
+            # --- Reshape for metrics calculation --- 
+            # NOTE: metrics.metric_func expects [B, C, H, W] or [B, C, D, H, W]
+            # The current graph output [B*N, T] or [B, N, T, 1] is incompatible with spatial FFT used in FRMSE.
+            # will reshape to [B*N, 1, T, 1] to calculate RMSE/NRMSE, but FRMSE will likely remain NaN.
+            outputs_reshaped_for_metrics = pred_sliced.unsqueeze(1).unsqueeze(-1) # Shape: [B*N, 1, num_timesteps, 1]
+            target_reshaped_for_metrics = target_sliced.unsqueeze(1).unsqueeze(-1) # Shape: [B*N, 1, num_timesteps, 1]
             
             Lx, Ly, Lz = 1., 1., 1.
             _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
-            = metrics.metric_func(outputs_reshaped, target_reshaped, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+            = metrics.metric_func(outputs_reshaped_for_metrics, target_reshaped_for_metrics, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
 
             metric_logger.update(rmse=_err_RMSE.item())
             metric_logger.update(nrmse=_err_nRMSE.item())
-            metric_logger.update(frmse=_err_F[0].item())
             
     else:  # For non-graph models
         for input_test, target_test, grid in metric_logger.log_every(data_loader, 10, header):
@@ -270,7 +279,7 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         edge_index = torch.stack([start_nodes_tensor, end_nodes_tensor], dim=0)
 
         senders = edge_index[0].numpy()
-        receivers = edge_index[1].numpy()
+        receivers = edge_index[1].nzumpy()
         crds_diff = points[senders] - points[receivers]
         crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
         edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)

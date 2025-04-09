@@ -262,10 +262,13 @@ class graph(torch.nn.Module):
             data.grid = data.grid.to(device)
         if data.edge_index.device != device:
             data.edge_index = data.edge_index.to(device)
+        if data.batch is not None and data.batch.device != device:
+            data.batch = data.batch.to(device)
         if target is not None and target.device != device:
-            target = target.to(device)
+            target = target.to(device) 
         
-        batch_size, n_nodes = data.x.shape[0], data.x.shape[1]
+        batch_size = data.num_graphs
+        n_nodes = data.num_nodes // batch_size
         
         # Use grid data for positions
         pos = data.grid.reshape(batch_size * n_nodes, 2)
@@ -275,7 +278,7 @@ class graph(torch.nn.Module):
         
         # Get edge indices and batch indices
         edge_index = data.edge_index
-        batch = torch.repeat_interleave(torch.arange(batch_size, device=device), n_nodes)
+        batch = data.batch
         
         # Encoder and processor (message passing)
         node_input = torch.cat((pos, u), -1)
@@ -307,7 +310,8 @@ class graph(torch.nn.Module):
             diff = self.output_mlp(h[:, None]).squeeze(-1) # Shape: [batch*nodes, forecast_horizon]
             
             # Get the last known value for the target prediction variable
-            u_last_step = u.reshape(batch_size * n_nodes, self.time_window, self.in_chans)[:, -1, :] # Shape: [batch*nodes, in_chans]
+            # data.x shape: [B*N, T, C], reshape to get last step
+            u_last_step = data.x[:, -1, :] # Shape: [batch*nodes, in_chans]
             u_pred_var = u_last_step[:, self.pred_var].unsqueeze(-1) # Shape: [batch*nodes, 1]
 
             # Calculate dt for the forecast horizon
@@ -324,9 +328,6 @@ class graph(torch.nn.Module):
             out = u_pred_var_repeated + temporal_evolution # Shape: [batch*nodes, forecast_horizon]
         
         else:
-            # Default case: predict single variable (pred_var) over forecast_horizon steps
-            
-            # Calculate dt for the forecast horizon
             dt = (torch.ones(1, self.forecast_horizon)).to(device)
             dt = torch.cumsum(dt, dim=1) 
             
@@ -334,7 +335,8 @@ class graph(torch.nn.Module):
             diff = self.output_mlp(h[:, None]).squeeze(1) # Shape: [batch*nodes, 1]
             
             # Get the last known value for the target prediction variable
-            u_last_step = u.reshape(batch_size * n_nodes, self.time_window, self.in_chans)[:, -1, :] 
+            # data.x shape: [B*N, T, C], reshape to get last step
+            u_last_step = data.x[:, -1, :] # Shape: [B*N, in_chans]
             u_pred_var = u_last_step[:, self.pred_var].unsqueeze(-1) 
             
             # Calculate temporal evolution by broadcasting diff across dt
@@ -346,41 +348,49 @@ class graph(torch.nn.Module):
             # Calculate final output
             out = u_pred_var_repeated + temporal_evolution # Shape: [batch*nodes, forecast_horizon]
 
-        # --- Consistent Reshaping --- 
-        # Reshape to [batch, nodes, forecast_horizon, 1]
-        out = out.reshape(batch_size, n_nodes, self.forecast_horizon, 1)
+        # --- Output Reshaping & Loss Calculation ---
+        # Store the flat output for loss calculation
+        out_flat = out # Shape: [B*N, forecast_horizon]
+
+        # Reshape for consistent return shape
+        eval_out = out_flat.reshape(batch_size, n_nodes, self.forecast_horizon, 1) # Shape: [B, N, T, 1]
 
         # Calculate loss using all available timesteps
         if criterion is not None:
             loss = 0 # Initialize loss
-            # Ensure target is 4D [batch, nodes, time, features]
-            if len(target.shape) == 4:  
+            # ensure target (data.y) shape is 3d
+            if len(target.shape) == 3: # Expects [B*N, T_target, C]
                 # Extract target's relevant variable based on pred_var
-                target_var_idx = self.pred_var if self.pred_var >= 0 else target.shape[3] + self.pred_var
-                target_var = target[:, :, :, target_var_idx] # Shape: [batch, nodes, time]
+                target_var_idx = self.pred_var if self.pred_var >= 0 else target.shape[2] + self.pred_var
+                target_var = target[:, :, target_var_idx] # Shape: [B*N, T_target]
 
                 # Use minimum number of timesteps between prediction and target
-                num_pred_timesteps = out.shape[2] 
-                num_target_timesteps = target_var.shape[2]
+                num_pred_timesteps = self.forecast_horizon
+                num_target_timesteps = target_var.shape[1] # T_target dim
                 num_timesteps = min(num_pred_timesteps, num_target_timesteps)
 
-                # Slice prediction (always has 1 channel)
-                pred_slice = out[:, :, :num_timesteps, 0] 
+                if num_pred_timesteps != num_target_timesteps:
+                    print(f"Warning: Prediction and target timesteps mismatch (using minimum): {num_pred_timesteps} != {num_target_timesteps}")
 
-                # Calculate loss
-                loss = criterion(pred_slice, target_var[:, :, :num_timesteps])
+                # Slice prediction and target to common timesteps
+                # Use the flat prediction before reshaping
+                pred_slice = out_flat[:, :num_timesteps] # Shape: [B*N, num_timesteps]
+                target_slice = target_var[:, :num_timesteps] # Shape: [B*N, num_timesteps]
 
-            else: 
-                # Fallback if target is not 4D (may indicate unexpected input)
-                print(f"Warning: Target shape {target.shape} unexpected, attempting direct loss calculation.")
-                loss = criterion(out, target) 
+                # Ensure shapes match before loss calculation
+                loss = criterion(pred_slice, target_slice)
 
-            # Return evaluation output (full prediction) and loss
-            eval_out = out
+            else:
+                # Fallback if target is not 3D (may indicate unexpected input)
+                print(f"Warning: Target shape {target.shape} unexpected (expected 3D [B*N, T, C]), attempting direct loss calculation.")
+                # unlikely to work, but shouldn't hit this case
+                loss = criterion(eval_out.reshape(batch_size*n_nodes, -1), target.reshape(batch_size*n_nodes, -1)) # Attempting a flatten comparison
+
+            # Return evaluation output (full prediction, consistently shaped) and loss
             return eval_out, loss
 
-        # If no criterion, return the full prediction tensor 'out' for inference
-        return out
+        # If no criterion, return the full prediction tensor 'eval_out' for inference
+        return eval_out
 
 if __name__ == '__main__':
     model = graph()
