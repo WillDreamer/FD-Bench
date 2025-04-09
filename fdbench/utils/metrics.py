@@ -190,7 +190,16 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
     err_mean = torch.sqrt(torch.mean((pred.view([nb, nc, -1, nt]) - target.view([nb, nc, -1, nt])) ** 2, dim=2))
     err_RMSE = torch.mean(err_mean, axis=0)
     nrm = torch.sqrt(torch.mean(target.view([nb, nc, -1, nt]) ** 2, dim=2))
-    err_nRMSE = torch.mean(err_mean / nrm, dim=0)
+    mask = (nrm != 0)
+    err_div = torch.zeros_like(err_mean) 
+    err_div[mask] = err_mean[mask] / nrm[mask] 
+    valid_count = mask.sum(dim=0) 
+    err_sum = err_div.sum(dim=0)   # [nc, nt]
+    valid_count_clamped = torch.clamp(valid_count, min=1)  # 避免除0
+    err_nRMSE = err_sum / valid_count_clamped 
+    mask_zero = (valid_count == 0)
+    err_nRMSE[mask_zero] = 0.0
+    # err_nRMSE = torch.mean(err_mean / nrm, dim=0)
 
     err_CSV = torch.sqrt(torch.mean(
         (torch.sum(pred.view([nb, nc, -1, nt]), dim=2) - torch.sum(target.view([nb, nc, -1, nt]), dim=2)) ** 2,

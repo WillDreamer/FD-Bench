@@ -19,11 +19,11 @@ class DatasetSingle(WellDataset):
                  ):
         
         filename = args.data_set
-        reduced_resolution=args.reduced_resolution
-        reduced_resolution_t=args.reduced_resolution_t
-        reduced_batch=args.reduced_batch
+        self.reduced_resolution=args.reduced_resolution
+        self.reduced_resolution_t=args.reduced_resolution_t
+        self.reduced_batch=args.reduced_batch
         saved_folder = args.data_path
-        well_dataset_name = args.well_dataset_name
+        self.well_dataset_name = args.well_dataset_name
         initial_step=args.initial_step
 
          # Time steps used as initial conditions
@@ -45,7 +45,7 @@ class DatasetSingle(WellDataset):
             split_name = "train"
         super(DatasetSingle, self).__init__(
             well_base_path=saved_folder,
-            well_dataset_name=well_dataset_name,
+            well_dataset_name=self.well_dataset_name,
             include_filters=[filename],  
             well_split_name=split_name,
             use_normalization=True,      
@@ -53,7 +53,6 @@ class DatasetSingle(WellDataset):
             n_steps_input = self.window_size,
             n_steps_output = self.window_size
         )
-
 
     def __len__(self):
         
@@ -78,23 +77,33 @@ class DatasetSingle(WellDataset):
         cat_std = torch.cat(all_tensors, dim=0)  
         self.train_std = cat_std.view(1, 1, 1, 1, -1)
 
-
         return self.train_mean, self.train_std
 
     def __getitem__(self, idx):
         sample = super(DatasetSingle, self).__getitem__(idx)
 
-        input_seq = sample.get("input_fields", None)    # [T, H, W, D]
-        target_seq = sample.get("output_fields", None)  
-        grid = sample.get("space_grid", None)           
+        if self.well_dataset_name == 'shear_flow':
+            reduced_resolution_long = self.reduced_resolution * 2
+        else:
+            reduced_resolution_long = self.reduced_resolution
+
+        input_seq = sample.get("input_fields", None)[:,::self.reduced_resolution,::reduced_resolution_long,:]    # [T, H, W, D]
+        target_seq = sample.get("output_fields", None)[:,::self.reduced_resolution,::reduced_resolution_long,:]  
+        grid = sample.get("space_grid", None)[::self.reduced_resolution,::reduced_resolution_long,:]           
 
         if input_seq is not None:
             Ti = input_seq.shape[0] 
+                
             if Ti >= 2 * self.window_size:
                 rand_idx = random.randint(0, Ti - 2 * self.window_size)
+                # shape [ T, H, W,  D, ]
                 new_input = input_seq[rand_idx : rand_idx + self.window_size]
                 new_target = input_seq[rand_idx + self.window_size : rand_idx + 2 * self.window_size]
-
+                new_input = new_input.permute(1,2,3,0)
+                new_target = new_target.permute(1,2,3,0)
+                # shape [ H, W, T, D, ]
                 return new_input, new_target, grid
             else:
+                input_seq = input_seq.squeeze(0)
+                target_seq = target_seq.squeeze(0)
                 return input_seq, target_seq, grid
