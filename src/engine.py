@@ -256,14 +256,15 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
             first_iter = False
 
         # --- Reshape tensors to be node-centric ---
-        # x: [T_in, H, W, C] -> [N, T_in, C] where N = H*W
-        T_in, H, W, C_in = x.shape
+        # Assume input shape is [H, W, T, C]
+        # x: [H, W, T_in, C_in] -> [N, T_in, C_in] where N = H*W
+        H, W, T_in, C_in = x.shape 
         num_nodes = H * W
-        node_x = x.reshape(T_in, num_nodes, C_in).permute(1, 0, 2) # Shape: [N, T_in, C_in]
+        node_x = x.reshape(num_nodes, T_in, C_in)
 
-        # y: [T_out, H, W, C] -> [N, T_out, C]
-        T_out, H, W, C_out = y.shape
-        node_y = y.reshape(T_out, num_nodes, C_out).permute(1, 0, 2) # Shape: [N, T_out, C_out]
+        # y: [H, W, T_out, C_out] -> [N, T_out, C_out]
+        H, W, T_out, C_out = y.shape 
+        node_y = y.reshape(num_nodes, T_out, C_out)
 
         # grid: [H, W, 2] -> [N, 2]
         node_pos = grid.reshape(num_nodes, 2)
