@@ -279,7 +279,7 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         edge_index = torch.stack([start_nodes_tensor, end_nodes_tensor], dim=0)
 
         senders = edge_index[0].numpy()
-        receivers = edge_index[1].nzumpy()
+        receivers = edge_index[1].numpy()
         crds_diff = points[senders] - points[receivers]
         crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
         edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
