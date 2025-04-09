@@ -258,8 +258,6 @@ class graph(torch.nn.Module):
         # Move data to the correct device
         if data.x.device != device:
             data.x = data.x.to(device)
-        if data.grid.device != device:
-            data.grid = data.grid.to(device)
         if data.edge_index.device != device:
             data.edge_index = data.edge_index.to(device)
         if data.batch is not None and data.batch.device != device:
@@ -280,7 +278,6 @@ class graph(torch.nn.Module):
         
         # Reshape features: data.x is [total_nodes, T_in, C_in]
         # Reshape to [total_nodes, T_in * C_in] for embedding MLP input
-        # u = data.x.reshape(batch_size * n_nodes, -1) # old incorrect reshape
         u = data.x.reshape(total_nodes, -1) # Shape: [total_nodes, T_in * C_in]
         
         # Get edge indices and batch indices
