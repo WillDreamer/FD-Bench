@@ -14,7 +14,7 @@ CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 
 # REMARK="ViTL_Dim_768_Epoch_2k_Cyc_up_1k_down_1k_lr_1e-3"
 # REMARK='cyc_1k_up_1k_down_1k_N_30_hidden_256_epo2k_grad_layer_8'
-REMARK='well_data'
+REMARK='KF_data'
 
 export WANDB_ENTITY="FD-Bench"
 export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"

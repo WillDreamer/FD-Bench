@@ -240,6 +240,7 @@ def main(args):
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
                 outputs, loss = model(samples,targets,grid,criterion)
+
                 optimizer.zero_grad()
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
