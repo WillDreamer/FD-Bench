@@ -270,8 +270,10 @@ class graph(torch.nn.Module):
         batch_size = data.num_graphs
         n_nodes = data.num_nodes // batch_size
         
-        # Use grid data for positions
-        pos = data.grid.reshape(batch_size * n_nodes, 2)
+        # Use grid data for positions.
+        # Assuming data.grid has been correctly processed by the dataloader to be [B*N, 2]
+        # print(f"DEBUG shapes: data.grid={data.grid.shape}, batch_size={batch_size}, n_nodes={n_nodes}, B*N={batch_size * n_nodes}")
+        pos = data.grid.reshape(-1, 2) # Reshape ensuring the last dimension is 2
         
         # Reshape features
         u = data.x.reshape(batch_size * n_nodes, -1)
