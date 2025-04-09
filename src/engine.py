@@ -253,11 +253,24 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         if first_iter:
             print("x, y, grid shape (in get_graph_dataloader)")
             print(x.shape,y.shape,grid.shape,'++++++++'*10)
+            print(f"Assuming reduced resolution: {dataset.S}x{dataset.S}")
             first_iter = False
 
-        # Reshape grid to [n_nodes, n_dims] e.g. [nx*ny, 2] for 2D
-        num_spatial_dims = grid.shape[-1]
-        points = grid.reshape(-1, num_spatial_dims).numpy()
+        # --- Reshape tensors to be node-centric ---
+        # x: [T_in, H, W, C] -> [N, T_in, C] where N = H*W
+        T_in, H, W, C_in = x.shape
+        num_nodes = H * W
+        node_x = x.reshape(T_in, num_nodes, C_in).permute(1, 0, 2) # Shape: [N, T_in, C_in]
+
+        # y: [T_out, H, W, C] -> [N, T_out, C]
+        T_out, H, W, C_out = y.shape
+        node_y = y.reshape(T_out, num_nodes, C_out).permute(1, 0, 2) # Shape: [N, T_out, C_out]
+
+        # grid: [H, W, 2] -> [N, 2]
+        node_pos = grid.reshape(num_nodes, 2)
+
+        # --- Graph Construction (using node_pos) ---
+        points = node_pos.numpy() # Use reshaped node_pos
         # calculate the distance matrix
         dist_matrix = distance_matrix(points, points)
         # compare with grid
@@ -285,7 +298,9 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
         edge_attr = torch.from_numpy(edge_attr)
 
-        data_list.append(Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr, grid=grid))
+        # --- Create Data object with node-centric tensors ---
+        # Store coordinates in 'pos' attribute
+        data_list.append(Data(x=node_x, y=node_y, pos=node_pos, edge_index=edge_index, edge_attr=edge_attr))
 
         # TODO: apply virtual node transform
         """

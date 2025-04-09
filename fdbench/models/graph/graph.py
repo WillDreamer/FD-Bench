@@ -266,17 +266,22 @@ class graph(torch.nn.Module):
             data.batch = data.batch.to(device)
         if target is not None and target.device != device:
             target = target.to(device) 
+        if hasattr(data, 'pos') and data.pos.device != device:
+            data.pos = data.pos.to(device)
         
         batch_size = data.num_graphs
-        n_nodes = data.num_nodes // batch_size
+        n_nodes_per_graph = data.num_nodes // batch_size
+        total_nodes = data.num_nodes
         
-        # Use grid data for positions.
-        # Assuming data.grid has been correctly processed by the dataloader to be [B*N, 2]
-        # print(f"DEBUG shapes: data.grid={data.grid.shape}, batch_size={batch_size}, n_nodes={n_nodes}, B*N={batch_size * n_nodes}")
-        pos = data.grid.reshape(-1, 2) # Reshape ensuring the last dimension is 2
+        # pos = data.grid.reshape(-1, 2) # Old way using grid
+        if not hasattr(data, 'pos'):
+             raise ValueError("Data object must have 'pos' attribute containing node coordinates.")
+        pos = data.pos # Shape: [total_nodes, 2]
         
-        # Reshape features
-        u = data.x.reshape(batch_size * n_nodes, -1)
+        # Reshape features: data.x is [total_nodes, T_in, C_in]
+        # Reshape to [total_nodes, T_in * C_in] for embedding MLP input
+        # u = data.x.reshape(batch_size * n_nodes, -1) # old incorrect reshape
+        u = data.x.reshape(total_nodes, -1) # Shape: [total_nodes, T_in * C_in]
         
         # Get edge indices and batch indices
         edge_index = data.edge_index
@@ -355,7 +360,7 @@ class graph(torch.nn.Module):
         out_flat = out # Shape: [B*N, forecast_horizon]
 
         # Reshape for consistent return shape
-        eval_out = out_flat.reshape(batch_size, n_nodes, self.forecast_horizon, 1) # Shape: [B, N, T, 1]
+        eval_out = out_flat.reshape(batch_size, n_nodes_per_graph, self.forecast_horizon, 1) # Shape: [B, N, T, 1]
 
         # Calculate loss using all available timesteps
         if criterion is not None:
@@ -386,7 +391,7 @@ class graph(torch.nn.Module):
                 # Fallback if target is not 3D (may indicate unexpected input)
                 print(f"Warning: Target shape {target.shape} unexpected (expected 3D [B*N, T, C]), attempting direct loss calculation.")
                 # unlikely to work, but shouldn't hit this case
-                loss = criterion(eval_out.reshape(batch_size*n_nodes, -1), target.reshape(batch_size*n_nodes, -1)) # Attempting a flatten comparison
+                loss = criterion(eval_out.reshape(batch_size*n_nodes_per_graph, -1), target.reshape(batch_size*n_nodes_per_graph, -1)) # Attempting a flatten comparison
 
             # Return evaluation output (full prediction, consistently shaped) and loss
             return eval_out, loss
