@@ -198,6 +198,8 @@ def evaluate(data_loader, model, device, use_amp, args):
 
             metric_logger.update(rmse=_err_RMSE.item())
             metric_logger.update(nrmse=_err_nRMSE.item())
+            # Add FRMSE to metric logger, but not currently working
+            metric_logger.update(frmse=_err_F[0].item() if not torch.isnan(_err_F[0]) else 0.0)
             
     else:  # For non-graph models
         for input_test, target_test, grid in metric_logger.log_every(data_loader, 10, header):
