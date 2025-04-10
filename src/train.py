@@ -141,16 +141,17 @@ def main(args):
     if not args.spa_mod == 'graph':
         data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
                             num_workers=args.num_workers)
-        # data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size,
-        #                     num_workers=args.num_workers)
+        data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size,
+                            num_workers=args.num_workers)
         data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
                             num_workers=args.num_workers)
     else:
-        num_nodes = 1024
-        rand_idx = torch.randperm(args.input_size ** 2)[:num_nodes]  # Random select N nodes
+        sample_nodes = 1024
+        rand_idx = torch.randperm(args.input_size ** 2)[:sample_nodes]  # Random select N nodes
         from fdbench.data.graph_data import get_graph_dataloader
         data_loader_train, normalizer_new = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=None, is_train=True, k=args.neighbor)
         data_loader_val, _ = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
+        data_loader_test, _ = get_graph_dataloader(test_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
     #<<<<<< =================================================================
     max_train_steps = int(args.epochs * len(data_loader_train))
 
@@ -329,6 +330,64 @@ def main(args):
                     logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, BD:{_err_BD_avg:.4f}, CSV:{_err_csv_avg:.4f}')
                     val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg, 'val/BD':_err_BD_avg}
                     accelerator.log(val_log, step=global_step)
+            
+            if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
+                model.eval()  # important! This disables randomized embedding dropout
+                
+                _err_RMSE_avg = 0
+                _err_nRMSE_avg = 0
+                _err_max_avg = 0
+                _err_csv_avg = 0
+                _err_BD_avg = 0
+                _err_F_avg = 0
+                with torch.no_grad():
+                    for batch in data_loader_test:
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            data = batch.to(device)
+                            input_test = data
+                            target_test = data.y
+                            grid = getattr(data, 'grid', None)
+                        else:
+                            input_test, target_test, grid = batch
+                            input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            grid = grid.to(device) if grid is not None else None
+
+                        if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                            if args.sample_method == "ddpm":
+                                samp_algo = model.ddpm_sample
+                            else:
+                                samp_algo = model.ddim_sample
+                            outputs, loss = samp_algo(input_test,target_test,grid,criterion)
+                        else:
+                            outputs, loss = model(input_test,target_test,grid,criterion)
+                        
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            batch_size = batch.num_graphs
+                        else:
+                            batch_size = input_test.shape[0]
+                        #     outputs = outputs.unsqueeze(-1).unsqueeze(-1)
+                        #     # outputs, target_test, mask = remove_virtual_nodes(outputs, target_test, batch.ptr)
+                        
+                        Lx, Ly, Lz = 1., 1., 1.
+                        _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
+                        = metric_func(outputs, target_test, batch_size, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+
+                        _err_RMSE_avg += _err_RMSE.item()
+                        _err_nRMSE_avg += _err_nRMSE.item()
+                        _err_max_avg += _err_Max.item()
+                        _err_csv_avg += _err_CSV.item()
+                        _err_F_avg += _err_F.item()
+                        _err_BD_avg += _err_BD.item()
+                    _err_RMSE_avg /= len(data_loader_test)
+                    _err_nRMSE_avg /= len(data_loader_test)
+                    _err_max_avg /= len(data_loader_test)
+                    _err_csv_avg /= len(data_loader_test)
+                    _err_F_avg /= len(data_loader_test)
+                    _err_BD_avg /= len(data_loader_test)
+                    logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, BD:{_err_BD_avg:.4f}, CSV:{_err_csv_avg:.4f}')
+                    test_log = {"test/test_RMSE": _err_RMSE_avg, "test/test_nRMSE": _err_nRMSE_avg, "test/fRMSE":_err_F_avg, 'test/MAX-ERR':_err_max_avg, 'test/CSV':_err_csv_avg, 'test/BD':_err_BD_avg}
+                    accelerator.log(test_log, step=global_step)
 
             logs = {
                 "train/lr": current_lr,
