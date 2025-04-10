@@ -173,9 +173,9 @@ class SpectralConv2d_fast(nn.Module):
         x = torch.fft.irfft2(out_ft, s=(x.size(-2), x.size(-1)))
         return x
 
-class fourier(nn.Module):
+class FNO2d(nn.Module):
     def __init__(self, gamma=1, args={}):
-        super(fourier, self).__init__()
+        super(FNO2d, self).__init__()
 
         """
         The overall network. It contains 4 layers of the Fourier layer.
@@ -214,6 +214,8 @@ class fourier(nn.Module):
 
     def forward(self, x, target, grid, creterion=None):
         # x dim = [b, x1, x2, t*v]
+        if len(x.shape) == 5:
+            x = x.reshape(x.shape[0],x.shape[1],x.shape[2],-1)
         x = x.permute(0, 2, 3, 1)
         x = self.fc0(x)
         x = x.permute(0, 3, 1, 2)
@@ -341,6 +343,7 @@ class FNO3d(nn.Module):
 
     def forward(self, x, grid):
         # x dim = [b, x1, x2, x3, t*v]
+
         x = torch.cat((x, grid), dim=-1)
         x = self.fc0(x)
         x = x.permute(0, 4, 1, 2, 3)
@@ -373,6 +376,19 @@ class FNO3d(nn.Module):
         x = self.fc2(x)
         return x.unsqueeze(-2)
 
+class fourier:
+    def __new__(cls, gamma=1, args={}):
+
+        if args.tem_mod == 'next_step':
+            base_cls = FNO2d
+        else:
+            raise ValueError(f"Unsupported temporal_mod: {args.tem_mod}")
+        
+        class DynamicFourierModel(base_cls):
+            def __init__(self_inner):
+                super(DynamicFourierModel, self_inner).__init__(gamma, args)
+        
+        return DynamicFourierModel()
 
 # import argparse
 # parser = argparse.ArgumentParser('FD-Bench training and evaluation script', add_help=False)
