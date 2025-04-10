@@ -248,10 +248,9 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
             target_var_idx = args.pred_var if args.pred_var >= 0 else target_grid.shape[-1] + args.pred_var
             target_grid_var = target_grid[:, :, :, :, target_var_idx] # [B, H, W, T]
 
-            # Prediction is single channel, add channel dim: [B, H, W, T] -> [B, 1, H, W, T]
-            pred_grid_metric = pred_grid.unsqueeze(1).permute(0, 1, 2, 3, 4)
-            # Target: [B, H, W, T] -> [B, 1, H, W, T]
-            target_grid_metric = target_grid_var.unsqueeze(1).permute(0, 1, 2, 3, 4)
+            # Format tensor for metric_func: requires [B, H, W, C, T]
+            pred_grid_metric = pred_grid.unsqueeze(3) # Shape [B, H, W, 1, T]
+            target_grid_metric = target_grid_var.unsqueeze(3) # Shape [B, H, W, 1, T]
             
             # pred_grid_metric = pred_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
             # target_grid_metric = target_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
