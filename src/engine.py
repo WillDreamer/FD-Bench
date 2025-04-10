@@ -167,12 +167,19 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
                 outputs, loss = model(data, data.y, criterion) # outputs shape: [B, N, T_pred, 1]
             
             batch_size = data.num_graphs
-            n_nodes_per_graph = data.num_nodes // batch_size # N
+            n_nodes_total = data.num_nodes // batch_size # N+1 (includes virtual node)
+            original_n_nodes_per_graph = n_nodes_total - 1 # N (real nodes)
+            
+            # Check if there are any real nodes left
+            if original_n_nodes_per_graph <= 0:
+                print("Warning: Graph found with only virtual nodes or no nodes. Skipping batch.")
+                continue # Skip this batch if no real nodes
+                
             forecast_horizon = outputs.shape[2] # T_pred
             in_chans = data.x.shape[2] # C_in
             target_chans = data.y.shape[2] # C_out
 
-            metric_logger.update(loss=loss.item())
+            metric_logger.update(loss=loss.item() if not torch.isnan(loss) else 0.0)
 
             # --- Interpolate graph data to grid for metrics ---
             if grid_h is None or grid_w is None:
@@ -190,10 +197,15 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
             target_grid_coords = np.vstack([grid_xx.ravel(), grid_yy.ravel()]).T
 
             # Reshape predictions and targets
-            # Prediction: [B, N, T_pred, 1] -> [B, N, T_pred]
-            pred_reshaped = outputs.squeeze(-1)
+            # Prediction: [B, N+1, T_pred, 1] -> Slice real nodes -> [B, N, T_pred]
+            pred_reshaped = outputs[:, :original_n_nodes_per_graph, :, :].squeeze(-1) # Shape [B, N, T_pred]
+            
             # Target: [B*N, T_target, C_out] -> [B, N, T_target, C_out]
-            target_reshaped = data.y.reshape(batch_size, n_nodes_per_graph, -1, target_chans)
+            # Ensure data.y has the expected size B*N
+            if data.y.shape[0] != batch_size * original_n_nodes_per_graph:
+                print(f"Warning: data.y size mismatch. Expected {batch_size * original_n_nodes_per_graph}, got {data.y.shape[0]}. Skipping batch.")
+                continue
+            target_reshaped = data.y.reshape(batch_size, original_n_nodes_per_graph, -1, target_chans)
 
             # Determine common timesteps
             num_target_timesteps = target_reshaped.shape[2] # T_target
@@ -205,7 +217,11 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
             interpolated_targets = []
 
             # Get node positions: [B*N, 2] -> [B, N, 2]
-            node_positions = data.pos.reshape(batch_size, n_nodes_per_graph, 2).cpu().numpy()
+            # Ensure data.pos has the expected size B*N
+            if data.pos.shape[0] != batch_size * original_n_nodes_per_graph:
+                print(f"Warning: data.pos size mismatch. Expected {batch_size * original_n_nodes_per_graph}, got {data.pos.shape[0]}. Skipping batch.")
+                continue
+            node_positions = data.pos.reshape(batch_size, original_n_nodes_per_graph, 2).cpu().numpy()
 
             # Iterate through batch, interpolate each sample
             for b in range(batch_size):
@@ -217,7 +233,7 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
                 # Interpolate predictions (single channel)
                 interpolated_pred_sample = griddata(
                     current_node_pos,
-                    current_pred.reshape(n_nodes_per_graph, -1), # Flatten time steps
+                    current_pred.reshape(original_n_nodes_per_graph, -1), # Flatten time steps
                     target_grid_coords,
                     method='linear',
                     fill_value=0 # Use 0 for points outside convex hull
@@ -229,7 +245,7 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
                 for c in range(target_chans):
                     interpolated_target_chan = griddata(
                         current_node_pos,
-                        current_target[:, :, c].reshape(n_nodes_per_graph, -1), # Flatten time steps
+                        current_target[:, :, c].reshape(original_n_nodes_per_graph, -1), # Flatten time steps
                         target_grid_coords,
                         method='linear',
                         fill_value=0 # Use 0 for points outside convex hull

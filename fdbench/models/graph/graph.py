@@ -353,17 +353,31 @@ class graph(torch.nn.Module):
             out = u_pred_var_repeated + temporal_evolution # Shape: [batch*nodes, forecast_horizon]
 
         # --- Output Reshaping & Loss Calculation ---
-        # Store the flat output for loss calculation
-        out_flat = out # Shape: [B*N, forecast_horizon]
+        # out_flat shape: [B*(N+1), forecast_horizon]
 
-        # Reshape for consistent return shape
-        eval_out = out_flat.reshape(batch_size, n_nodes_per_graph, self.forecast_horizon, 1) # Shape: [B, N, T, 1]
+        # Reshape for consistent return shape (includes virtual node)
+        n_nodes_total = data.num_nodes // batch_size # N+1
+        eval_out = out.reshape(batch_size, n_nodes_total, self.forecast_horizon, 1) # Shape: [B, N+1, T, 1]
 
-        # Calculate loss using all available timesteps
+        # Calculate loss using only the real nodes across all timesteps
         if criterion is not None:
             loss = 0 # Initialize loss
-            # ensure target (data.y) shape is 3d
-            if len(target.shape) == 3: # Expects [B*N, T_target, C]
+
+            # Get original number of nodes (N)
+            n_real_nodes = n_nodes_total - 1
+
+            # Reshape prediction to separate batch and nodes: [B*(N+1), T] -> [B, N+1, T]
+            pred_reshaped_all_nodes = out.reshape(batch_size, n_nodes_total, self.forecast_horizon)
+
+            # Slice to get only real node predictions: [B, N+1, T] -> [B, N, T]
+            pred_real_nodes = pred_reshaped_all_nodes[:, :n_real_nodes, :]
+
+            # Flatten real node predictions: [B, N, T] -> [B*N, T]
+            pred_real_nodes_flat = pred_real_nodes.reshape(-1, self.forecast_horizon)
+
+            # ensure target (data.y) shape is [B*N, T_target, C]
+            # Check target shape and size against real nodes
+            if len(target.shape) == 3 and target.shape[0] == batch_size * n_real_nodes:
                 # Extract target's relevant variable based on pred_var
                 target_var_idx = self.pred_var if self.pred_var >= 0 else target.shape[2] + self.pred_var
                 target_var = target[:, :, target_var_idx] # Shape: [B*N, T_target]
@@ -374,21 +388,24 @@ class graph(torch.nn.Module):
                 num_timesteps = min(num_pred_timesteps, num_target_timesteps)
 
                 if num_pred_timesteps != num_target_timesteps:
-                    print(f"Warning: Prediction and target timesteps mismatch (using minimum): {num_pred_timesteps} != {num_target_timesteps}")
+                     if not hasattr(self, '_warned_timestep_mismatch'):
+                        print(f"Warning: Prediction and target timesteps mismatch (using minimum): {num_pred_timesteps} vs {num_target_timesteps}")
+                        self._warned_timestep_mismatch = True
 
-                # Slice prediction and target to common timesteps
-                # Use the flat prediction before reshaping
-                pred_slice = out_flat[:, :num_timesteps] # Shape: [B*N, num_timesteps]
+                # Slice prediction (real nodes) and target to common timesteps
+                pred_slice = pred_real_nodes_flat[:, :num_timesteps] # Shape: [B*N, num_timesteps]
                 target_slice = target_var[:, :num_timesteps] # Shape: [B*N, num_timesteps]
 
                 # Ensure shapes match before loss calculation
                 loss = criterion(pred_slice, target_slice)
 
             else:
-                # Fallback if target is not 3D (may indicate unexpected input)
-                print(f"Warning: Target shape {target.shape} unexpected (expected 3D [B*N, T, C]), attempting direct loss calculation.")
-                # unlikely to work, but shouldn't hit this case
-                loss = criterion(eval_out.reshape(batch_size*n_nodes_per_graph, -1), target.reshape(batch_size*n_nodes_per_graph, -1)) # Attempting a flatten comparison
+                # Handle incorrect target shape or size
+                 if not hasattr(self, '_warned_loss_fallback'):
+                    print(f"Warning: Target shape {target.shape} or size mismatch with real nodes ({batch_size * n_real_nodes}). Loss calculation cannot proceed correctly.")
+                    self._warned_loss_fallback = True
+                # Cannot reliably calculate loss here, return NaN loss.
+                 loss = torch.tensor(float('nan')).to(device)
 
             # Return evaluation output (full prediction, consistently shaped) and loss
             return eval_out, loss
