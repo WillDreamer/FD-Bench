@@ -13,6 +13,7 @@ from fdbench.utils import utils
 from fdbench.utils.utils import tprint
 from fdbench.utils import metrics
 from torch_geometric.data import Data, DataLoader
+from torch_geometric.transforms import VirtualNode
 from scipy.spatial import distance_matrix
 import numpy as np
 import random
@@ -370,6 +371,8 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
 
     first_iter = True
 
+    virtual_node_transform = VirtualNode()
+
     for i in range(len(dataset)):
         x, y, grid = dataset[i]
 
@@ -428,18 +431,12 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
 
         # --- Create Data object with node-centric tensors ---
         # Store coordinates in 'pos' attribute
-        data_list.append(Data(x=node_x, y=node_y, pos=node_pos, edge_index=edge_index, edge_attr=edge_attr))
-
-        # TODO: apply virtual node transform
-        """
-        data = Data(x=x, edge_index=edge_index)
-
+        data = Data(x=node_x, y=node_y, pos=node_pos, edge_index=edge_index, edge_attr=edge_attr)
 
         # Apply the VirtualNode transform
-        transform = VirtualNode()
-        data = transform(data)
-        """
-        
+        data = virtual_node_transform(data)
+
+        data_list.append(data)
 
     dataloader = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return dataloader, grid_h, grid_w
