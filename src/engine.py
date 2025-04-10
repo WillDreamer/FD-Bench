@@ -253,11 +253,8 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
             # Target: [B, H, W, T] -> [B, 1, H, W, T]
             target_grid_metric = target_grid_var.unsqueeze(1).permute(0, 1, 2, 3, 4)
             
-            # Move time dimension to the end if metric_func expects it
-            # Currently metric_func expects [B, C, H, W, T] -> [B, C, D, H, W] or similar
-            # Let's reshape to [B, C, T, H, W] as the fft is done on spatial dims 2,3
-            pred_grid_metric = pred_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
-            target_grid_metric = target_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
+            # pred_grid_metric = pred_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
+            # target_grid_metric = target_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
 
             # Check shapes before calling metric_func
             # print(f"Shape before metrics: Pred={pred_grid_metric.shape}, Target={target_grid_metric.shape}")
