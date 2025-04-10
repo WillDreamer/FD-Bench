@@ -178,7 +178,9 @@ def metric_func(pred, target, if_mean=True, Lx=1., Ly=1., Lz=1., iLow=4, iHigh=1
     err_mean = torch.sqrt(torch.mean((pred.view([nb, nc, -1, nt]) - target.view([nb, nc, -1, nt])) ** 2, dim=2))
     err_RMSE = torch.mean(err_mean, axis=0)
     nrm = torch.sqrt(torch.mean(target.view([nb, nc, -1, nt]) ** 2, dim=2))
-    err_nRMSE = torch.mean(err_mean / nrm, dim=0)
+    # add epsilon to avoid division by zero
+    epsilon = 1e-8 
+    err_nRMSE = torch.mean(err_mean / (nrm + epsilon), dim=0)
 
     err_CSV = torch.sqrt(torch.mean(
         (torch.sum(pred.view([nb, nc, -1, nt]), dim=2) - torch.sum(target.view([nb, nc, -1, nt]), dim=2)) ** 2,

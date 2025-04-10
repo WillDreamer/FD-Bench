@@ -82,10 +82,12 @@ def main(args):
     print("graph_baseline (train.py): ", args.graph_baseline)
 
     if args.use_odeint or args.graph_baseline:
-        data_loader_train = get_graph_dataloader(train_data, batch_size=args.batch_size, num_workers=args.num_workers)
-        data_loader_test = get_graph_dataloader(test_data, batch_size=args.batch_size//2, num_workers=args.num_workers)
-        data_loader_val = get_graph_dataloader(val_data, batch_size=args.batch_size//2, num_workers=args.num_workers)  
+        data_loader_train, _, _ = get_graph_dataloader(train_data, batch_size=args.batch_size, num_workers=args.num_workers)
+        data_loader_test, grid_h_test, grid_w_test = get_graph_dataloader(test_data, batch_size=args.batch_size//2, num_workers=args.num_workers, shuffle=False)
+        data_loader_val, grid_h_val, grid_w_val = get_graph_dataloader(val_data, batch_size=args.batch_size//2, num_workers=args.num_workers, shuffle=False)
     else:
+        grid_h_test, grid_w_test = None, None
+        grid_h_val, grid_w_val = None, None
         data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
                                                 num_workers=args.num_workers)
         data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size//2,
@@ -232,8 +234,12 @@ def main(args):
                     }, checkpoint_path)
 
         if (epoch +1) % args.eval_step == 0: 
-            val_stats = evaluate(data_loader_val, model, device, args.use_amp, args)
-            test_stats = evaluate(data_loader_test, model, device, args.use_amp, args)
+            if args.use_odeint or args.graph_baseline:
+                 val_stats = evaluate(data_loader_val, model, device, args.use_amp, args, grid_h=grid_h_val, grid_w=grid_w_val)
+                 test_stats = evaluate(data_loader_test, model, device, args.use_amp, args, grid_h=grid_h_test, grid_w=grid_w_test)
+            else:
+                val_stats = evaluate(data_loader_val, model, device, args.use_amp, args)
+                test_stats = evaluate(data_loader_test, model, device, args.use_amp, args)
 
 
             log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},

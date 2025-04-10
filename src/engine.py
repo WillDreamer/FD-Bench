@@ -16,6 +16,7 @@ from torch_geometric.data import Data, DataLoader
 from scipy.spatial import distance_matrix
 import numpy as np
 import random
+from scipy.interpolate import griddata
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -144,7 +145,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
 
 
 @torch.no_grad()
-def evaluate(data_loader, model, device, use_amp, args):
+def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None):
     criterion = torch.nn.MSELoss()
 
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -165,41 +166,148 @@ def evaluate(data_loader, model, device, use_amp, args):
                 outputs, loss = model(data, data.y, criterion) # outputs shape: [B, N, T_pred, 1]
             
             batch_size = data.num_graphs
-            n_nodes = data.num_nodes // batch_size
-            forecast_horizon = outputs.shape[2] 
+            n_nodes_per_graph = data.num_nodes // batch_size # N
+            forecast_horizon = outputs.shape[2] # T_pred
+            in_chans = data.x.shape[2] # C_in
+            target_chans = data.y.shape[2] # C_out
+
             metric_logger.update(loss=loss.item())
+
+            # --- Interpolate graph data to grid for metrics ---
+            if grid_h is None or grid_w is None:
+                if not hasattr(evaluate, '_printed_grid_fallback'):
+                    print(f"Warning [evaluate]: Grid dimensions not provided. Falling back to 128x128.")
+                    evaluate._printed_grid_fallback = True 
+                interp_h, interp_w = 128, 128
+            else:
+                interp_h, interp_w = grid_h, grid_w
             
-            # --- Target Processing for Metrics --- 
-            # data.y shape is [B*N, T_target, C]
-            target_var_idx = args.pred_var if args.pred_var >= 0 else data.y.shape[2] + args.pred_var
-            target_all_steps = data.y[:, :, target_var_idx] # Shape: [B*N, T_target]
+            # Create grid coordinates for interpolation
+            grid_x_vals = np.linspace(0, 1, interp_w) # Assuming coordinates are normalized [0,1]
+            grid_y_vals = np.linspace(0, 1, interp_h) # Assuming coordinates are normalized [0,1]
+            grid_xx, grid_yy = np.meshgrid(grid_x_vals, grid_y_vals)
+            target_grid_coords = np.vstack([grid_xx.ravel(), grid_yy.ravel()]).T
 
-            # Slice target timesteps to match prediction horizon
-            num_target_timesteps = target_all_steps.shape[1] # T_target dim
+            # Reshape predictions and targets
+            # Prediction: [B, N, T_pred, 1] -> [B, N, T_pred]
+            pred_reshaped = outputs.squeeze(-1)
+            # Target: [B*N, T_target, C_out] -> [B, N, T_target, C_out]
+            target_reshaped = data.y.reshape(batch_size, n_nodes_per_graph, -1, target_chans)
+
+            # Determine common timesteps
+            num_target_timesteps = target_reshaped.shape[2] # T_target
             num_pred_timesteps = forecast_horizon
-            num_timesteps = min(num_pred_timesteps, num_target_timesteps) # Use common timesteps
-            target_sliced = target_all_steps[:, :num_timesteps] # Shape: [B*N, num_timesteps]
+            num_timesteps = min(num_pred_timesteps, num_target_timesteps)
 
-            # Slice prediction timesteps if necessary
-            # Reshape prediction [B, N, T_pred, 1] -> [B*N, T_pred]
-            pred_reshaped = outputs.reshape(batch_size * n_nodes, forecast_horizon)
-            pred_sliced = pred_reshaped[:, :num_timesteps] # Shape: [B*N, num_timesteps]
+            # Prepare lists to store interpolated tensors
+            interpolated_preds = []
+            interpolated_targets = []
 
-            # --- Reshape for metrics calculation --- 
-            # NOTE: metrics.metric_func expects [B, C, H, W] or [B, C, D, H, W]
-            # The current graph output [B*N, T] or [B, N, T, 1] is incompatible with spatial FFT used in FRMSE.
-            # will reshape to [B*N, 1, T, 1] to calculate RMSE/NRMSE, but FRMSE will likely remain NaN.
-            outputs_reshaped_for_metrics = pred_sliced.unsqueeze(1).unsqueeze(-1) # Shape: [B*N, 1, num_timesteps, 1]
-            target_reshaped_for_metrics = target_sliced.unsqueeze(1).unsqueeze(-1) # Shape: [B*N, 1, num_timesteps, 1]
+            # Get node positions: [B*N, 2] -> [B, N, 2]
+            node_positions = data.pos.reshape(batch_size, n_nodes_per_graph, 2).cpu().numpy()
+
+            # Iterate through batch, interpolate each sample
+            for b in range(batch_size):
+                # Current sample data (move to CPU)
+                current_node_pos = node_positions[b] # [N, 2]
+                current_pred = pred_reshaped[b, :, :num_timesteps].cpu().numpy() # [N, num_timesteps]
+                current_target = target_reshaped[b, :, :num_timesteps, :].cpu().numpy() # [N, num_timesteps, C_out]
+
+                # Interpolate predictions (single channel)
+                interpolated_pred_sample = griddata(
+                    current_node_pos,
+                    current_pred.reshape(n_nodes_per_graph, -1), # Flatten time steps
+                    target_grid_coords,
+                    method='linear',
+                    fill_value=0 # Use 0 for points outside convex hull
+                ).reshape(interp_h, interp_w, num_timesteps)
+                interpolated_preds.append(torch.from_numpy(interpolated_pred_sample)) # [H, W, T]
+
+                # Interpolate targets (multiple channels)
+                interpolated_target_sample_channels = []
+                for c in range(target_chans):
+                    interpolated_target_chan = griddata(
+                        current_node_pos,
+                        current_target[:, :, c].reshape(n_nodes_per_graph, -1), # Flatten time steps
+                        target_grid_coords,
+                        method='linear',
+                        fill_value=0 # Use 0 for points outside convex hull
+                    ).reshape(interp_h, interp_w, num_timesteps)
+                    interpolated_target_sample_channels.append(torch.from_numpy(interpolated_target_chan)) # [H, W, T]
+                # Stack channels: List[[H, W, T]] -> [H, W, T, C]
+                interpolated_target_sample = torch.stack(interpolated_target_sample_channels, dim=-1)
+                interpolated_targets.append(interpolated_target_sample)
+
+            # Stack batch: List[[H, W, T]] -> [B, H, W, T]
+            pred_grid = torch.stack(interpolated_preds, dim=0).to(device)
+            # Stack batch: List[[H, W, T, C]] -> [B, H, W, T, C]
+            target_grid = torch.stack(interpolated_targets, dim=0).to(device)
+
+            # --- Prepare tensors for metric_func (expects [B, C, H, W, T] or [B, C, H, W]) ---
+            # Select the target variable for comparison
+            target_var_idx = args.pred_var if args.pred_var >= 0 else target_grid.shape[-1] + args.pred_var
+            target_grid_var = target_grid[:, :, :, :, target_var_idx] # [B, H, W, T]
+
+            # Prediction is single channel, add channel dim: [B, H, W, T] -> [B, 1, H, W, T]
+            pred_grid_metric = pred_grid.unsqueeze(1).permute(0, 1, 2, 3, 4)
+            # Target: [B, H, W, T] -> [B, 1, H, W, T]
+            target_grid_metric = target_grid_var.unsqueeze(1).permute(0, 1, 2, 3, 4)
+            
+            # Move time dimension to the end if metric_func expects it
+            # Currently metric_func expects [B, C, H, W, T] -> [B, C, D, H, W] or similar
+            # Let's reshape to [B, C, T, H, W] as the fft is done on spatial dims 2,3
+            pred_grid_metric = pred_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
+            target_grid_metric = target_grid_metric.permute(0, 1, 4, 2, 3) # [B, 1, T, H, W]
+
+            # Check shapes before calling metric_func
+            # print(f"Shape before metrics: Pred={pred_grid_metric.shape}, Target={target_grid_metric.shape}")
             
             Lx, Ly, Lz = 1., 1., 1.
             _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
-            = metrics.metric_func(outputs_reshaped_for_metrics, target_reshaped_for_metrics, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+                = metrics.metric_func(pred_grid_metric, target_grid_metric, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
 
             metric_logger.update(rmse=_err_RMSE.item())
             metric_logger.update(nrmse=_err_nRMSE.item())
-            # Add FRMSE to metric logger, but not currently working
+            # Add FRMSE to metric logger
             metric_logger.update(frmse=_err_F[0].item() if not torch.isnan(_err_F[0]) else 0.0)
+
+            # --- Old code for reference ---
+            # batch_size = data.num_graphs
+            # n_nodes = data.num_nodes // batch_size
+            # forecast_horizon = outputs.shape[2] 
+            # metric_logger.update(loss=loss.item())
+            # 
+            # # --- Target Processing for Metrics --- 
+            # # data.y shape is [B*N, T_target, C]
+            # target_var_idx = args.pred_var if args.pred_var >= 0 else data.y.shape[2] + args.pred_var
+            # target_all_steps = data.y[:, :, target_var_idx] # Shape: [B*N, T_target]
+
+            # # Slice target timesteps to match prediction horizon
+            # num_target_timesteps = target_all_steps.shape[1] # T_target dim
+            # num_pred_timesteps = forecast_horizon
+            # num_timesteps = min(num_pred_timesteps, num_target_timesteps) # Use common timesteps
+            # target_sliced = target_all_steps[:, :num_timesteps] # Shape: [B*N, num_timesteps]
+
+            # # Slice prediction timesteps if necessary
+            # # Reshape prediction [B, N, T_pred, 1] -> [B*N, T_pred]
+            # pred_reshaped = outputs.reshape(batch_size * n_nodes, forecast_horizon)
+            # pred_sliced = pred_reshaped[:, :num_timesteps] # Shape: [B*N, num_timesteps]
+
+            # # --- Reshape for metrics calculation --- 
+            # # NOTE: metrics.metric_func expects [B, C, H, W] or [B, C, D, H, W]
+            # # The current graph output [B*N, T] or [B, N, T, 1] is incompatible with spatial FFT used in FRMSE.
+            # # will reshape to [B*N, 1, T, 1] to calculate RMSE/NRMSE, but FRMSE will likely remain NaN.
+            # outputs_reshaped_for_metrics = pred_sliced.unsqueeze(1).unsqueeze(-1) # Shape: [B*N, 1, num_timesteps, 1]
+            # target_reshaped_for_metrics = target_sliced.unsqueeze(1).unsqueeze(-1) # Shape: [B*N, 1, num_timesteps, 1]
+            # 
+            # Lx, Ly, Lz = 1., 1., 1.
+            # _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
+            # = metrics.metric_func(outputs_reshaped_for_metrics, target_reshaped_for_metrics, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+
+            # metric_logger.update(rmse=_err_RMSE.item())
+            # metric_logger.update(nrmse=_err_nRMSE.item())
+            # # Add FRMSE to metric logger, but not currently working
+            # metric_logger.update(frmse=_err_F[0].item() if not torch.isnan(_err_F[0]) else 0.0)
             
     else:  # For non-graph models
         for input_test, target_test, grid in metric_logger.log_every(data_loader, 10, header):
@@ -247,6 +355,23 @@ def evaluate(data_loader, model, device, use_amp, args):
 def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True):
     data_list = []
 
+    # --- Get Grid Dimensions from the input dataset (for interpolation) --- 
+    grid_h, grid_w = None, None
+    if hasattr(dataset, 'grid') and isinstance(dataset.grid, torch.Tensor):
+        grid_shape = dataset.grid.shape
+        if len(grid_shape) >= 2:
+            grid_h = grid_shape[0]
+            grid_w = grid_shape[1]
+            print(f"[get_graph_dataloader] Determined grid dimensions: H={grid_h}, W={grid_w}")
+        else:
+            print(f"[get_graph_dataloader] Warning: Input dataset.grid has unexpected shape {grid_shape}. Cannot determine H, W.")
+    else:
+        print(f"[get_graph_dataloader] Warning: Input dataset object of type {type(dataset).__name__} lacks a 'grid' attribute or it's not a Tensor.")
+
+    if grid_h is None or grid_w is None:
+        print(f"[get_graph_dataloader] Warning: Falling back to default grid dimensions 128x128.")
+        grid_h, grid_w = 128, 128
+
     first_iter = True
 
     for i in range(len(dataset)):
@@ -270,6 +395,11 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
 
         # grid: [H, W, 2] -> [N, 2]
         node_pos = grid.reshape(num_nodes, 2)
+
+        if i == 0:
+            print(f"DEBUG: Coordinate range (sample 0):")
+            print(f"  X min/max: {node_pos[:, 0].min().item():.4f} / {node_pos[:, 0].max().item():.4f}")
+            print(f"  Y min/max: {node_pos[:, 1].min().item():.4f} / {node_pos[:, 1].max().item():.4f}")
 
         # --- Graph Construction (using node_pos) ---
         points = node_pos.numpy() # Use reshaped node_pos
@@ -316,4 +446,4 @@ def get_graph_dataloader(dataset, batch_size, k=20, num_workers=1, shuffle=True)
         
 
     dataloader = DataLoader(data_list, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    return dataloader
+    return dataloader, grid_h, grid_w
