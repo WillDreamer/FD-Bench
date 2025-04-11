@@ -38,7 +38,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
     if use_odeint or graph_baseline:
         for i, d in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
             if first_go:
-                print(f"DEBUG LOOP (Batch 0, Epoch {epoch}):")
+                print(f"DEBUG:")
                 print(f"  d.num_nodes = {d.num_nodes}")
                 print(f"  d.x.shape = {d.x.shape}")
                 print(f"  d.y.shape = {d.y.shape}")
