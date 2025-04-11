@@ -146,7 +146,7 @@ def main(args):
     _err_BD_avg = 0
     _err_F_avg = 0
     with torch.no_grad():
-        for batch in data_loader_test:
+        for bat_idx, batch in enumerate(data_loader_test):
             if hasattr(batch, 'x') and hasattr(batch, 'y'):
                 data = batch.to(device)
                 input_test = data
@@ -174,6 +174,57 @@ def main(args):
             #     outputs = outputs.unsqueeze(-1).unsqueeze(-1)
             #     # outputs, target_test, mask = remove_virtual_nodes(outputs, target_test, batch.ptr)
             
+            if bat_idx == 0:
+                from matplotlib.backends.backend_pdf import PdfPages
+                from einops import rearrange 
+                import matplotlib.pyplot as plt
+                vis_pdf_path = os.path.join('/wanghaixin/FD-Bench/vis', args.exp_name + '.pdf')
+                pdf = PdfPages(vis_pdf_path)
+                
+                fontdict = {
+                    'fontsize': 16,
+                    'fontweight': 'bold',  #  'normal', 'bold', 'light'
+                    'family': 'serif',     # 'sans-serif', 'monospace', etc.
+                }
+
+                if len(outputs.shape) == 4:
+                    samples = rearrange(outputs, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
+                    targets = rearrange(target_test, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
+                elif len(outputs.shape) == 5:
+                    samples = rearrange(outputs, "B T C H W -> B H W T C").detach().cpu()
+                    targets = rearrange(target_test, "B T C H W -> B H W T C").detach().cpu()
+
+                for i in range(min(samples.size(0), 4)):
+                    T = samples.size(-2)
+                    C = samples.size(-1)
+                    fig, axes = plt.subplots(2 * T, C, figsize=(16, 9))
+
+                    # 安全处理 axes
+                    if isinstance(axes, plt.Axes):
+                        axes = np.array([axes])
+                    else:
+                        axes = np.array(axes).flatten()
+
+                    for j in range(C):
+                        for k in range(T):
+                            idx = k * C + j
+
+                            # 输出预测
+                            axes[idx].imshow(samples[i, :, :, k, j].numpy(), cmap='coolwarm')
+                            axes[idx].axis('off')
+                            axes[idx].set_title(f'Sample {i+1}, Step {k+1}, Ch {j+1}',fontdict=fontdict)
+
+                            # Ground Truth
+                            axes[idx + (len(axes) // 2)].imshow(targets[i, :, :, k, j].numpy(), cmap='coolwarm')
+                            axes[idx + (len(axes) // 2)].axis('off')
+                            axes[idx + (len(axes) // 2)].set_title(f'GT {i+1}, Step {k+1}, Ch {j+1}',fontdict=fontdict)
+
+                    plt.tight_layout(pad=0.5, w_pad=2, h_pad=2)
+                    pdf.savefig(fig, dpi=300)
+                    plt.close(fig)
+
+                pdf.close()
+
             Lx, Ly, Lz = 1., 1., 1.
             _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
             = metric_func(outputs, target_test, batch_size, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)

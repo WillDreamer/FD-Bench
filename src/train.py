@@ -135,7 +135,7 @@ def main(args):
     data_module = getattr(importlib.import_module(data_module_name), 'DatasetSingle')
     train_data = data_module(args = args)
     normalizer = train_data.__normalizer__
-    # test_data = data_module(if_test=True,args = args,normalizer=normalizer)
+    test_data = data_module(if_test=True,args = args,normalizer=normalizer)
     val_data = data_module(if_valid=True,args = args,normalizer=normalizer)
 
     if not args.spa_mod == 'graph':
