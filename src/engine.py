@@ -210,12 +210,13 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
             # Prediction: [B, N+1, T_pred, 1] -> Slice real nodes -> [B, N, T_pred]
             pred_reshaped = outputs[:, :original_n_nodes_per_graph, :, :].squeeze(-1) # Shape [B, N, T_pred]
             
-            # Target: [B*N, T_target, C_out] -> [B, N, T_target, C_out]
-            # Ensure data.y has the expected size B*N
-            if data.y.shape[0] != batch_size * original_n_nodes_per_graph:
-                print(f"Warning: data.y size mismatch. Expected {batch_size * original_n_nodes_per_graph}, got {data.y.shape[0]}. Skipping batch.")
+            # Target: [B*(N+1), T_target, C_out] -> Slice real -> [B, N, T_target, C_out]
+            # Ensure data.y has the expected size B*(N+1)
+            if data.y.shape[0] != batch_size * n_nodes_total:
+                print(f"Warning: data.y size mismatch. Expected {batch_size * n_nodes_total}, got {data.y.shape[0]}. Skipping batch.")
                 continue
-            target_reshaped = data.y.reshape(batch_size, original_n_nodes_per_graph, -1, target_chans)
+            target_reshaped_all_nodes = data.y.reshape(batch_size, n_nodes_total, -1, target_chans)
+            target_reshaped = target_reshaped_all_nodes[:, :original_n_nodes_per_graph, :, :] # Shape [B, N, T_target, C_out]
 
             # Determine common timesteps
             num_target_timesteps = target_reshaped.shape[2] # T_target
@@ -226,12 +227,13 @@ def evaluate(data_loader, model, device, use_amp, args, grid_h=None, grid_w=None
             interpolated_preds = []
             interpolated_targets = []
 
-            # Get node positions: [B*N, 2] -> [B, N, 2]
-            # Ensure data.pos has the expected size B*N
-            if data.pos.shape[0] != batch_size * original_n_nodes_per_graph:
-                print(f"Warning: data.pos size mismatch. Expected {batch_size * original_n_nodes_per_graph}, got {data.pos.shape[0]}. Skipping batch.")
+            # Get node positions: [B*(N+1), 2] -> Slice real -> [B, N, 2]
+            # Ensure data.pos has the expected size B*(N+1)
+            if data.pos.shape[0] != batch_size * n_nodes_total:
+                print(f"Warning: data.pos size mismatch. Expected {batch_size * n_nodes_total}, got {data.pos.shape[0]}. Skipping batch.")
                 continue
-            node_positions = data.pos.reshape(batch_size, original_n_nodes_per_graph, 2).cpu().numpy()
+            node_positions_all_nodes = data.pos.reshape(batch_size, n_nodes_total, 2)
+            node_positions = node_positions_all_nodes[:, :original_n_nodes_per_graph, :].cpu().numpy() # Shape [B, N, 2]
 
             # Iterate through batch, interpolate each sample
             for b in range(batch_size):

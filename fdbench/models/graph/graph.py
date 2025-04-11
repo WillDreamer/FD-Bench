@@ -375,12 +375,19 @@ class graph(torch.nn.Module):
             # Flatten real node predictions: [B, N, T] -> [B*N, T]
             pred_real_nodes_flat = pred_real_nodes.reshape(-1, self.forecast_horizon)
 
-            # ensure target (data.y) shape is [B*N, T_target, C]
-            # Check target shape and size against real nodes
-            if len(target.shape) == 3 and target.shape[0] == batch_size * n_real_nodes:
+            # ensure target (data.y) shape is [B*(N+1), T_target, C]
+            # Check target shape and size
+            if len(target.shape) == 3 and target.shape[0] == batch_size * n_nodes_total:
+                # Slice target to get only real node targets: [B*(N+1), T, C] -> [B*N, T, C]
+                # Need to know how batching maps B*(N+1) to B,N+1
+                # Assume standard PyG batching: target can be reshaped and sliced
+                target_reshaped_all_nodes = target.reshape(batch_size, n_nodes_total, target.shape[1], target.shape[2])
+                target_real_nodes = target_reshaped_all_nodes[:, :n_real_nodes, :, :] # [B, N, T_target, C]
+                target_flat_real_nodes = target_real_nodes.reshape(-1, target.shape[1], target.shape[2]) # [B*N, T_target, C]
+
                 # Extract target's relevant variable based on pred_var
-                target_var_idx = self.pred_var if self.pred_var >= 0 else target.shape[2] + self.pred_var
-                target_var = target[:, :, target_var_idx] # Shape: [B*N, T_target]
+                target_var_idx = self.pred_var if self.pred_var >= 0 else target_flat_real_nodes.shape[2] + self.pred_var
+                target_var = target_flat_real_nodes[:, :, target_var_idx] # Shape: [B*N, T_target]
 
                 # Use minimum number of timesteps between prediction and target
                 num_pred_timesteps = self.forecast_horizon
