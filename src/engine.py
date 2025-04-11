@@ -33,17 +33,18 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.MSELoss,
 
     #print("use_odeint (train_one_epoch): ", use_odeint)
 
+    first_go = True
+
     if use_odeint or graph_baseline:
         for i, d in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
-            # Print shapes for the first batch of the first epoch
-            if epoch == args.start_epoch and i == 0:
+            if first_go:
                 print(f"DEBUG LOOP (Batch 0, Epoch {epoch}):")
                 print(f"  d.num_nodes = {d.num_nodes}")
                 print(f"  d.x.shape = {d.x.shape}")
                 print(f"  d.y.shape = {d.y.shape}")
                 print(f"  d.pos.shape = {d.pos.shape}")
                 print(f"  d.batch size = {d.batch.max().item() + 1}")
-
+                first_go = False
             samples = d.x
             targets = d.y
 
