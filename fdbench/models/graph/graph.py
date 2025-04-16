@@ -26,8 +26,7 @@ class GNN_Layer(MessagePassing):
                  out_features: int,
                  hidden_features: int,
                  time_window: int,
-                 in_chans: int,
-                 n_variables: int):
+                 in_chans: int):
         """
         Initialize message passing layers
         Args:
@@ -35,7 +34,6 @@ class GNN_Layer(MessagePassing):
             out_features (int): number of node output features
             hidden_features (int): number of hidden features
             time_window (int): number of input/output timesteps (temporal bundling)
-            n_variables (int): number of equation specific parameters used in the solver
         """
         super(GNN_Layer, self).__init__(node_dim=-2, aggr='mean')
         self.in_features = in_features
@@ -90,26 +88,14 @@ class graph(torch.nn.Module):
     MP-PDE solver class
     """
     def __init__(self,
-                 time_window: int = 1,
-                 pred_var: int = -4,
                  eq_variables: dict = {},
                  args={}):
-        """
-        Initialize MP-PDE solver class.
-        It contains 6 MP-PDE layers with skip connections
-        The input graph to the forward pass has the shape [batch*n_nodes, inchan * time_window].
-        The output graph has the shape [batch*n_nodes, inchan * time_window].
-        Args:
-            time_window (int): number of input/output timesteps (temporal bundling)
-            hidden features (int): number of hidden features
-            hidden_layer (int): number of hidden layers
-            eq_variables (dict): dictionary of equation specific parameters
-        """
+        
         super(graph, self).__init__()
         # 1D decoder CNN is so far designed time_window = [20,25,50]
         self.hidden_features = args.hidden_features
         self.hidden_layer = args.hidden_layer
-        self.pred_var = pred_var
+        self.pred_var = args.pred_var
         self.eq_variables = eq_variables
         self.in_chans = args.in_chans
         self.args = args
@@ -121,12 +107,11 @@ class graph(torch.nn.Module):
             self.fc2 = nn.Linear(self.hidden_features//2, args.out_chans)
 
         elif args.tem_mod == 'temporal_bundling':
-            self.forecast_horizon = 5
-            self.time_window = 5
+            self.forecast_horizon = args.initial_step
+            self.time_window = args.initial_step
             conv_params = {
                 1:  (25, 21, 5, 1),
-                5:  (64, 8, 5, 1),
-                20: (15, 4, 10, 1),
+                5:  (32, 8, 10, 1),   # correspond to T*channels
                 25: (16, 3, 14, 1),
                 50: (12, 2, 10, 1)
             }
@@ -134,21 +119,16 @@ class graph(torch.nn.Module):
                 in_ker_size, stride_bund, out_ker_size, out_stride = conv_params[self.time_window]
                 self.output_mlp = nn.Sequential(
                     nn.Conv1d(1, 8, in_ker_size, stride=stride_bund),
-                    Swish(),  # or nn.SiLU()
+                    Swish(),  
                     nn.Conv1d(8, 1, out_ker_size, stride=out_stride)
                 )
-            self.output_mlp = nn.Sequential(nn.Conv1d(1, 8, in_ker_size, stride=stride_bund),
-                                            Swish(),
-                                            nn.Conv1d(8, 1, out_ker_size, stride=1)
-                                            )
 
         self.gnn_layers = torch.nn.ModuleList(modules=(GNN_Layer(
             in_features=self.hidden_features,
             hidden_features=self.hidden_features,
             out_features=self.hidden_features,
             time_window=self.time_window,
-            in_chans = self.in_chans,
-            n_variables=len(self.eq_variables) + 1  # variables = eq_variables + time
+            in_chans = self.in_chans
         ) for _ in range(self.hidden_layer - 1)))
 
         # The last message passing last layer has a fixed output size to make the use of the decoder 1D-CNN easier
@@ -157,7 +137,6 @@ class graph(torch.nn.Module):
                                          out_features=self.hidden_features,
                                          time_window=self.time_window,
                                          in_chans = self.in_chans,
-                                         n_variables=len(self.eq_variables) + 1
                                         ))
 
         self.embedding_mlp = nn.Sequential(
@@ -168,19 +147,10 @@ class graph(torch.nn.Module):
         )
 
     def __repr__(self):
-        return f'GNN'
+        return f'Spatial module is Graph'
 
     def forward(self, data, target, grid, creterion=None) -> torch.Tensor:
-        """
-        Forward pass of MP-PDE solver class.
-        The input graph has the shape [batch*n_nodes, time_window].
-        The output tensor has the shape [batch*n_nodes, time_window].
-        Args:
-            data (Data): Pytorch Geometric data graph
-        Returns:
-            torch.Tensor: data output
-        """
-        # x dim = [b, c, x1, x2]
+        
 
         pos = data.pos
         u = data.x
@@ -189,18 +159,24 @@ class graph(torch.nn.Module):
 
         # Encoder and processor (message passing)
         node_input = torch.cat((pos, u), -1) 
+
         h = self.embedding_mlp(node_input)
         for i in range(self.hidden_layer):
             h = self.gnn_layers[i](h, u, pos, edge_index, batch)
         
         if self.args.tem_mod == 'temporal_bundling':
-            # Decoder (formula 10 in the paper)
-            dt = (torch.ones(1, self.time_window)).to(h.device)
-            dt = torch.cumsum(dt, dim=1)
+            
+            dt = torch.cumsum(torch.ones(1, self.time_window, 1, device=h.device), dim=1).repeat(1,1,self.pred_var)
             # [batch*n_nodes, hidden_dim] -> 1DCNN([batch*n_nodes, 1, hidden_dim]) -> [batch*n_nodes, time_window]
             diff = self.output_mlp(h[:, None]).squeeze(1)
-            out = u[:, self.pred_var].repeat(self.time_window, 1).transpose(0, 1) + dt * diff
-            out = out[:,:self.forecast_horizon]
+
+            diff = diff.reshape(-1, self.time_window, self.pred_var)
+
+            u_last = u[:, -self.pred_var:] 
+            u_last = u_last.unsqueeze(1) 
+            out = u_last + dt * diff
+            out = out.reshape(-1, self.time_window*self.pred_var)  
+        
         
         elif self.args.tem_mod == 'next_step':
             x = self.fc1(h)
