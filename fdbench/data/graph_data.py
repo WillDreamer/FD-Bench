@@ -49,7 +49,7 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
             x[-1:,:,:] - x[-2:-1,:,:],                    
         ], dim=0)
 
-        x = torch.cat([x,all_gradx,all_grady],dim=-1)
+        x = torch.cat([all_gradx,all_grady,x],dim=-1)
         all_var_dim = x.shape[-1]
 
         if first_iter:

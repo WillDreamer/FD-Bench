@@ -221,7 +221,7 @@ class DatasetSingle(Dataset):
         # Time steps used as initial conditions
         if args.tem_mod == 'next_step':
             self.window_size = 1
-        elif args.tem_mod == 'auto_regressive':
+        elif args.tem_mod in {'auto_regressive', 'temporal_bundling'}:
             self.window_size = initial_step
         else:
             self.window_size = initial_step

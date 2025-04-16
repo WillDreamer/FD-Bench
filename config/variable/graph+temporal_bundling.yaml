@@ -1,6 +1,6 @@
 paths:
   output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
-  report_to: 'wandb'    #* choices: ['wandb', 'tensorboard', 'all']
+  report_to: 'tensorboard'                #* choices: ['wandb', 'tensorboard', 'all']
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
@@ -15,16 +15,15 @@ training:
   pin_mem: true
 
 model:
-  spa_mod: 'graph'  #* choices: ['self_atten', 'fourier', 'graph']
-  tem_mod: 'next_step'      #* choices: ['linear', 'next_step']
+  spa_mod: 'graph'                  #* choices: ['self_atten', 'fourier', 'graph']
+  tem_mod: 'temporal_bundling'      #* choices: ['linear', 'next_step','temporal_bundling']
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
   neighbor: 30
-  time_window: 20
   hidden_features: 256
   hidden_layer: 8
-  pred_var: -4
+  pred_var: 4
   checkpoint_activations: false
   ls_w: 4
   ls_dp_rank: 16
@@ -39,7 +38,7 @@ data:
   reduced_resolution: 4
   reduced_resolution_t: 1 
   reduced_batch: 1
-  initial_step: 1
+  initial_step: 5
 
 optimizer:
   opt: 'adamw'
