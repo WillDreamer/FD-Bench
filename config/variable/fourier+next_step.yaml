@@ -1,11 +1,11 @@
 paths:
   output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
-  report_to: tensorboard   #* choices: ['wandb', 'tensorboard', 'all']
+  report_to: wandb   #* choices: ['wandb', 'tensorboard', 'all']
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 128
-  epochs: 500
+  epochs: 1500
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -15,14 +15,14 @@ training:
   pin_mem: true
 
 model:
-  spa_mod: 'fourier'  #* choices: ['self_atten', 'fourier', 'graph']
-  tem_mod: 'next_step'      #* choices: ['linear', ]
+  spa_mod: 'fourier'  
+  tem_mod: 'next_step'      
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
   
-  modes1: 24
-  modes2: 24
+  modes1: 48
+  modes2: 48
   width: 64
   
   fno_bias: false
@@ -36,7 +36,7 @@ model:
   ls_dp_rank: 16
 
 data:
-  # PDE_type: 'CNS'      #* choices: ['CNS', 'DR']
+  # PDE_type: 'CNS'      
   # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
   # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
   # input_size: 128 
@@ -66,8 +66,9 @@ data:
   max_num_time_steps: 3
   input_size: 128
   in_chans: 5
-  
   reduced_resolution: 1
+  
+  
   reduced_resolution_t: 1 
   reduced_batch: 1
   initial_step: 1
@@ -86,7 +87,8 @@ optimizer:
 
 
 lr_scheduler:
-  scheduler: 'CosineAnnealing'
+  # scheduler: 'CosineAnnealing'
+  scheduler: 'lambda'
   step_size_up: 1000
   step_size_down: 1000
   lr: 1.0e-3
