@@ -46,6 +46,32 @@ data:
   input_size: 128 
   in_chans: 4 
   reduced_resolution: 4
+
+  # PDE_type: 'DR'
+  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  # data_set: '2D_diff-react_NA_NA.h5'
+  # input_size: 32
+  # in_chans: 2
+  # reduced_resolution: 1
+
+  # PDE_type: 'Well'
+  # well_dataset_name: "shear_flow"
+  # data_path: '/wanghaixin/well/datasets/'
+  # data_set: 'shear_flow_Reynolds_1e5_Schmidt_1e1.hdf5'
+  # input_size: 128
+  # in_chans: 4
+  # reduced_resolution: 2
+
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
+
   reduced_resolution_t: 1 
   reduced_batch: 1
   initial_step: 1
@@ -64,10 +90,10 @@ optimizer:
 
 
 lr_scheduler:
-  scheduler: 'cyc'
+  scheduler: 'CosineAnnealingWarmRestarts'
   step_size_up: 1000
   step_size_down: 1000
-  lr: 1.0e-3
+  lr: 1.0e-4
   lr_noise: null
   lr_noise_pct: 0.67
   lr_noise_std: 1.0

@@ -1,21 +1,21 @@
 # FD-Bench/train.sh
 #!/bin/bash
 
-# SPATIAL_REP="self_atten"
+SPATIAL_REP="self_atten"
 # SPATIAL_REP="conv"
-SPATIAL_REP="graph"
+# SPATIAL_REP="graph"
 # SPATIAL_REP='latent'
 # SPATIAL_REP='fourier'
 
-# TEMPORAL_REP="next_step"
-TEMPORAL_REP="temporal_bundling"
+TEMPORAL_REP="next_step"
+# TEMPORAL_REP="temporal_bundling"
 
 TARGET="variable"
 CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 
 # REMARK="ViTL_Dim_768_Epoch_2k_Cyc_up_1k_down_1k_lr_1e-3"
 # REMARK='cyc_1k_up_1k_down_1k_N_30_hidden_256_epo2k_grad_layer_8'
-REMARK='test'
+REMARK='CNS'
 
 export WANDB_ENTITY="FD-Bench"
 export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
