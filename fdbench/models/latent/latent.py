@@ -101,7 +101,7 @@ class latent(nn.Module):
             y_hat = self.vq_ae.decode(z_new)
             out_lst.append(y_hat)
             
-        out_lst = torch.stack(out_lst, dim=1)
+        out_lst = torch.stack(out_lst, dim=1).to(data.device)
         if self.steps == 1:
             out_lst = out_lst.squeeze(1)
 

@@ -5,7 +5,7 @@ paths:
 
 training:
   batch_size: 64
-  epochs: 2000
+  epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -50,7 +50,7 @@ data:
   # PDE_type: 'DR'
   # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
   # data_set: '2D_diff-react_NA_NA.h5'
-  # input_size: 32
+  # input_size: 128
   # in_chans: 2
   # reduced_resolution: 1
 
