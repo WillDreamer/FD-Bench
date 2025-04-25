@@ -4,7 +4,7 @@ import datetime
 import math
 import numpy as np
 import torch
-import os
+import os, sys, socket
 import json
 from pathlib import Path
 import importlib
@@ -125,7 +125,7 @@ def main(args):
         logger.info(model)
         logger.info(f"Number of Parameters: {n_parameters} Mb")
         
-    model = model.to(device)
+    model = model.to(accelerator.device)
     ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
     requires_grad(ema, False)
     #<<<<<< =================================================================
@@ -275,6 +275,8 @@ def main(args):
             #### =========4. Model Testing=========
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
+
+                torch.cuda.empty_cache()
                 
                 _err_RMSE_avg = 0
                 _err_nRMSE_avg = 0
@@ -283,6 +285,7 @@ def main(args):
                 _err_BD_avg = 0
                 _err_F_avg = 0
                 with torch.no_grad():
+                    
                     for batch in data_loader_val:
                         if hasattr(batch, 'x') and hasattr(batch, 'y'):
                             data = batch.to(device)
@@ -297,10 +300,10 @@ def main(args):
 
                         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
                             if args.sample_method == "ddpm":
-                                samp_algo = model.ddpm_sample
+                                model = model.ddpm_sample
                             else:
-                                samp_algo = model.ddim_sample
-                            outputs, loss = samp_algo(input_test,target_test,grid,criterion)
+                                model = model.ddim_sample
+                            outputs, loss = model(input_test,target_test,grid,criterion)
                         else:
                             outputs, loss = model(input_test,target_test,grid,criterion)
                         
@@ -330,6 +333,18 @@ def main(args):
                     logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, BD:{_err_BD_avg:.4f}, CSV:{_err_csv_avg:.4f}')
                     val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg, 'val/BD':_err_BD_avg}
                     accelerator.log(val_log, step=global_step)
+
+                    if global_step == 10 and accelerator.is_main_process:
+                        from thop import profile
+                        target_model = model.module if hasattr(model, "module") else model
+                        flops, params = profile(target_model, inputs=(input_test,target_test,grid,criterion))
+                        gflops = flops / 1e9
+                        mem_alloc_MB = torch.cuda.memory_allocated(device) / (1024 ** 2)
+                        accelerator.log({
+                            "model/num_params": n_parameters,
+                            "model/GFlops": gflops,
+                            "model/memory_MB": mem_alloc_MB,
+                        }, step=global_step)
             
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
