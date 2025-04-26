@@ -381,6 +381,8 @@ class fourier:
 
         if args.tem_mod == 'next_step':
             base_cls = FNO2d
+        elif args.tem_mod == 'auto_regressive':
+            base_cls = FNO2d
         else:
             raise ValueError(f"Unsupported temporal_mod: {args.tem_mod}")
         
