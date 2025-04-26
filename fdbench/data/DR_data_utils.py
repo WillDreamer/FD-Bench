@@ -35,6 +35,7 @@ class DatasetSingle(Dataset):
         reduced_batch=args.reduced_batch
         saved_folder = args.data_path
         initial_step=args.initial_step
+        self.tem_mod=args.tem_mod
         
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
 
@@ -89,11 +90,12 @@ class DatasetSingle(Dataset):
         if args.tem_mod == 'next_step':
             self.window_size = 1
         elif args.tem_mod == 'auto_regressive':
-            self.window_size = initial_step
+            self.window_size = args.window_size
         else:
-            self.window_size = initial_step
+            self.window_size = args.window_size
 
         self.data = self.data if torch.is_tensor(self.data) else torch.tensor(self.data)
+        # [B,128,128,101,2]
 
     def __len__(self):
         return len(self.data)
@@ -106,16 +108,28 @@ class DatasetSingle(Dataset):
         return self.train_mean, self.train_std
 
     def __getitem__(self, idx):
-        max_start = self.data.shape[-2] - 2 * self.window_size
-        if max_start <= 0:
-            raise ValueError("Data length is too short for the given window size.")
-        
-        rand_idx = random.randint(0, max_start)
-        # shape [B, H, W, T, D]
-        input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
-        target_seq = self.data[idx, ..., rand_idx + self.window_size : rand_idx + 2 * self.window_size, :]
-        if self.window_size == 1:
-            input_seq = input_seq.squeeze(-2)
-            target_seq = target_seq.squeeze(-2)
+        if self.tem_mod == 'auto_regressive':
+            # shape [B, H, W, T, D]
+            max_start = self.data.shape[-2] - self.window_size
+            if max_start <= 0:
+                raise ValueError("Data length is too short for the given window size.")
+            rand_idx = random.randint(0, max_start)
+            input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
+            if self.window_size == 1:
+                input_seq = input_seq.squeeze(-2)
+
+            return input_seq, input_seq, self.grid
+        else:
+            max_start = self.data.shape[-2] - 2 * self.window_size
+            if max_start <= 0:
+                raise ValueError("Data length is too short for the given window size.")
+            
+            rand_idx = random.randint(0, max_start)
+            # shape [B, H, W, T, D]
+            input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
+            target_seq = self.data[idx, ..., rand_idx + self.window_size : rand_idx + 2 * self.window_size, :]
+            if self.window_size == 1:
+                input_seq = input_seq.squeeze(-2)
+                target_seq = target_seq.squeeze(-2)
 
         return input_seq, target_seq, self.grid

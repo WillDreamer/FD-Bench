@@ -231,6 +231,7 @@ def main(args):
                 grid = getattr(data, 'grid', None)
             else:
                 samples, targets, grid = batch
+                
                 if len(samples.shape) == 4:
                     samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
                     targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
@@ -252,7 +253,8 @@ def main(args):
                 
                 elif args.tem_mod == 'auto_regressive':
                     loss = 0
-                    for tt in range(args.window_size - args.initial_step):
+                    for tt in range(int(args.window_size) - int(args.initial_step)):
+
                         sample_t = samples[...,tt:tt+args.initial_step,:].reshape(B_field,-1,H_field,W_field)
                         target_t = samples[...,tt+args.initial_step,:].permute(0, 3, 1, 2)
                         output_t, loss_batch = model(sample_t, target_t, grid, criterion)
