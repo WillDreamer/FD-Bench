@@ -2,13 +2,14 @@
 #!/bin/bash
 
 # SPATIAL_REP="self_atten"
-SPATIAL_REP="conv"
+# SPATIAL_REP="conv"
 # SPATIAL_REP="graph"
 # SPATIAL_REP='latent'
-# SPATIAL_REP='fourier'
+SPATIAL_REP='fourier'
 
-TEMPORAL_REP="next_step"
+# TEMPORAL_REP="next_step"
 # TEMPORAL_REP="temporal_bundling"
+ TEMPORAL_REP="auto_regressive"
 
 TARGET="variable"
 CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
