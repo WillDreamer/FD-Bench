@@ -21,7 +21,7 @@ export WANDB_NAME="${SPATIAL_REP}_${TEMPORAL_REP}_${REMARK}"
 export WANDB_API_KEY="ba70fcbc92808cc7a1750dd80ac3908295e6854f"
 
 # 运行训练
-cd /wanghaixin/FD-Bench
+cd /home/mosaicml/FD-Bench
 /root/anaconda3/bin/accelerate launch --main_process_port 29513 src/train.py \
     --config_file "$CONFIG_PATH" \
     --remark "$REMARK" \
