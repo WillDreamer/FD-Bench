@@ -76,3 +76,6 @@ secrets.json
 /exps
 /vis
 
+*.mat
+NS_u0_xi_nu4
+wget-log*

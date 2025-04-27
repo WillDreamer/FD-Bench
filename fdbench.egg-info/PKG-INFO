@@ -1,6 +1,8 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: fdbench
 Version: 1.0.0
 Author: Haixin Wang
 Author-email: whx@cs.ucla.edu
 License-File: LICENSE
+Dynamic: author
+Dynamic: author-email
