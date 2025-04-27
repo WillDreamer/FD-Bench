@@ -132,7 +132,7 @@ def main(args):
 
     #>>>>>> =============================Data Reading==========================
     data_module_name = 'fdbench.data.' + args.PDE_type + '_data_utils'
-    data_module = getattr(importlib.import_module(data_module_name), 'DatasetSingle')
+    data_module = getattr(importlib.import_module(data_module_name), 'DatasetSPDESingle')
     train_data = data_module(args = args)
     normalizer = train_data.__normalizer__
     test_data = data_module(if_test=True,args = args,normalizer=normalizer)
