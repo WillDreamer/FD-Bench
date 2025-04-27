@@ -34,10 +34,10 @@ class DatasetSPDESingle(Dataset):
         
         # Extract data fields
         _sol = np.array(mat_data['sol'], dtype=np.float32)  # (N, x, t+1) or (N, x, y, t+1)
-        _forcing = np.array(mat_data['W'], dtype=np.float32)  # same shape as sol
-        _t = np.array(mat_data['T'], dtype=np.float32)  # time points
-        _X = np.array(mat_data['X'], dtype=np.float32)  # space points
-        
+        # We're not using the forcing term for now
+        _t = np.array(mat_data['t'], dtype=np.float32)  # time points
+        _param = np.array(mat_data['param'])
+        _forcing = np.array(mat_data['forcing'], dtype=np.float32)
         # Determine data dimensionality
         if len(_sol.shape) == 3:  # 1D spatial + time
             # Shape: (N, x, t+1)
@@ -45,20 +45,18 @@ class DatasetSPDESingle(Dataset):
             
             # Apply reductions
             _sol = _sol[::reduced_batch, ::reduced_resolution, ::reduced_resolution_t]
-            _forcing = _forcing[::reduced_batch, ::reduced_resolution, ::reduced_resolution_t]
             
             # Convert to format [batch, x, t, channels]
-            _sol = np.transpose(_sol, (0, 1, 2))
-            _forcing = np.transpose(_forcing, (0, 1, 2))
-            
-            # Combine sol and forcing into data array
-            self.data = np.zeros([_sol.shape[0], _sol.shape[1], _sol.shape[2], 2], dtype=np.float32)
-            self.data[..., 0] = _sol      # solution as first channel
-            self.data[..., 1] = _forcing   # forcing as second channel
+            _sol = np.expand_dims(np.transpose(_sol, (0, 1, 2)), axis=-1)
+
+            # Create data array with only solution
+            self.data = _sol      # solution as the only channel
             
             # Create grid
             x_coords = np.linspace(0, 1, n_x)[::reduced_resolution]
             self.grid = torch.tensor(x_coords, dtype=torch.float).unsqueeze(-1)
+            print(f"self.data shape: {self.data.shape}")
+            print(f"self.grid shape: {self.grid.shape}")
             
         elif len(_sol.shape) == 4:  # 2D spatial + time
             # Shape: (N, x, y, t+1)
@@ -66,16 +64,14 @@ class DatasetSPDESingle(Dataset):
             
             # Apply reductions
             _sol = _sol[::reduced_batch, ::reduced_resolution, ::reduced_resolution, ::reduced_resolution_t]
-            _forcing = _forcing[::reduced_batch, ::reduced_resolution, ::reduced_resolution, ::reduced_resolution_t]
             
-            # Convert to format [batch, x, y, t, channels]
-            _sol = np.transpose(_sol, (0, 1, 2, 3))
-            _forcing = np.transpose(_forcing, (0, 1, 2, 3))
-            
-            # Combine sol and forcing into data array
-            self.data = np.zeros([_sol.shape[0], _sol.shape[1], _sol.shape[2], _sol.shape[3], 2], dtype=np.float32)
-            self.data[..., 0] = _sol      # solution as first channel
-            self.data[..., 1] = _forcing   # forcing as second channel
+            _sol = np.expand_dims(_sol, axis=-1)
+
+            # Convert to format [batch, x, y, t, cxhannels]
+            _sol = np.transpose(_sol, (0, 1, 2, 3,4))
+
+            # Create data array with only solution
+            self.data = _sol      # solution as the only channel
             
             # Create grid
             x_coords = np.linspace(0, 1, n_x)[::reduced_resolution]

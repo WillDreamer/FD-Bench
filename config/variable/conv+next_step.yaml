@@ -1,7 +1,7 @@
 paths:
-  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
+  output_dir: 'FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: 'FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 128
@@ -25,8 +25,8 @@ model:
   model_ema_force_cpu: false
   
   # CNO
-  in_dim: 4
-  out_dim: 4 
+  in_dim: 1 # forcing + sol
+  out_dim: 1 # sol
   size: 128 
   N_layers: 4
   N_res: 4
@@ -34,10 +34,10 @@ model:
 
 data:
   PDE_type: 'SPDE'      #* choices: ['CNS']
-  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
-  data_set: 'kdv_xi_1200.mat'       #* file_name
-  input_size: 128 
-  in_chans: 1
+  data_path: 'NS_u0_xi_nu4'                  #* your path to data
+  data_set: '0.mat'       #* file_name
+  input_size: 128
+  in_chans: 1 # forcing + sol
   reduced_resolution: 1
   reduced_resolution_t: 1 
   reduced_batch: 1
