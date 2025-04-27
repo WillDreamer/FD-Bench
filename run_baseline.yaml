@@ -5,7 +5,7 @@ command: |-
   git clone git@github.com:WillDreamer/FD-Bench.git
   cd FD-Bench
   git checkout spde
-  wget -O kdv_xi_1200.mat https://www.dropbox.com/scl/fi/4hd4gx4nl98k03ao560bm/kdv_xi_1200.mat?rlkey=690j738lgegmge3u0p8g23nok&st=f673phg7&dl=0
+  wget -O 0.mat https://www.dropbox.com/scl/fi/x3h2aczbiygtycru0ms8j/0.mat?rlkey=ingg06o8hetz222uh8ogfgoo7&st=unnw6dui&dl=0
 
   pip install ogb gitpython wandb ray ray[tune] optuna
   pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
