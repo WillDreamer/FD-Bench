@@ -35,7 +35,7 @@ class DatasetSPDESingle(Dataset):
         # Extract data fields
         _sol = np.array(mat_data['sol'], dtype=np.float32)  # (N, x, t+1) or (N, x, y, t+1)
         _forcing = np.array(mat_data['W'], dtype=np.float32)  # same shape as sol
-        _t = np.array(mat_data['t'], dtype=np.float32)  # time points
+        _t = np.array(mat_data['T'], dtype=np.float32)  # time points
         _X = np.array(mat_data['X'], dtype=np.float32)  # space points
         
         # Determine data dimensionality
