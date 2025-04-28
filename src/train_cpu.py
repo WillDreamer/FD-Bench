@@ -107,7 +107,18 @@ def main(args):
 
     #>>>>>> =============================Data Reading==========================
     data_module_name = 'fdbench.data.' + args.PDE_type + '_data_utils'
-    data_module = getattr(importlib.import_module(data_module_name), 'DatasetSPDESingle')
+    
+    # Select the appropriate dataset class based on spatial model
+    if args.spa_mod == 'graph':
+        dataset_class = 'DatasetGraphSPDE'
+    elif args.spa_mod == 'latent':
+        dataset_class = 'DatasetDRSPDE'
+    else:
+        dataset_class = 'DatasetSPDESingle'
+    
+    print(f"dataset_class: {dataset_class}")
+    
+    data_module = getattr(importlib.import_module(data_module_name), dataset_class)
     train_data = data_module(args = args)
     normalizer = train_data.__normalizer__
     test_data = data_module(if_test=True,args = args,normalizer=normalizer)
@@ -205,6 +216,9 @@ def main(args):
             model.train()
 
             #### =========2. Model Training=========
+            print(f"samples.shape: {samples.shape}")
+            print(f"targets.shape: {targets.shape}")
+            print(f"grid.shape: {grid.shape}")
             outputs, loss = model(samples, targets, grid, criterion)
 
             optimizer.zero_grad()

@@ -1,0 +1,144 @@
+Run summary: 5 successful, 0 failed, 5 total
+model: gspde
+dataset: minesweeper
+
+Short Summary (Avg ± Std):
+AUROC: 67.4040 ± 0.6732
+AUPR_in: 32.4781 ± 0.7900
+AUPR_out: 88.6808 ± 0.2711
+FPR95: 81.8060 ± 1.1975
+Detection Acc: 62.6360 ± 0.4311
+Based on 5/5 successful runs
+
+Run summary: 5 successful, 0 failed, 5 total
+model: gspde
+dataset: minesweeper
+
+Short Summary (Avg ± Std):
+AUROC: 57.0682 ± 3.8272
+AUPR_in: 71.6426 ± 2.3216
+AUPR_out: 41.2321 ± 4.7895
+FPR95: 88.4000 ± 4.2043
+Detection Acc: 55.8700 ± 2.7363
+Based on 5/5 successful runs
+
+Run summary: 5 successful, 0 failed, 5 total
+model: gspde
+dataset: minesweeper
+
+Short Summary (Avg ± Std):
+AUROC: 57.0013 ± 2.9366
+AUPR_in: 25.6284 ± 2.7411
+AUPR_out: 82.8653 ± 0.8998
+FPR95: 92.3060 ± 0.2973
+Detection Acc: 55.8010 ± 2.3912
+Based on 5/5 successful runs
+
+Run summary: 4 successful, 1 failed, 5 total
+model: gspde
+dataset: questions
+
+Short Summary (Avg ± Std):
+AUROC: 62.9372 ± 1.7068
+AUPR_in: 39.3999 ± 2.2228
+AUPR_out: 84.4190 ± 0.7160
+FPR95: 93.3347 ± 1.4707
+Detection Acc: 60.2734 ± 1.2837
+Based on 4/5 successful runs
+
+Run summary: 3 successful, 2 failed, 5 total
+model: gspde
+dataset: questions
+
+Short Summary (Avg ± Std):
+AUROC: 48.8964 ± 2.7498
+AUPR_in: 93.4970 ± 0.6312
+AUPR_out: 6.6616 ± 0.7134
+FPR95: 91.8721 ± 1.6752
+Detection Acc: 51.6072 ± 1.1751
+Based on 3/5 successful runs
+
+Run summary: 1 successful, 4 failed, 5 total
+model: gspde
+dataset: questions
+
+Short Summary (Avg ± Std):
+AUROC: 50.8506 ± 0.0000
+AUPR_in: 20.8680 ± 0.0000
+AUPR_out: 80.3801 ± 0.0000
+FPR95: 94.6260 ± 0.0000
+Detection Acc: 50.8109 ± 0.0000
+Based on 1/5 successful runs
+
+Run summary: 5 successful, 0 failed, 5 total
+model: gspde
+dataset: tolokers
+
+Short Summary (Avg ± Std):
+AUROC: 58.5862 ± 10.3102
+AUPR_in: 48.5373 ± 6.2157
+AUPR_out: 80.3895 ± 5.7740
+FPR95: 95.8888 ± 3.8822
+Detection Acc: 65.0937 ± 2.5120
+Based on 5/5 successful runs
+
+Run summary: 4 successful, 1 failed, 5 total
+model: gspde
+dataset: tolokers
+
+Short Summary (Avg ± Std):
+AUROC: 58.9493 ± 4.6256
+AUPR_in: 70.8158 ± 4.0084
+AUPR_out: 42.2586 ± 3.4031
+FPR95: 91.0561 ± 1.3549
+Detection Acc: 58.2439 ± 3.7523
+Based on 4/5 successful runs
+
+Run summary: 5 successful, 0 failed, 5 total
+model: gspde
+dataset: tolokers
+
+Short Summary (Avg ± Std):
+AUROC: 69.9017 ± 18.8631
+AUPR_in: 52.1904 ± 18.3792
+AUPR_out: 87.1156 ± 8.4754
+FPR95: 75.9925 ± 23.9534
+Detection Acc: 70.7711 ± 11.2621
+Based on 5/5 successful runs
+
+Run summary: 1 successful, 4 failed, 5 total
+model: gspde
+dataset: amazon_ratings
+
+Short Summary (Avg ± Std):
+AUROC: 42.6527 ± 0.0000
+AUPR_in: 21.3923 ± 0.0000
+AUPR_out: 72.3657 ± 0.0000
+FPR95: 100.0000 ± 0.0000
+Detection Acc: 51.6046 ± 0.0000
+Based on 1/5 successful runs
+
+Run summary: 1 successful, 4 failed, 5 total
+model: gspde
+dataset: amazon_ratings
+
+Short Summary (Avg ± Std):
+AUROC: 52.3141 ± 0.0000
+AUPR_in: 72.0504 ± 0.0000
+AUPR_out: 31.0166 ± 0.0000
+FPR95: 93.2203 ± 0.0000
+Detection Acc: 52.3003 ± 0.0000
+Based on 1/5 successful runs
+
+Run summary: 4 successful, 1 failed, 5 total
+model: gspde
+dataset: amazon_ratings
+
+Short Summary (Avg ± Std):
+AUROC: 53.0787 ± 0.9930
+AUPR_in: 23.1582 ± 0.7597
+AUPR_out: 80.8275 ± 0.4429
+FPR95: 94.3318 ± 0.1789
+Detection Acc: 52.8423 ± 0.6132
+Based on 4/5 successful runs
+
