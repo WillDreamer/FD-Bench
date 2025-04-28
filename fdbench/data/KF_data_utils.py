@@ -28,14 +28,15 @@ class DatasetSingle(Dataset):
         self.reduced_resolution_t=args.reduced_resolution_t
         self.reduced_batch=args.reduced_batch
         initial_step=args.initial_step
+        self.tem_mod = args.tem_mod 
 
-         # Time steps used as initial conditions
+        # Time steps used as initial conditions
         if args.tem_mod == 'next_step':
             self.window_size = 1
         elif args.tem_mod == 'auto_regressive':
-            self.window_size = initial_step
+            self.window_size = args.window_size
         else:
-            self.window_size = initial_step
+            self.window_size = args.window_size
 
         data_path = args.data_path + args.data_set
         self.reader = h5py.File(data_path, "r")
@@ -127,17 +128,24 @@ class DatasetSingle(Dataset):
         input_seq = (inputs - means) / stds
         target_seq = (label - means) / stds
 
-        input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
-        target_seq = torch.cat([target_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
-        # shape [T, D, H, W]
+        if self.tem_mod == 'auto_regressive':
+            input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
+            input_seq = input_seq.permute(2,3,0,1)
+            return input_seq, input_seq, self.grid
 
-        input_seq = input_seq.permute(2,3,0,1)
-        target_seq = target_seq.permute(2,3,0,1)
+        else:
 
-        # shape [ H, W, T, D, ]
+            input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
+            target_seq = torch.cat([target_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
+            # shape [T, D, H, W]
 
-        if self.window_size == 1:
-            input_seq = input_seq.squeeze(-2)
-            target_seq = target_seq.squeeze(-2)
+            input_seq = input_seq.permute(2,3,0,1)
+            target_seq = target_seq.permute(2,3,0,1)
+            # shape [ H, W, T, D, ]
 
-        return input_seq, target_seq, self.grid
+            if self.window_size == 1:
+                input_seq = input_seq.squeeze(-2)
+                target_seq = target_seq.squeeze(-2)
+            
+
+            return input_seq, target_seq, self.grid

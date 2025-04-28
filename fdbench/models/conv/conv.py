@@ -219,6 +219,7 @@ class conv(nn.Module):
         self.lift_dim = self.channel_multiplier//2 # Input is lifted to the half of channel_multiplier dimension
         self.in_dim   = args.in_dim
         self.out_dim  = args.out_dim
+        initial_step = args.initial_step
         size = args.size
         N_res = args.N_res
 
@@ -246,13 +247,12 @@ class conv(nn.Module):
 
 
         ######## Define Lift and Project blocks ########
-
-        self.lift   = LiftProjectBlock(in_channels = self.in_dim,
+        self.lift   = LiftProjectBlock(in_channels = initial_step*self.in_dim,
                                         out_channels = self.encoder_features[0],
                                         size = size)
 
         self.project   = LiftProjectBlock(in_channels = self.encoder_features[0] + self.decoder_features_out[-1],
-                                            out_channels = self.out_dim,
+                                            out_channels = initial_step*self.out_dim,
                                             size = size)
 
         ######## Define Encoder, ED Linker and Decoder networks ########
