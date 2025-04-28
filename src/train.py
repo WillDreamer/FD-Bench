@@ -136,7 +136,7 @@ def main(args):
     # Select the appropriate dataset class based on spatial model
     if args.spa_mod == 'graph':
         dataset_class = 'DatasetGraphSPDE'
-    elif args.spa_mod == 'dr':
+    elif args.spa_mod == 'latent':
         dataset_class = 'DatasetDRSPDE'
     else:
         dataset_class = 'DatasetSPDESingle'
