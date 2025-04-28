@@ -4,8 +4,8 @@ paths:
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 64
-  epochs: 1000
+  batch_size: 256
+  epochs: 2000
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -15,36 +15,29 @@ training:
   pin_mem: true
 
 model:
-  spa_mod: 'fourier'  #* choices: ['self_atten', 'fourier', 'graph']
+  spa_mod: 'conv'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'auto_regressive'      #* choices: ['next_step', 'auto_regressive']
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
   
-  modes1: 24
-  modes2: 24
-  width: 64
+ # CNO
+  in_dim: 4
+  out_dim: 4 
+  size: 128 
+  N_layers: 4
+  N_res: 4
+  channel_multiplier: 32
   
-  fno_bias: false
-  fno_blocks: 1
-  fno_softshrink: 0.00
-  double_skip: false
-  hidden_size: 512
-  num_layers: 12
-  checkpoint_activations: false
-  ls_w: 4
-  ls_dp_rank: 16
-  
-
 data:
-  # PDE_type: 'CNS'      #* choices: ['CNS']
-  # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
-  # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
-  # input_size: 128 
-  # in_chans: 4              #* 4 *  initial_step
-  # reduced_resolution: 4
-  # initial_step: 10
-  # window_size: 15
+  PDE_type: 'CNS'      #* choices: ['CNS']
+  data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
+  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  input_size: 128 
+  in_chans: 4              #* 4 *  initial_step
+  reduced_resolution: 4
+  initial_step: 10
+  window_size: 15
 
   # PDE_type: 'DR'
   # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
@@ -55,17 +48,17 @@ data:
   # initial_step: 5
   # window_size: 10
 
-  PDE_type: 'KF'
-  data_path: '/wanghaixin/FNS-KF/'
-  data_set: 'FNS-KF.nc'
-  num_trajectories: -1
-  max_trajectories: 1000
-  max_num_time_steps: 3
-  input_size: 128
-  in_chans: 5
-  reduced_resolution: 1
-  initial_step: 5
-  window_size: 10
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
+  # initial_step: 5
+  # window_size: 10
 
   reduced_resolution_t: 1 
   reduced_batch: 1
@@ -84,15 +77,15 @@ optimizer:
 
 
 lr_scheduler:
-  scheduler: 'CosineAnnealing'
+  scheduler: 'lambda'    # ['CosineAnnealing','cyc','CosineAnnealingWarmRestarts']
   step_size_up: 1000
   step_size_down: 1000
   lr: 1.0e-3
   lr_noise: null
   lr_noise_pct: 0.67
   lr_noise_std: 1.0
-  warmup_lr: 1.0e-3
-  min_lr: 5.0e-4
+  warmup_lr: 1.0e-4
+  min_lr: 5.0e-5
   decay_epochs: 30
   warmup_epochs: 5
   cooldown_epochs: 10
