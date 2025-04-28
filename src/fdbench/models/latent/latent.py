@@ -92,7 +92,8 @@ class latent(nn.Module):
     def forward(self, data, target, grid, creterion=None):
         z = self.vq_ae.encode(data)
         out_lst = []
-        z = z.squeeze()
+        if len(z) != 1:
+            z = z.squeeze()
         for t in range(self.steps):
 
             z_new = self.propagator(z)
