@@ -379,7 +379,7 @@ def main(args):
                     if global_step == 10 and accelerator.is_main_process:
                         from thop import profile
                         target_model = model.module if hasattr(model, "module") else model
-                        if len(target_test.shape) == 4:
+                        if len(target_test.shape) < 5:
                             flops, params = profile(target_model, inputs=(input_test,target_test,grid,criterion))
                         elif args.tem_mod == 'auto_regressive':
                             flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field),target_test_raw[..., 0, :].permute(0, 3, 1, 2),grid,criterion))
