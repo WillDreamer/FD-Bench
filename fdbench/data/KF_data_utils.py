@@ -89,15 +89,10 @@ class DatasetSingle(Dataset):
         """
         mean and value
         """
-        mean_4ch = self.constants["mean"]
-        mean_forcing_tensor = torch.tensor(self.constants["mean_forcing"]).reshape(1,1,1)
-        mean_5ch = torch.cat([mean_4ch, mean_forcing_tensor], dim=0)
-
-        std_4ch = self.constants["std"]
-        std_forcing_tensor = torch.tensor(self.constants["std_forcing"]).reshape(1,1,1)
-        std_5ch = torch.cat([std_4ch, std_forcing_tensor], dim=0)
-
-        return mean_5ch.unsqueeze(0).repeat(self.window_size,1,1,1), std_5ch.unsqueeze(0).repeat(self.window_size,1,1,1)
+        mean_2ch = self.constants["mean"][1:3]
+        std_2ch = self.constants["std"][1:3]
+    
+        return mean_2ch.unsqueeze(0).unsqueeze(0).numpy(), std_2ch.unsqueeze(0).unsqueeze(0).numpy()
 
     def __getitem__(self, idx):
 
@@ -134,7 +129,6 @@ class DatasetSingle(Dataset):
             return input_seq, input_seq, self.grid
 
         else:
-
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
             target_seq = torch.cat([target_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
             # shape [T, D, H, W]
@@ -146,6 +140,4 @@ class DatasetSingle(Dataset):
             if self.window_size == 1:
                 input_seq = input_seq.squeeze(-2)
                 target_seq = target_seq.squeeze(-2)
-            
-
             return input_seq, target_seq, self.grid

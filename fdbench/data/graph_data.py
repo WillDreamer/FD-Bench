@@ -26,13 +26,26 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
     dataset.data = (dataset.data * train_std) + train_mean
 
     if is_train:
-        new_mean = dataset.data.mean(dim=(0, 1, 2, 3), keepdim=True)
-        new_std = dataset.data.std(dim=(0, 1, 2, 3), keepdim=True)
-        new_std = torch.where(new_std == 0, torch.ones_like(new_std), new_std)
-        dataset.data = (dataset.data - new_mean) / new_std
+        if isinstance(dataset.data, torch.Tensor):
+            new_mean = dataset.data.mean(dim=(0, 1, 2, 3), keepdim=True)
+            new_std = dataset.data.std(dim=(0, 1, 2, 3), keepdim=True)
+            new_std = torch.where(new_std == 0, torch.ones_like(new_std), new_std)
+            dataset.data = (dataset.data - new_mean) / new_std
+        elif isinstance(dataset.data, np.ndarray):
+            new_mean = np.mean(dataset.data, axis=(0, 1, 2, 3), keepdims=True)
+            new_std = np.std(dataset.data, axis=(0, 1, 2, 3), keepdims=True)
+            new_std = np.where(new_std == 0, 1.0, new_std)
+            dataset.data = (dataset.data - new_mean) / new_std
+        else:
+            raise TypeError(f"Unsupported data type {type(dataset.data)} for normalization.")
     else:
         new_mean, new_std = normalizer_new
-        dataset.data = (dataset.data - new_mean) / new_std
+        if isinstance(dataset.data, torch.Tensor):
+            dataset.data = (dataset.data - new_mean) / new_std
+        elif isinstance(dataset.data, np.ndarray):
+            dataset.data = (dataset.data - new_mean) / new_std
+        else:
+            raise TypeError(f"Unsupported data type {type(dataset.data)} for normalization.")
 
     for i in range(len(dataset)):
         x, y, grid = dataset[i]

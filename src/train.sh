@@ -2,8 +2,8 @@
 #!/bin/bash
 
 # SPATIAL_REP='self_atten'
-# SPATIAL_REP="graph"
-SPATIAL_REP='latent'
+SPATIAL_REP="graph"
+# SPATIAL_REP='latent'
 # SPATIAL_REP='fourier'
 # SPATIAL_REP='conv'
 
