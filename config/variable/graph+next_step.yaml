@@ -1,7 +1,7 @@
 paths:
-  output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
+  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: 'wandb'    #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 64
@@ -30,13 +30,13 @@ model:
   ls_dp_rank: 16
 
 data:
-  PDE_type: 'CNS'      #* choices: ['CNS']
-  data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
-  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  PDE_type: 'SPDE'      #* choices: ['CNS']
+  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  data_set: '0.mat'       #* file_name
   input_size: 128 
-  in_chans: 12 
-  out_chans: 4 
-  reduced_resolution: 4
+  in_chans: 1 
+  out_chans: 1 
+  reduced_resolution: 1
   reduced_resolution_t: 1 
   reduced_batch: 1
   initial_step: 1

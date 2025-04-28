@@ -174,7 +174,8 @@ command: |-
   pip install xxhash                       
   pip install yacs                         
   pip install yarl                         
-  pip install zipp                         
+  pip install zipp     
+  pip install thop                    
 
   SPATIAL_REP="conv"
   TEMPORAL_REP="next_step"
@@ -188,8 +189,8 @@ command: |-
   accelerate launch --main_process_port 29513 src/train.py --config_file "$CONFIG_PATH"
 
 compute:
-  cluster: r4z13p3
-  gpus: 8
+  cluster: r4z13p2
+  gpus: 1
 scheduling:
   priority: auto
 integrations:

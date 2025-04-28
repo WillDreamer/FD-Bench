@@ -1,7 +1,7 @@
 paths:
-  output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
+  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: 'wandb'    #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 32
@@ -53,12 +53,12 @@ data:
   # reduced_resolution: 4
   # in_channels: 4   
 
-  PDE_type: 'DR'
-  data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
-  data_set: '2D_diff-react_NA_NA.h5'
+  PDE_type: 'SPDE'
+  data_path: '/home/mosaicml/FD-Bench/'
+  data_set: '0.mat'
   input_size: 128
-  in_chans: 2
-  in_channels: 2  
+  in_chans: 1
+  in_channels: 1  
   reduced_resolution: 1
 
   # PDE_type: 'KF'
