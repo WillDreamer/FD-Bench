@@ -216,9 +216,6 @@ def main(args):
             model.train()
 
             #### =========2. Model Training=========
-            print(f"samples.shape: {samples.shape}")
-            print(f"targets.shape: {targets.shape}")
-            print(f"grid.shape: {grid.shape}")
             outputs, loss = model(samples, targets, grid, criterion)
 
             optimizer.zero_grad()
@@ -252,7 +249,7 @@ def main(args):
                 logger.info(f"Saved checkpoint to {checkpoint_path}")
             
             #### =========4. Model Testing=========
-            if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
+            if global_step == 1 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
                 
                 _err_RMSE_avg = 0

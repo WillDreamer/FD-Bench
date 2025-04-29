@@ -34,8 +34,8 @@ data:
   data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
   data_set: '0.mat'       #* file_name
   input_size: 128 
-  in_chans: 1 
-  out_chans: 1 
+  in_chans: 3
+  out_chans: 1
   reduced_resolution: 1
   reduced_resolution_t: 1 
   reduced_batch: 1

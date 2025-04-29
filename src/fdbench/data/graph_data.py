@@ -24,7 +24,6 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
     # transform = VirtualNode()
     train_mean, train_std = normalizer
     dataset.data = (dataset.data * train_std) + train_mean
-
     if is_train:
         new_mean = dataset.data.mean(dim=(0, 1, 2, 3), keepdim=True)
         new_std = dataset.data.std(dim=(0, 1, 2, 3), keepdim=True)
@@ -33,10 +32,11 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
     else:
         new_mean, new_std = normalizer_new
         dataset.data = (dataset.data - new_mean) / new_std
-
+    
     for i in range(len(dataset)):
         x, y, grid = dataset[i]
         var_dim = x.shape[-1]
+        
 
         all_grady = torch.cat([
             x[:, 1:2, :] - x[:, 0:1, :],            
