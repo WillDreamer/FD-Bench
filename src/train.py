@@ -140,9 +140,7 @@ def main(args):
         dataset_class = 'DatasetDRSPDE'
     else:
         dataset_class = 'DatasetSPDESingle'
-    
-    print(f"dataset_class: {dataset_class}")
-    
+        
     data_module = getattr(importlib.import_module(data_module_name), dataset_class)
     train_data = data_module(args = args)
     normalizer = train_data.__normalizer__
@@ -248,9 +246,6 @@ def main(args):
                 grid = grid.to(device) if grid is not None else None
 
             model.train()
-            print(f"samples.shape: {samples.shape}")
-            print(f"targets.shape: {targets.shape}")
-            print(f"grid.shape: {grid.shape}")
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
                 outputs, loss = model(samples,targets,grid,criterion)
