@@ -1,7 +1,7 @@
 paths:
-  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
+  output_dir: 'FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: 'FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 256
@@ -30,8 +30,8 @@ model:
   channel_multiplier: 32
   
 data:
-  PDE_type: 'CNS'      #* choices: ['CNS']
-  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  PDE_type: 'SPDE'      #* choices: ['CNS']
+  data_path: 'NS_u0_xi_nu4'                  #* your path to data
   data_set: '0.mat'       #* file_name
   input_size: 128 
   in_chans: 1              #* 4 *  initial_step

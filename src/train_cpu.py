@@ -211,13 +211,33 @@ def main(args):
                 if len(samples.shape) == 4:
                     samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
                     targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                elif len(samples.shape) == 5:
+                    # [B, H, W, T, D]
+                    samples = samples.to(device, non_blocking=True)
+                    targets = targets.to(device, non_blocking=True)
+                    H_field = samples.shape[1]
+                    W_field = samples.shape[2]
+                    B_field = samples.shape[0]
                 grid = grid.to(device) if grid is not None else None
 
             model.train()
 
             #### =========2. Model Training=========
-            outputs, loss = model(samples, targets, grid, criterion)
+            print(f"samples.shape: {samples.shape}")
+            print(f"targets.shape: {targets.shape}")
+            print(f"grid.shape: {grid.shape}")
+            if args.tem_mod == 'next_step':
+                outputs, loss = model(samples, targets, grid, criterion)
+            elif args.tem_mod == 'auto_regressive':
+                loss = 0
+                for tt in range(int(args.window_size) - int(args.initial_step)):
+                    sample_t = samples[...,tt:tt+args.initial_step,:].reshape(B_field,-1,H_field,W_field)
+                    target_t = samples[...,tt+args.initial_step,:].permute(0, 3, 1, 2)
+                    output_t, loss_batch = model(sample_t, target_t, grid, criterion)
+                    loss += loss_batch
 
+                    print(f"sample_t.shape: {sample_t.shape}")
+                    print(f"target_t.shape: {target_t.shape}")
             optimizer.zero_grad()
             loss.backward()
             
@@ -268,8 +288,16 @@ def main(args):
                             grid = getattr(data, 'grid', None)
                         else:
                             input_test, target_test, grid = batch
-                            input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-                            target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            if len(input_test.shape) == 4:
+                                input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                                target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            elif len(input_test.shape) == 5:
+                                # [B, H, W, T, D]
+                                input_test = input_test.to(device, non_blocking=True)
+                                target_test_raw = target_test.to(device, non_blocking=True)
+                                H_field = input_test.shape[1]
+                                W_field = input_test.shape[2]
+                                B_field = input_test.shape[0]
                             grid = grid.to(device) if grid is not None else None
 
                         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
@@ -278,8 +306,24 @@ def main(args):
                             else:
                                 model = model.ddim_sample
                             outputs, loss = model(input_test,target_test,grid,criterion)
-                        else:
+                        elif args.tem_mod == 'next_step':
                             outputs, loss = model(input_test,target_test,grid,criterion)
+                        elif args.tem_mod == 'auto_regressive':
+                            rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                            predicted_outputs = []
+                            
+                            for tt in range(args.window_size - args.initial_step):
+                                input_test_t = rolling_input.reshape(B_field, -1, H_field, W_field)
+                                target_test_t = target_test_raw[..., tt+args.initial_step, :].permute(0, 3, 1, 2)
+                                
+                                output_test_t, _ = model(input_test_t, target_test_t, grid, criterion)
+                                predicted_outputs.append(output_test_t.unsqueeze(1))  
+                                rolling_input = torch.cat([
+                                    rolling_input[..., 1:, :],       
+                                    output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                                ], dim=-2) 
+                            outputs = torch.cat(predicted_outputs, dim=1).contiguous()
+                            target_test = target_test_raw[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
                         
                         if hasattr(batch, 'x') and hasattr(batch, 'y'):
                             batch_size = batch.num_graphs
@@ -327,8 +371,16 @@ def main(args):
                             grid = getattr(data, 'grid', None)
                         else:
                             input_test, target_test, grid = batch
-                            input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-                            target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            if len(input_test.shape) == 4:
+                                input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                                target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            elif len(input_test.shape) == 5:
+                                # [B, H, W, T, D]
+                                input_test = input_test.to(device, non_blocking=True)
+                                target_test = target_test.to(device, non_blocking=True)
+                                H_field = input_test.shape[1]
+                                W_field = input_test.shape[2]
+                                B_field = input_test.shape[0]
                             grid = grid.to(device) if grid is not None else None
 
                         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
@@ -337,8 +389,24 @@ def main(args):
                             else:
                                 samp_algo = model.ddim_sample
                             outputs, loss = samp_algo(input_test,target_test,grid,criterion)
-                        else:
+                        elif args.tem_mod == 'next_step':
                             outputs, loss = model(input_test,target_test,grid,criterion)
+                        elif args.tem_mod == 'auto_regressive':
+                            rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                            predicted_outputs = []
+                            
+                            for tt in range(args.window_size - args.initial_step):
+                                input_test_t = rolling_input.reshape(B_field, -1, H_field, W_field)
+                                target_test_t = input_test[..., tt+args.initial_step, :].permute(0,3,1,2)
+                                
+                                output_test_t, _ = model(input_test_t, target_test_t, grid, criterion)
+                                predicted_outputs.append(output_test_t.unsqueeze(1))  
+                                rolling_input = torch.cat([
+                                    rolling_input[..., 1:, :],       
+                                    output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                                ], dim=-2) 
+                            outputs = torch.cat(predicted_outputs, dim=1).contiguous()
+                            target_test = input_test[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
                         
                         if hasattr(batch, 'x') and hasattr(batch, 'y'):
                             batch_size = batch.num_graphs

@@ -175,7 +175,7 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
         idxs = target.size()
         nb, nc, nt = idxs[0], idxs[1], 1
     elif len(idxs) == 5:
-        # 3D Flow B C H W
+        # 2D Flow input B T C H W
         pred = pred.permute(0, 2, 3, 4, 1)
         target = target.permute(0, 2, 3, 4, 1)
         idxs = target.size()
@@ -187,9 +187,9 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
         nb, nc, nt = idxs[0], idxs[1], idxs[-1]
     
     # RMSE
-    err_mean = torch.sqrt(torch.mean((pred.view([nb, nc, -1, nt]) - target.view([nb, nc, -1, nt])) ** 2, dim=2))
+    err_mean = torch.sqrt(torch.mean((pred.reshape([nb, nc, -1, nt]) - target.reshape([nb, nc, -1, nt])) ** 2, dim=2))
     err_RMSE = torch.mean(err_mean, axis=0)
-    nrm = torch.sqrt(torch.mean(target.view([nb, nc, -1, nt]) ** 2, dim=2))
+    nrm = torch.sqrt(torch.mean(target.reshape([nb, nc, -1, nt]) ** 2, dim=2))
     mask = (nrm != 0)
     err_div = torch.zeros_like(err_mean) 
     err_div[mask] = err_mean[mask] / nrm[mask] 
@@ -202,7 +202,7 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
     # err_nRMSE = torch.mean(err_mean / nrm, dim=0)
 
     err_CSV = torch.sqrt(torch.mean(
-        (torch.sum(pred.view([nb, nc, -1, nt]), dim=2) - torch.sum(target.view([nb, nc, -1, nt]), dim=2)) ** 2,
+        (torch.sum(pred.reshape([nb, nc, -1, nt]), dim=2) - torch.sum(target.reshape([nb, nc, -1, nt]), dim=2)) ** 2,
         dim=0))
     if len(idxs) == 2:
         nx = pred.shape[1]
@@ -218,7 +218,7 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
         err_CSV /= nx * ny * nz
     # worst case in all the data
     err_Max = torch.max(torch.max(
-        torch.abs(pred.view([nb, nc, -1, nt]) - target.view([nb, nc, -1, nt])), dim=2)[0], dim=0)[0]
+        torch.abs(pred.reshape([nb, nc, -1, nt]) - target.reshape([nb, nc, -1, nt])), dim=2)[0], dim=0)[0]
 
     if len(idxs) == 2:
         err_BD = (pred[:, 0, :] - target[:, 0, :]) ** 2
@@ -244,9 +244,9 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
         err_BD_y += (pred[:, :, :, -1, :] - target[:, :, :, -1, :]) ** 2
         err_BD_z = (pred[:, :, :, :, 0] - target[:, :, :, :, 0]) ** 2
         err_BD_z += (pred[:, :, :, :, -1] - target[:, :, :, :, -1]) ** 2
-        err_BD = torch.sum(err_BD_x.view([nb, -1, nt]), dim=-2) \
-                 + torch.sum(err_BD_y.view([nb, -1, nt]), dim=-2) \
-                 + torch.sum(err_BD_z.view([nb, -1, nt]), dim=-2)
+        err_BD = torch.sum(err_BD_x.reshape([nb, -1, nt]), dim=-2) \
+                 + torch.sum(err_BD_y.reshape([nb, -1, nt]), dim=-2) \
+                 + torch.sum(err_BD_z.reshape([nb, -1, nt]), dim=-2)
         err_BD = err_BD / (2 * nx * ny + 2 * ny * nz + 2 * nz * nx)
         err_BD = torch.mean(torch.sqrt(err_BD), dim=0)
 
@@ -269,6 +269,20 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
                     continue
                 err_F[:, :, it] += _err_F[:, :, i, j]
         _err_F = torch.sqrt(torch.mean(err_F, axis=0)) / (nx * ny) * Lx * Ly
+    elif len(idxs) == 5:  # 2D
+        pred_F = torch.fft.rfftn(pred, dim=[2,3])
+        target_F = torch.fft.rfftn(target, dim=[2,3])
+        nx, ny = idxs[2:4]
+        _err_F = torch.abs(pred_F - target_F) ** 2
+        err_F = torch.zeros([nb, nc, min(nx // 2, ny // 2), nt]).to(device)
+        for i in range(nx // 2):
+            for j in range(ny // 2):
+                it = mt.floor(mt.sqrt(i ** 2 + j ** 2))
+                if it > min(nx // 2, ny // 2) - 1:
+                    continue
+                err_F[:,:,it] += _err_F[:, :, i, j, :]
+        _err_F = torch.sqrt(torch.mean(err_F, axis=0)) / (nx * ny) * Lx * Ly
+        
     elif len(idxs) == 6:  # 3D
         pred_F = torch.fft.fftn(pred, dim=[2, 3, 4])
         target_F = torch.fft.fftn(target, dim=[2, 3, 4])
@@ -298,7 +312,7 @@ def metric_func(pred, target, batch_size, if_mean=True, Lx=1., Ly=1., Lz=1., iLo
                torch.mean(err_CSV, dim=[0, -1]), \
                torch.mean(err_Max, dim=[0, -1]), \
                torch.mean(err_BD, dim=[0, -1]), \
-               torch.mean(err_F, dim=[0, -1])
+               torch.mean(err_F)
     else:
         return err_RMSE, err_nRMSE, err_CSV, err_Max, err_BD, err_F
 
@@ -522,9 +536,9 @@ class LpLoss(object):
         self.reduction = reduction
     def __call__(self, x, y, eps=1e-20):
         num_examples = x.size()[0]
-        _diff = x.view(num_examples,-1) - y.view(num_examples,-1)
+        _diff = x.reshape(num_examples,-1) - y.reshape(num_examples,-1)
         _diff = torch.norm(_diff, self.p, 1)
-        _norm = eps + torch.norm(y.view(num_examples,-1), self.p, 1)
+        _norm = eps + torch.norm(y.reshape(num_examples,-1), self.p, 1)
         if self.reduction in ['mean']:
             return torch.mean(_diff/_norm)
         if self.reduction in ['sum']:
@@ -642,9 +656,9 @@ def inverse_metrics(u0,x,pred_u0,y):
     fftl3loss_fn = FftLpLoss(p=3,reduction="mean")    
 
     #initial condition
-    mseloss_u0 = mseloss_fn(u0.view(1, -1), x.view(1, -1)).item()
-    l2loss_u0 = l2loss_fn(u0.view(1, -1), x.view(1, -1)).item()
-    l3loss_u0 = l3loss_fn(u0.view(1, -1), x.view(1, -1)).item()
+    mseloss_u0 = mseloss_fn(u0.reshape(1, -1), x.reshape(1, -1)).item()
+    l2loss_u0 = l2loss_fn(u0.reshape(1, -1), x.reshape(1, -1)).item()
+    l3loss_u0 = l3loss_fn(u0.reshape(1, -1), x.reshape(1, -1)).item()
     
     
     fmid = u0.shape[1]//4

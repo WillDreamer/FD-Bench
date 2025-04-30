@@ -1,7 +1,7 @@
 paths:
-  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
+  output_dir: 'FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: 'FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 64
@@ -55,17 +55,17 @@ data:
   # initial_step: 5
   # window_size: 10
 
-  PDE_type: 'KF'
-  data_path: '/wanghaixin/FNS-KF/'
-  data_set: 'FNS-KF.nc'
+  PDE_type: 'SPDE'
+  data_path: 'NS_u0_xi_nu4'
+  data_set: '0.mat'
   num_trajectories: -1
   max_trajectories: 1000
   max_num_time_steps: 3
   input_size: 128
   in_chans: 1
   reduced_resolution: 1
-  initial_step: 5
-  window_size: 10
+  initial_step: 10
+  window_size: 15
 
   reduced_resolution_t: 1 
   reduced_batch: 1
