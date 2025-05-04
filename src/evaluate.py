@@ -154,8 +154,16 @@ def main(args):
                 grid = getattr(data, 'grid', None)
             else:
                 input_test, target_test, grid = batch
-                input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-                target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                if len(samples.shape) == 4:
+                    input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                    target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                elif len(samples.shape) == 5:
+                    # [B, H, W, T, D]
+                    input_test = input_test.to(device, non_blocking=True)
+                    target_test = target_test.to(device, non_blocking=True)
+                    H_field = input_test.shape[1]
+                    W_field = input_test.shape[2]
+                    B_field = input_test.shape[0]
                 grid = grid.to(device) if grid is not None else None
 
             if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
@@ -164,6 +172,28 @@ def main(args):
                 else:
                     samp_algo = model.ddim_sample
                 outputs, _ = samp_algo(input_test,target_test,grid,criterion)
+            elif args.tem_mod in {'next_step'}:
+                outputs, loss = model(input_test,target_test,grid,criterion)
+            elif args.tem_mod in {'self_atten'}:
+                target_test = target_test.permute(0, 3, 4, 1, 2)
+                input_test = input_test.permute(0, 3, 4, 1, 2)
+                outputs, loss = model(input_test,target_test,grid,criterion)
+            elif args.tem_mod == 'auto_regressive':
+                rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                predicted_outputs = []
+                
+                for tt in range(args.window_size - args.initial_step):
+                    input_test_t = rolling_input.reshape(B_field, -1, H_field, W_field)
+                    target_test_t = input_test[..., tt+args.initial_step, :].permute(0,3,1,2)
+                    
+                    output_test_t, _ = model(input_test_t, target_test_t, grid, criterion)
+                    predicted_outputs.append(output_test_t.unsqueeze(1))  
+                    rolling_input = torch.cat([
+                        rolling_input[..., 1:, :],       
+                        output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                    ], dim=-2) 
+                outputs = torch.cat(predicted_outputs, dim=1).contiguous()
+                target_test = input_test[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
             else:
                 outputs, _ = model(input_test,target_test,grid,criterion)
             
