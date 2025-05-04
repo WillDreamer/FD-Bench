@@ -35,6 +35,9 @@ class DatasetSingle(Dataset):
             self.window_size = 1
         elif args.tem_mod == 'auto_regressive':
             self.window_size = args.window_size
+        elif args.tem_mod in {'self_atten'}:
+            self.window_size = args.window_size
+            self.forecast_horizon = args.forecast_horizon
         else:
             self.window_size = args.window_size
 
@@ -127,6 +130,16 @@ class DatasetSingle(Dataset):
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
             input_seq = input_seq.permute(2,3,0,1)
             return input_seq, input_seq, self.grid
+
+        elif self.tem_mod == 'self_attn':
+            # shape [B, H, W, T, D]
+            max_start = self.data.shape[-2] - self.window_size
+            if max_start <= 0:
+                raise ValueError("Data length is too short for the given window size.")
+            rand_idx = random.randint(0, max_start)
+            input_seq = self.data[idx, ..., rand_idx : rand_idx + self.forecast_horizon, :]
+            target_seq = self.data[idx, ..., rand_idx + self.forecast_horizon : rand_idx + self.window_size, :]
+            return input_seq, target_seq, self.grid
 
         else:
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)

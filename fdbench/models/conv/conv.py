@@ -206,7 +206,7 @@ class conv(nn.Module):
                 # size,                      # Input and Output spatial size (required )
                 # N_layers,                  # Number of (D) or (U) blocks in the network
                 # N_res,                 # Number of (R) blocks per level (except the neck)
-                N_res_neck = 4,            # Number of (R) blocks in the neck
+                # N_res_neck = 4,            # Number of (R) blocks in the neck
                 # channel_multiplier = 64,   # How the number of channels evolve?
                 use_bn = True,             # Add BN? We do not add BN in lifting/projection layer
                 args={}
@@ -252,7 +252,7 @@ class conv(nn.Module):
                                         size = size)
 
         self.project   = LiftProjectBlock(in_channels = self.encoder_features[0] + self.decoder_features_out[-1],
-                                            out_channels = initial_step*self.out_dim,
+                                            out_channels = self.out_dim,
                                             size = size)
 
         ######## Define Encoder, ED Linker and Decoder networks ########
@@ -289,7 +289,7 @@ class conv(nn.Module):
 
         self.res_nets = []
         self.N_res = int(N_res)
-        self.N_res_neck = int(N_res_neck)
+        self.N_res_neck = int(args.N_res_neck)
 
         # Define the ResNet networks (before the neck)
         for l in range(self.N_layers):
@@ -347,7 +347,10 @@ if __name__ == '__main__':
         'out_dim': 4,
         'size': 128,
         'N_layers': 4,
-        'N_res': 12
+        'N_res': 4,
+        'channel_multiplier':32,
+        'N_res_neck':8,
+        'initial_step':1
     }
     from argparse import Namespace
     args = Namespace(**args)
@@ -358,3 +361,4 @@ if __name__ == '__main__':
         return sum(p.numel() for p in model.parameters() if p.requires_grad) /(1024**2)
 
     print(f"Total trainable parameters: {count_parameters(model):,}")
+    print(model(inp,inp,None,criterion=torch.nn.MSELoss())[0].shape,'===')

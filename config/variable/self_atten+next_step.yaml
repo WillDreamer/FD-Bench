@@ -72,6 +72,7 @@ data:
   # in_chans: 5
   # reduced_resolution: 1
 
+  window_size: 1
   reduced_resolution_t: 1 
   reduced_batch: 1
   initial_step: 1

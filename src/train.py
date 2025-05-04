@@ -21,8 +21,9 @@ from fdbench.utils.metrics import metric_func
 import warnings
 warnings.filterwarnings('ignore')
 
-logger = get_logger(__name__)
 
+
+logger = get_logger(__name__)
 
 def create_logger(logging_dir):
     """
@@ -248,7 +249,12 @@ def main(args):
 
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
-                if args.tem_mod == 'next_step':
+                if args.tem_mod in {'next_step'}:
+                    outputs, loss = model(samples,targets,grid,criterion)
+                
+                elif args.tem_mod in {'self_atten'}:
+                    samples = samples.permute(0, 3, 4, 1, 2)
+                    targets = targets.permute(0, 3, 4, 1, 2)
                     outputs, loss = model(samples,targets,grid,criterion)
                 
                 elif args.tem_mod == 'auto_regressive':
@@ -293,8 +299,6 @@ def main(args):
             #### =========4. Model Testing=========
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
-
-                torch.cuda.empty_cache()
                 
                 _err_RMSE_avg = 0
                 _err_nRMSE_avg = 0
@@ -312,6 +316,8 @@ def main(args):
                             grid = getattr(data, 'grid', None)
                         else:
                             input_test, target_test, grid = batch
+                            input_test = input_test.to(device)
+                            target_test = target_test.to(device)
                             if len(samples.shape) == 4:
                                 input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
                                 target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
@@ -330,7 +336,11 @@ def main(args):
                             else:
                                 model = model.ddim_sample
                             outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod == 'next_step':
+                        elif args.tem_mod in {'next_step'}:
+                            outputs, loss = model(input_test,target_test,grid,criterion)
+                        elif args.tem_mod in {'self_atten'}:
+                            input_test = input_test.permute(0, 3, 4, 1, 2)
+                            target_test = target_test.permute(0, 3, 4, 1, 2)
                             outputs, loss = model(input_test,target_test,grid,criterion)
                         elif args.tem_mod == 'auto_regressive':
                             rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
@@ -380,9 +390,11 @@ def main(args):
                         from thop import profile
                         target_model = model.module if hasattr(model, "module") else model
                         if len(target_test.shape) < 5:
-                            flops, params = profile(target_model, inputs=(input_test,target_test,grid,criterion))
+                            flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
+                        elif args.tem_mod in {'self_atten'}:
+                            flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
                         elif args.tem_mod == 'auto_regressive':
-                            flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field),target_test_raw[..., 0, :].permute(0, 3, 1, 2),grid,criterion))
+                            flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
                         gflops = flops / 1e9
                         mem_alloc_MB = torch.cuda.memory_allocated(device) / (1024 ** 2)
                         accelerator.log({
@@ -427,7 +439,11 @@ def main(args):
                             else:
                                 samp_algo = model.ddim_sample
                             outputs, loss = samp_algo(input_test,target_test,grid,criterion)
-                        elif args.tem_mod == 'next_step':
+                        elif args.tem_mod in {'next_step'}:
+                            outputs, loss = model(input_test,target_test,grid,criterion)
+                        elif args.tem_mod in {'self_atten'}:
+                            target_test = target_test.permute(0, 3, 4, 1, 2)
+                            input_test = input_test.permute(0, 3, 4, 1, 2)
                             outputs, loss = model(input_test,target_test,grid,criterion)
                         elif args.tem_mod == 'auto_regressive':
                             rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
