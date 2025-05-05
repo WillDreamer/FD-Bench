@@ -252,7 +252,7 @@ def main(args):
                 if args.tem_mod in {'next_step'}:
                     outputs, loss = model(samples,targets,grid,criterion)
                 
-                elif args.tem_mod in {'self_atten'}:
+                elif args.tem_mod in {'self_atten', 'node'}:
                     samples = samples.permute(0, 3, 4, 1, 2)
                     targets = targets.permute(0, 3, 4, 1, 2)
                     outputs, loss = model(samples,targets,grid,criterion)
@@ -338,7 +338,7 @@ def main(args):
                             outputs, loss = model(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'next_step'}:
                             outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'self_atten'}:
+                        elif args.tem_mod in {'self_atten','node'}:
                             input_test = input_test.permute(0, 3, 4, 1, 2)
                             target_test = target_test.permute(0, 3, 4, 1, 2)
                             outputs, loss = model(input_test,target_test,grid,criterion)
@@ -391,7 +391,7 @@ def main(args):
                         target_model = model.module if hasattr(model, "module") else model
                         if len(target_test.shape) < 5:
                             flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
-                        elif args.tem_mod in {'self_atten'}:
+                        elif args.tem_mod in {'self_atten','node'}:
                             flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
                         elif args.tem_mod == 'auto_regressive':
                             flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
@@ -441,7 +441,7 @@ def main(args):
                             outputs, loss = samp_algo(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'next_step'}:
                             outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'self_atten'}:
+                        elif args.tem_mod in {'self_atten','node'}:
                             target_test = target_test.permute(0, 3, 4, 1, 2)
                             input_test = input_test.permute(0, 3, 4, 1, 2)
                             outputs, loss = model(input_test,target_test,grid,criterion)

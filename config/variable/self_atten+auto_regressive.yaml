@@ -47,7 +47,6 @@ data:
   in_chans: 4 
   reduced_resolution: 4
   initial_step: 5
-  forecast_horizon: 5
   window_size: 10
 
   # auto-regressive is given 5 steps, predict next steps and then roll-out for next 5 steps
@@ -86,7 +85,6 @@ data:
 
   reduced_resolution_t: 1 
   reduced_batch: 1
-  initial_step: 1
 
 optimizer:
   opt: 'adamw'

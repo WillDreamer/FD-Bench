@@ -7,13 +7,19 @@ SPATIAL_REP='self_atten'
 # SPATIAL_REP='fourier'
 # SPATIAL_REP='conv'
 
-TEMPORAL_REP='self_atten'
+# TEMPORAL_REP='self_atten'
 # TEMPORAL_REP="next_step"
 # TEMPORAL_REP="temporal_bundling"
 # TEMPORAL_REP="auto_regressive"
+TEMPORAL_REP="node"
 
 TARGET="variable"
-CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
+CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
+
+if [ ! -f "$CONFIG_PATH" ]; then
+    echo "Error: The modular combination ${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml does not exist!"
+    exit 1
+fi
 
 REMARK='lambda'
 
