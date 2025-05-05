@@ -47,6 +47,16 @@ class Mlp(nn.Module):
         x = self.drop(x)
         return x
 
+class Swish(nn.Module):
+    """
+    Swish activation function
+    """
+    def __init__(self, beta=1):
+        super(Swish, self).__init__()
+        self.beta = beta
+
+    def forward(self, x):
+        return x * torch.sigmoid(self.beta*x)
 
 class Block(nn.Module):
     def __init__(self, dim, mlp_ratio=4., drop=0., drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, h=14, w=8, use_fno=False, use_blocks=False, args={}):
@@ -160,17 +170,11 @@ class FinalLayer(nn.Module):
     """
     def __init__(self, hidden_size, patch_size, out_channels):
         super().__init__()
-        self.norm_final = nn.LayerNorm(hidden_size)
         self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
-        # self.adaLN_modulation = nn.Sequential(
-        #     nn.SiLU(),
-        #     nn.Linear(hidden_size, 2 * hidden_size, bias=True)
-        # )
 
     def forward(self, x):
         
         x = self.linear(x)
-        x = self.norm_final(x)
 
         return x
 
@@ -205,7 +209,7 @@ class self_atten(nn.Module):
         img_size = args.input_size
         patch_size = args.patch_size
         in_chans = args.in_chans
-        embed_dim = args.hidden_size
+        embed_dim = args.hidden_size 
         depth = args.num_layers
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
@@ -228,12 +232,35 @@ class self_atten(nn.Module):
             grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
             num_patches = grid_size[0] * grid_size[1]
         
+        elif self.config.tem_mod in ['node']:
+            self.forecast_horizon = args.forecast_horizon
+            self.decoding_mlp = nn.Sequential(nn.Linear(embed_dim, embed_dim),
+                                              Swish(),
+                                              nn.Linear(embed_dim, 1),
+                                              Swish()
+                                              )
+            # ODEINT derivative network
+            self.derivative_net = nn.Sequential(nn.Linear(embed_dim, embed_dim),
+                                                Swish(),
+                                                nn.Linear(embed_dim, self.embed_dim),
+                                                Swish()
+                                                )
+        
+        elif self.config.tem_mod in ['auto_regressive']:
+            patch_dim = args.initial_step * in_chans * patch_size ** 2
+            self.patch_embed = nn.Sequential(
+                Rearrange('b (t c) (h p1) (w p2) -> b (h w) (t p1 p2 c)', p1 = patch_size, p2 = patch_size, t=args.initial_step),
+                nn.Linear(patch_dim, embed_dim),
+            )
+            self.unpatch = UnpatchEmbed(
+                img_size=img_size, patch_size=patch_size, out_chans=in_chans, embed_dim=embed_dim)
+            grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
+            num_patches = grid_size[0] * grid_size[1]
         else:
             self.patch_embed = PatchEmbed(
                 img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
             self.unpatch = UnpatchEmbed(
                 img_size=img_size, patch_size=patch_size, out_chans=in_chans, embed_dim=embed_dim)
-    
             num_patches = self.patch_embed.num_patches
 
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim))
@@ -301,10 +328,11 @@ class self_atten(nn.Module):
         x = self.patch_embed(x)
         x = x + self.pos_embed
 
-        if self.config.tem_mod == 'self_atten':
-            b, ts, n, _ = x.shape
+        if self.config.tem_mod in {'self_atten','node'}:
+            b, ts, seq_len, _ = x.shape
             x = rearrange(x, 'b t n d -> (b t) n d')
         
+        ## Must do spatial self-attention
         x = self.pos_drop(x)
         if not self.config.checkpoint_activations:
             for blk in self.blocks:
@@ -315,11 +343,32 @@ class self_atten(nn.Module):
 
         if self.config.tem_mod == 'self_atten':
             x = rearrange(x, '(b t) n d -> (b n) t d',t=ts)
+            
+            # temporal attention 
             for tem_blk in self.temporal_blocks:
                 x = tem_blk(x)
+                
             x = self.norm(x)
             x = rearrange(x, '(b n) t d -> b t n d',t=ts,b=b)
             x = self.final_layer(x)
+        
+        elif self.config.tem_mod == 'node':
+
+            from torchdiffeq import odeint
+            
+            def ode_func(t, y):
+                return self.derivative_net(y)
+
+            x = rearrange(x, '(b t) n d -> b t n d',t=ts)[:, -1, :, :].reshape(-1, x.size(-1))
+            
+            # timespan for odeint
+            t = torch.linspace(0, 1, self.forecast_horizon + 1).to(x.device)
+
+            # use h as initial condition
+            pred_z = odeint(ode_func, x, t, method='dopri5')
+            # Remove the initial state, permute to [batch*seq_len, time, features]
+            pred_z = (pred_z[1:]).permute(1, 0, 2) 
+            x = rearrange(pred_z, '(b n) t d -> b t n d',n=seq_len)
 
 
         x = self.unpatch(x)

@@ -89,9 +89,7 @@ class DatasetSingle(Dataset):
         # Time steps used as initial conditions
         if args.tem_mod == 'next_step':
             self.window_size = 1
-        elif args.tem_mod == 'auto_regressive':
-            self.window_size = args.window_size
-        elif args.tem_mod in {'self_atten'}:
+        elif args.tem_mod in {'self_atten','node','auto_regressive'}:
             self.window_size = args.window_size
             self.forecast_horizon = args.forecast_horizon
         else:
@@ -122,7 +120,7 @@ class DatasetSingle(Dataset):
                 input_seq = input_seq.squeeze(-2)
 
             return input_seq, input_seq, self.grid
-        elif self.tem_mod == 'self_attn':
+        elif self.tem_mod in {'self_attn', 'node'}:
             # shape [B, H, W, T, D]
             max_start = self.data.shape[-2] - self.window_size
             if max_start <= 0:
