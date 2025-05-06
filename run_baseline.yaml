@@ -1,0 +1,200 @@
+name: stochastic-messagepassing-spdeode-rm-baseline-pde
+image: mosaicml/pytorch:latest-aws
+command: |-  
+  cd home/mosaicml
+  git clone git@github.com:WillDreamer/FD-Bench.git
+  cd FD-Bench
+  git checkout accelerate
+  pip install -e .
+  wget -O 0.mat https://www.dropbox.com/scl/fi/x3h2aczbiygtycru0ms8j/0.mat?rlkey=ingg06o8hetz222uh8ogfgoo7&st=unnw6dui&dl=0
+
+  pip install ogb gitpython wandb ray ray[tune] optuna
+  pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+  pip install torch_geometric
+  pip install torch-harmonics
+  pip install torchdata 
+  pip install torchmetrics
+  pip install transformers  
+  pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.5.1+cu124.html
+  pip install numpy scipy pandas matplotlib
+  pip install scikit-learn
+  pip install toml tqdm
+  pip install torchsde
+  pip install torchdiffeq
+  pip install networkx
+  pip install h5py 
+  pip install tensorflow
+  pip install tensorflow-datasets
+  pip install tensorflow-io-gcs-filesystem
+  pip install tensorflow-metadata
+  pip install tensorly tensorly-torch
+  pip install pyarrow
+  pip install accelerate
+  pip install pytorch-lightning
+  pip install timm
+  pip install einops
+  pip install absl-py  
+  pip install aiohappyeyeballs             
+  pip install aiohttp                     
+  pip install aiosignal                    
+  pip install annotated-types             
+  pip install array_record                
+  pip install asttokens   
+  pip install astunparse                
+  pip install async-timeout
+  pip install attrs                        
+  pip install black                        
+  pip install certifi                      
+  pip install charset-normalizer           
+  pip install click                        
+  pip install cloudpickle                  
+  pip install colorama                     
+  pip install comm                         
+  pip install configmypy                   
+  pip install contourpy                    
+  pip install cycler                       
+  pip install dask                         
+  pip install datasets                     
+  pip install debugpy                      
+  pip install decorator                    
+  pip install deeptime                     
+  pip install dgl                          
+  pip install dill                         
+  pip install dm-tree                      
+  pip install docker-pycreds               
+  pip install docstring_parser             
+  pip install etils                        
+  pip install evaluate                     
+  pip install exceptiongroup               
+  pip install executing                    
+  pip install fdbench                      
+  pip install filelock                     
+  pip install frozenlist                   
+  pip install fsspec                       
+  pip install fvcore                       
+  pip install gast                         
+  pip install gitdb                        
+  pip install GitPython                    
+  pip install google-pasta                 
+  pip install grpcio                       
+  pip install h5py                         
+  pip install huggingface-hub              
+  pip install humanfriendly                
+  pip install idna                         
+  pip install immutabledict                
+  pip install importlib_metadata           
+  pip install importlib_resources           
+  pip install iniconfig                     
+  pip install iopath                       
+  pip install ipykernel                    
+  pip install ipython                      
+  pip install jedi                         
+  pip install Jinja2                       
+  pip install joblib                       
+  pip install jupyter_client               
+  pip install jupyter_core                 
+  pip install keras                        
+  pip install kiwisolver                   
+  pip install libclang                     
+  pip install lightning-utilities          
+  pip install littleutils                  
+  pip install llvmlite                     
+  pip install locket                       
+  pip install lxml                         
+  pip install Markdown                     
+  pip install markdown-it-py               
+  pip install MarkupSafe                            
+  pip install ml-dtypes                    
+  pip install mpmath                       
+  pip install multidict                    
+  pip install multiprocess                 
+  pip install mypy-extensions              
+  pip install namex                        
+  pip install nest_asyncio                 
+  pip install networkx                     
+  pip install neuraloperator               
+  pip install numba
+  pip install opt_einsum           
+  pip install optree         
+  pip install outdated                  
+  pip install packaging                    
+  pip install parso                        
+  pip install partd                        
+  pip install pathspec                     
+  pip install pexpect                      
+  pip install pickleshare                  
+  pip install pillow                       
+  pip install platformdirs                 
+  pip install pluggy                       
+  pip install portalocker                  
+  pip install promise                      
+  pip install prompt_toolkit               
+  pip install protobuf                     
+  pip install psutil                       
+  pip install ptyprocess                   
+  pip install pure_eval                    
+  pip install pyarrow                      
+  pip install pydantic                     
+  pip install pydantic_core                
+  pip install pyg-lib                      
+  pip install Pygments                     
+  pip install pyparsing                    
+  pip install pytest                       
+  pip install pytest-mock                  
+  pip install python-dateutil              
+  pip install pytorch-lightning            
+  pip install pytz                         
+  pip install PyYAML                       
+  pip install pyzmq                        
+  pip install regex                        
+  pip install requests                     
+  pip install rich                         
+  pip install ruamel.yaml                  
+  pip install ruamel.yaml.clib             
+  pip install sacrebleu                    
+  pip install safetensors                  
+  pip install seaborn                      
+  pip install sentry-sdk                   
+  pip install setproctitle                 
+  pip install setuptools                   
+  pip install simple-parsing               
+  pip install smmap                        
+  pip install stack-data                   
+  pip install sympy                        
+  pip install tabulate                     
+  pip install tensorboard                  
+  pip install tensorboard-data-server      
+  pip install tensorboardX                 
+  pip install termcolor  
+  pip install tokenizers
+  pip install toml
+  pip install wcwidth                      
+  pip install Werkzeug                     
+  pip install wheel                        
+  pip install wrapt                        
+  pip install xxhash                       
+  pip install yacs                         
+  pip install yarl                         
+  pip install zipp     
+  pip install thop                    
+
+  SPATIAL_REP="fourier"
+  TEMPORAL_REP="auto_regressive"
+  TARGET="variable"
+  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
+  REMARK='spde'
+  export WANDB_ENTITY="FD-Bench"
+  export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
+  export WANDB_NAME="${SPATIAL_REP}_${TEMPORAL_REP}_${REMARK}"
+  export WANDB_API_KEY="ba70fcbc92808cc7a1750dd80ac3908295e6854f"
+  accelerate launch --main_process_port 29513 src/train.py --config_file "$CONFIG_PATH"
+
+compute:
+  cluster: r4z13p2
+  gpus: 1
+scheduling:
+  priority: auto
+integrations:
+  - integration_type: git_repo
+    git_repo: WillDreamer/FD-Bench
+    git_branch: spde
