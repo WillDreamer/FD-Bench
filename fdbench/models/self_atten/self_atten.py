@@ -221,7 +221,7 @@ class self_atten(nn.Module):
             print('using linear droppath with expect rate', drop_path_rate * 0.5)
             dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
         
-        if self.config.tem_mod in ['node','self_atten']:
+        if self.config.tem_mod in ['self_atten']:
             self.forecast_horizon = args.forecast_horizon
             patch_dim = in_chans * patch_size ** 2
             self.patch_embed = nn.Sequential(
@@ -234,6 +234,14 @@ class self_atten(nn.Module):
         
         elif self.config.tem_mod in ['node']:
             self.forecast_horizon = args.forecast_horizon
+            patch_dim = in_chans * patch_size ** 2
+            self.patch_embed = nn.Sequential(
+                Rearrange('b t c (h p1) (w p2) -> b t (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
+                nn.Linear(patch_dim, embed_dim),
+            )
+            self.unpatch = Rearrange('b t (h w) (c p1 p2) -> b t c (h p1) (w p2)', p1=patch_size, p2=patch_size, h=img_size//patch_size)
+            grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
+            num_patches = grid_size[0] * grid_size[1]
             self.decoding_mlp = nn.Sequential(nn.Linear(embed_dim, embed_dim),
                                               Swish(),
                                               nn.Linear(embed_dim, 1),
@@ -245,6 +253,7 @@ class self_atten(nn.Module):
                                                 nn.Linear(embed_dim, self.embed_dim),
                                                 Swish()
                                                 )
+            self.final_layer = FinalLayer(embed_dim, patch_size, in_chans)
         
         elif self.config.tem_mod in ['auto_regressive']:
             patch_dim = args.initial_step * in_chans * patch_size ** 2
@@ -352,23 +361,31 @@ class self_atten(nn.Module):
             x = rearrange(x, '(b n) t d -> b t n d',t=ts,b=b)
             x = self.final_layer(x)
         
+
         elif self.config.tem_mod == 'node':
 
-            from torchdiffeq import odeint
+            # from torchdiffeq import odeint
+            from torchdiffeq import odeint_adjoint as odeint
             
-            def ode_func(t, y):
-                return self.derivative_net(y)
+            # def ode_func(t, y):
+            #     return self.derivative_net(y)
+            class ODEFunc(nn.Module):
+                def __init__(self, derivative_net):
+                    super().__init__()
+                    self.net = derivative_net  # 使用你已有的 self.derivative_net
 
+                def forward(self, t, y):
+                    return self.net(y)
+            ode_func = ODEFunc(self.derivative_net)
+            
             x = rearrange(x, '(b t) n d -> b t n d',t=ts)[:, -1, :, :].reshape(-1, x.size(-1))
             
-            # timespan for odeint
             t = torch.linspace(0, 1, self.forecast_horizon + 1).to(x.device)
-
-            # use h as initial condition
             pred_z = odeint(ode_func, x, t, method='dopri5')
             # Remove the initial state, permute to [batch*seq_len, time, features]
             pred_z = (pred_z[1:]).permute(1, 0, 2) 
             x = rearrange(pred_z, '(b n) t d -> b t n d',n=seq_len)
+            x = self.final_layer(x)
 
 
         x = self.unpatch(x)
