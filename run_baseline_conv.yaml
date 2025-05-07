@@ -4,7 +4,7 @@ command: |-
   cd home/mosaicml
   git clone git@github.com:WillDreamer/FD-Bench.git
   cd FD-Bench
-  git checkout accelerate
+  git checkout generalizability_exps
   pip install -e .
   wget -O 2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164689
 
@@ -178,11 +178,11 @@ command: |-
   pip install zipp     
   pip install thop                    
 
-  SPATIAL_REP="fourier"
-  TEMPORAL_REP="auto_regressive"
+  SPATIAL_REP="conv"
+  TEMPORAL_REP="next_step"
   TARGET="variable"
   CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
-  REMARK='spde'
+  REMARK='generalization'
   export WANDB_ENTITY="FD-Bench"
   export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
   export WANDB_NAME="${SPATIAL_REP}_${TEMPORAL_REP}_${REMARK}"
@@ -191,7 +191,7 @@ command: |-
 
 compute:
   cluster: r4z13p2
-  gpus: 1
+  gpus: 2
 scheduling:
   priority: auto
 integrations:
