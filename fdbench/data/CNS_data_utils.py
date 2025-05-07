@@ -35,7 +35,7 @@ class DatasetSingle(Dataset):
         reduced_batch=args.reduced_batch
         saved_folder = args.data_path
         initial_step=args.initial_step
-        window_size=args.window_size
+        # window_size=args.window_size
         self.tem_mod = args.tem_mod
         
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
