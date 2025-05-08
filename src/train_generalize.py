@@ -501,6 +501,7 @@ def main(args):
         args.data_set = args.test_data_set
         
         # Create test dataset with the new params
+        args.reduced_resolution = args.test_data_reduced_resolution
         gen_test_data = data_module(if_test=True, args=args, normalizer=normalizer)
         
         # Limit to 100 samples as requested
@@ -553,6 +554,7 @@ if __name__ == '__main__':
     parser.add_argument("--remark", type=str, default=' ', help="Training remark")
     parser.add_argument("--test_data_path", type=str, default=None, help="Path to the test data for generalization")
     parser.add_argument("--test_data_set", type=str, default=None, help="Name of the test dataset for generalization")
+    parser.add_argument("--test_data_reduced_resolution", type=int, default=1, help="Reduced resolution of the test data")
     default_args = parser.parse_args()
     
     args = get_config(config_path=default_args.config_file)
