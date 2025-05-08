@@ -432,6 +432,7 @@ def main(args):
                 if global_step == 10 and accelerator.is_main_process:
                     from thop import profile
                     target_model = model.module if hasattr(model, "module") else model
+                    flops = 0  # Initialize flops with a default value
                     if hasattr(batch, 'x') and hasattr(batch, 'y'):
                         data = batch.to(device)
                         input_profile = data
