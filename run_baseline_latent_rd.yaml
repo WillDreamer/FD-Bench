@@ -6,7 +6,7 @@ command: |-
   cd FD-Bench
   git checkout generalizability_exps
   pip install -e .
-  wget -q -O 2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164689
+  wget -q -O 2D_diff-react_NA_NA.h5 https://darus.uni-stuttgart.de/api/access/datafile/133017
 
   pip install --quiet ogb gitpython wandb ray ray[tune] optuna
   pip install --quiet torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
