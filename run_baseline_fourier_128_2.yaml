@@ -1,13 +1,13 @@
-name: stochastic-messagepassing-spdeode-rm-baseline-pde
+name: stochastic-messagepassing-spdeode-rm-baseline-pde-fno-2
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
   git clone git@github.com:WillDreamer/FD-Bench.git
   cd FD-Bench
   git checkout generalizability_exps
-  pip install --quiet -e .
+  pip install -e .
   wget -q -O 2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164689
-  wget -q -O 2D_CFD_Rand_M0.1_Eta0.01_Zeta0.01_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164687
+  wget -q -O 2D_CFD_Rand_M0.1_Eta0.1_Zeta0.1_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164688
 
   pip install --quiet ogb gitpython wandb ray ray[tune] optuna
   pip install --quiet torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
@@ -179,7 +179,7 @@ command: |-
   pip install --quiet zipp     
   pip install --quiet thop                    
 
-  SPATIAL_REP="latent"
+  SPATIAL_REP="fourier"
   TEMPORAL_REP="next_step"
   TARGET="variable"
   CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
@@ -191,7 +191,7 @@ command: |-
   accelerate launch --main_process_port 29513 src/train_generalize.py \
   --config_file "$CONFIG_PATH" \
   --test_data_path /home/mosaicml/FD-Bench/ \
-  --test_data_set 2D_CFD_Rand_M0.1_Eta0.01_Zeta0.01_periodic_128_Train.hdf5 \
+  --test_data_set 2D_CFD_Rand_M0.1_Eta0.1_Zeta0.1_periodic_128_Train.hdf5 \
   --test_data_reduced_resolution 1
 
 compute:

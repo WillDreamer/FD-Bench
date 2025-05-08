@@ -1,0 +1,4 @@
+wget -q -O 2D_CFD_Rand_M0.1_Eta0.01_Zeta0.01_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164687
+wget -q -O 2D_CFD_Rand_M0.1_Eta0.1_Zeta0.1_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164688
+wget -q -O 2D_CFD_Rand_M1.0_Eta0.01_Zeta0.01_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164690
+wget -q -O 2D_CFD_Rand_M1.0_Eta0.1_Zeta0.1_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164691
