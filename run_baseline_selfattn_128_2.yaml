@@ -1,0 +1,206 @@
+name: stochastic-messagepassing-spdeode-rm-baseline-pde-attn-2
+image: mosaicml/pytorch:latest-aws
+command: |-  
+  cd home/mosaicml
+  git clone git@github.com:WillDreamer/FD-Bench.git
+  cd FD-Bench
+  git checkout generalizability_exps
+  pip install -e .
+  wget -q -O 2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164689
+  wget -q -O 2D_CFD_Rand_M0.1_Eta0.1_Zeta0.1_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164688
+
+
+  pip install --quiet ogb gitpython wandb ray ray[tune] optuna
+  pip install --quiet torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+  pip install --quiet torch_geometric
+  pip install --quiet torch-harmonics
+  pip install --quiet torchdata 
+  pip install --quiet torchmetrics
+  pip install --quiet transformers  
+  pip install --quiet pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.5.1+cu124.html
+  pip install --quiet numpy scipy pandas matplotlib
+  pip install --quiet scikit-learn
+  pip install --quiet toml tqdm
+  pip install --quiet torchsde
+  pip install --quiet torchdiffeq
+  pip install --quiet networkx
+  pip install --quiet h5py 
+  pip install --quiet tensorflow
+  pip install --quiet tensorflow-datasets
+  pip install --quiet tensorflow-io-gcs-filesystem
+  pip install --quiet tensorflow-metadata
+  pip install --quiet tensorly tensorly-torch
+  pip install --quiet pyarrow
+  pip install --quiet accelerate
+  pip install --quiet pytorch-lightning
+  pip install --quiet timm
+  pip install --quiet einops
+  pip install --quiet absl-py  
+  pip install --quiet aiohappyeyeballs             
+  pip install --quiet aiohttp                     
+  pip install --quiet aiosignal                    
+  pip install --quiet annotated-types             
+  pip install --quiet array_record                
+  pip install --quiet asttokens   
+  pip install --quiet astunparse                
+  pip install --quiet async-timeout
+  pip install --quiet attrs                        
+  pip install --quiet black                        
+  pip install --quiet certifi                      
+  pip install --quiet charset-normalizer           
+  pip install --quiet click                        
+  pip install --quiet cloudpickle                  
+  pip install --quiet colorama                     
+  pip install --quiet comm                         
+  pip install --quiet configmypy                   
+  pip install --quiet contourpy                    
+  pip install --quiet cycler                       
+  pip install --quiet dask                         
+  pip install --quiet datasets                     
+  pip install --quiet debugpy                      
+  pip install --quiet decorator                    
+  pip install --quiet deeptime                     
+  pip install --quiet dgl                          
+  pip install --quiet dill                         
+  pip install --quiet dm-tree                      
+  pip install --quiet docker-pycreds               
+  pip install --quiet docstring_parser             
+  pip install --quiet etils                        
+  pip install --quiet evaluate                     
+  pip install --quiet exceptiongroup               
+  pip install --quiet executing                    
+  pip install --quiet fdbench                      
+  pip install --quiet filelock                     
+  pip install --quiet frozenlist                   
+  pip install --quiet fsspec                       
+  pip install --quiet fvcore                       
+  pip install --quiet gast                         
+  pip install --quiet gitdb                        
+  pip install --quiet GitPython                    
+  pip install --quiet google-pasta                 
+  pip install --quiet grpcio                       
+  pip install --quiet h5py                         
+  pip install --quiet huggingface-hub              
+  pip install --quiet humanfriendly                
+  pip install --quiet idna                         
+  pip install --quiet immutabledict                
+  pip install --quiet importlib_metadata           
+  pip install --quiet importlib_resources           
+  pip install --quiet iniconfig                     
+  pip install --quiet iopath                       
+  pip install --quiet ipykernel                    
+  pip install --quiet ipython                      
+  pip install --quiet jedi                         
+  pip install --quiet Jinja2                       
+  pip install --quiet joblib                       
+  pip install --quiet jupyter_client               
+  pip install --quiet jupyter_core                 
+  pip install --quiet keras                        
+  pip install --quiet kiwisolver                   
+  pip install --quiet libclang                     
+  pip install --quiet lightning-utilities          
+  pip install --quiet littleutils                  
+  pip install --quiet llvmlite                     
+  pip install --quiet locket                       
+  pip install --quiet lxml                         
+  pip install --quiet Markdown                     
+  pip install --quiet markdown-it-py               
+  pip install --quiet MarkupSafe                            
+  pip install --quiet ml-dtypes                    
+  pip install --quiet mpmath                       
+  pip install --quiet multidict                    
+  pip install --quiet multiprocess                 
+  pip install --quiet mypy-extensions              
+  pip install --quiet namex                        
+  pip install --quiet nest_asyncio                 
+  pip install --quiet networkx                     
+  pip install --quiet neuraloperator               
+  pip install --quiet numba
+  pip install --quiet opt_einsum           
+  pip install --quiet optree         
+  pip install --quiet outdated                  
+  pip install --quiet packaging                    
+  pip install --quiet parso                        
+  pip install --quiet partd                        
+  pip install --quiet pathspec                     
+  pip install --quiet pexpect                      
+  pip install --quiet pickleshare                  
+  pip install --quiet pillow                       
+  pip install --quiet platformdirs                 
+  pip install --quiet pluggy                       
+  pip install --quiet portalocker                  
+  pip install --quiet promise                      
+  pip install --quiet prompt_toolkit               
+  pip install --quiet protobuf                     
+  pip install --quiet psutil                       
+  pip install --quiet ptyprocess                   
+  pip install --quiet pure_eval                    
+  pip install --quiet pyarrow                      
+  pip install --quiet pydantic                     
+  pip install --quiet pydantic_core                
+  pip install --quiet pyg-lib                      
+  pip install --quiet Pygments                     
+  pip install --quiet pyparsing                    
+  pip install --quiet pytest                       
+  pip install --quiet pytest-mock                  
+  pip install --quiet python-dateutil              
+  pip install --quiet pytorch-lightning            
+  pip install --quiet pytz                         
+  pip install --quiet PyYAML                       
+  pip install --quiet pyzmq                        
+  pip install --quiet regex                        
+  pip install --quiet requests                     
+  pip install --quiet rich                         
+  pip install --quiet ruamel.yaml                  
+  pip install --quiet ruamel.yaml.clib             
+  pip install --quiet sacrebleu                    
+  pip install --quiet safetensors                  
+  pip install --quiet seaborn                      
+  pip install --quiet sentry-sdk                   
+  pip install --quiet setproctitle                 
+  pip install --quiet setuptools                   
+  pip install --quiet simple-parsing               
+  pip install --quiet smmap                        
+  pip install --quiet stack-data                   
+  pip install --quiet sympy                        
+  pip install --quiet tabulate                     
+  pip install --quiet tensorboard                  
+  pip install --quiet tensorboard-data-server      
+  pip install --quiet tensorboardX                 
+  pip install --quiet termcolor  
+  pip install --quiet tokenizers
+  pip install --quiet toml
+  pip install --quiet wcwidth                      
+  pip install --quiet Werkzeug                     
+  pip install --quiet wheel                        
+  pip install --quiet wrapt                        
+  pip install --quiet xxhash                       
+  pip install --quiet yacs                         
+  pip install --quiet yarl                         
+  pip install --quiet zipp     
+  pip install --quiet thop                    
+
+  SPATIAL_REP="self_atten"
+  TEMPORAL_REP="next_step"
+  TARGET="variable"
+  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
+  REMARK='generalization'
+  export WANDB_ENTITY="FD-Bench"
+  export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
+  export WANDB_NAME="${SPATIAL_REP}_${TEMPORAL_REP}_${REMARK}"
+  export WANDB_API_KEY="ba70fcbc92808cc7a1750dd80ac3908295e6854f"
+  accelerate launch --main_process_port 29513 src/train_generalize.py \
+  --config_file "$CONFIG_PATH" \
+  --test_data_path /home/mosaicml/FD-Bench/ \
+  --test_data_set 2D_CFD_Rand_M0.1_Eta0.1_Zeta0.1_periodic_128_Train.hdf5 \
+  --test_data_reduced_resolution 1
+
+compute:
+  cluster: r4z13p2
+  gpus: 1
+scheduling:
+  priority: auto
+integrations:
+  - integration_type: git_repo
+    git_repo: WillDreamer/FD-Bench
+    git_branch: generalizability_exps
