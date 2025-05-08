@@ -1,11 +1,11 @@
-name: stochastic-messagepassing-spdeode-rm-baseline-pde-latent-3
+name: stochastic-messagepassing-spdeode-rm-baseline-pde-lat-3
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
   git clone git@github.com:WillDreamer/FD-Bench.git
   cd FD-Bench
   git checkout generalizability_exps
-  pip install --quiet -e .
+  pip install -e .
   wget -q -O 2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164689
   wget -q -O 2D_CFD_Rand_M1.0_Eta0.01_Zeta0.01_periodic_128_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164690
 

@@ -515,14 +515,28 @@ def main(args):
                 num_workers=args.num_workers
             )
         else:
-            # For graph data, we need to use the original dataset since Subset doesn't expose data attribute
-            gen_data_loader, _ = get_graph_dataloader(
-                gen_test_data, rand_idx, batch_size=args.batch_size, 
+            # For graph data, we need to handle the subset differently
+            # Instead of creating a subset and then setting the dataloader's dataset,
+            # we'll directly create a subset of the processed data
+            
+            # First, create loader with full dataset to get the processed data from the first batch
+            temp_loader, _ = get_graph_dataloader(
+                gen_test_data, rand_idx, batch_size=len(gen_test_data), 
                 normalizer=normalizer, normalizer_new=normalizer_new, 
-                is_train=False, k=args.neighbor
+                is_train=False, k=args.neighbor, shuffle=False
             )
-            # Then we can filter the dataloader to only use the subset indices
-            gen_data_loader.dataset = gen_test_subset
+            
+            # Get all processed data as a list
+            all_processed_data = list(temp_loader.dataset)
+            
+            # Create a new subset with just the indices we want
+            subset_data = [all_processed_data[i] for i in subset_indices]
+            
+            # Create a new dataloader with just the subset data
+            gen_data_loader = torch.utils.data.DataLoader(
+                subset_data, batch_size=args.batch_size, shuffle=False,
+                num_workers=args.num_workers
+            )
         
         # Prepare the dataloader with accelerator
         gen_data_loader = accelerator.prepare(gen_data_loader)
