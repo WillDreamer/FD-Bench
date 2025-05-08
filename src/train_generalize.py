@@ -339,6 +339,10 @@ def main(args):
         desc="Steps",
         disable=not accelerator.is_local_main_process,
     )
+    # Initialize best model tracking
+    best_val_rmse = float('inf')
+    best_model_state = None
+    
     ##### Start Training
     for epoch in range(args.start_epoch, args.epochs):
         
@@ -423,6 +427,13 @@ def main(args):
                     accelerator, global_step, log_prefix="val", logger=logger
                 )
                 
+                # Update best model if validation RMSE improves
+                if val_metrics["val/RMSE"] < best_val_rmse:
+                    best_val_rmse = val_metrics["val/RMSE"]
+                    best_model_state = deepcopy(model.state_dict())
+                    if accelerator.is_main_process:
+                        logger.info(f"New best model found! Validation RMSE: {best_val_rmse:.4f}")
+                
                 # Test on normal test set
                 test_metrics = evaluate_model(
                     model, data_loader_test, device, args, criterion, 
@@ -465,21 +476,16 @@ def main(args):
         
         scheduler.step()
     
-    # Final evaluation using best checkpoint
+    # Final evaluation using best model
     accelerator.wait_for_everyone()
     if accelerator.is_main_process:
         logger.info("Training completed. Evaluating on additional test data...")
     
-    # Load the model with the best checkpoint (if specified)
-    best_checkpoint = args.resume_step if args.resume_step > 0 else global_step
-    ckpt_name = str(best_checkpoint).zfill(7) + '.pt'
-    ckpt_path = os.path.join(checkpoint_dir, ckpt_name)
-    
-    if accelerator.is_main_process:
-        logger.info(f"Loading best checkpoint from {ckpt_path}")
-    
-    ckpt = torch.load(ckpt_path, map_location='cpu')
-    align_and_load_state_dict(model, ckpt['model'])
+    # Load the best model state
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+        if accelerator.is_main_process:
+            logger.info(f"Loaded best model with validation RMSE: {best_val_rmse:.4f}")
     
     # Create the generalization test dataset if specified
     if hasattr(args, 'test_data_path') and hasattr(args, 'test_data_set') and args.test_data_path and args.test_data_set:
@@ -508,11 +514,14 @@ def main(args):
                 num_workers=args.num_workers
             )
         else:
+            # For graph data, we need to use the original dataset since Subset doesn't expose data attribute
             gen_data_loader, _ = get_graph_dataloader(
-                gen_test_subset, rand_idx, batch_size=args.batch_size, 
+                gen_test_data, rand_idx, batch_size=args.batch_size, 
                 normalizer=normalizer, normalizer_new=normalizer_new, 
                 is_train=False, k=args.neighbor
             )
+            # Then we can filter the dataloader to only use the subset indices
+            gen_data_loader.dataset = gen_test_subset
         
         # Prepare the dataloader with accelerator
         gen_data_loader = accelerator.prepare(gen_data_loader)
