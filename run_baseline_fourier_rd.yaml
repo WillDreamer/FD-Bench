@@ -1,4 +1,4 @@
-name: stochastic-messagepassing-spdeode-rm-baseline-pde-lat16
+name: stochastic-messagepassing-spdeode-rm-baseline-pde-fno-rd1
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
@@ -6,7 +6,7 @@ command: |-
   cd FD-Bench
   git checkout generalizability_exps
   pip install -e .
-  wget -q -O 2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164689
+  wget -q -O 2D_diff-react_NA_NA.h5 https://darus.uni-stuttgart.de/api/access/datafile/133017
 
   pip install --quiet ogb gitpython wandb ray ray[tune] optuna
   pip install --quiet torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
@@ -178,17 +178,17 @@ command: |-
   pip install --quiet zipp     
   pip install --quiet thop                    
 
-  SPATIAL_REP="latent"
+  SPATIAL_REP="fourier"
   TEMPORAL_REP="next_step"
   TARGET="variable"
-  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}_scale16.yaml"
+  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
   REMARK='generalization'
   export WANDB_ENTITY="FD-Bench"
   export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
   export WANDB_NAME="${SPATIAL_REP}_${TEMPORAL_REP}_${REMARK}"
   export WANDB_API_KEY="ba70fcbc92808cc7a1750dd80ac3908295e6854f"
-  accelerate launch --main_process_port 29513 src/train.py \
-  --config_file "$CONFIG_PATH"
+  accelerate launch --main_process_port 29513 src/train.py --config_file "$CONFIG_PATH"
+
 compute:
   cluster: r4z13p2
   gpus: 1
