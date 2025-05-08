@@ -5,178 +5,178 @@ command: |-
   git clone git@github.com:WillDreamer/FD-Bench.git
   cd FD-Bench
   git checkout generalizability_exps
-  pip install -e .
+  pip install --quite -e .
   wget -q -O 2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164689
   wget -q -O 2D_CFD_Rand_M1.0_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5 https://darus.uni-stuttgart.de/api/access/datafile/164692
-  pip install ogb gitpython wandb ray ray[tune] optuna
-  pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-  pip install torch_geometric
-  pip install torch-harmonics
-  pip install torchdata 
-  pip install torchmetrics
-  pip install transformers  
-  pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.5.1+cu124.html
-  pip install numpy scipy pandas matplotlib
-  pip install scikit-learn
-  pip install toml tqdm
-  pip install torchsde
-  pip install torchdiffeq
-  pip install networkx
-  pip install h5py 
-  pip install tensorflow
-  pip install tensorflow-datasets
-  pip install tensorflow-io-gcs-filesystem
-  pip install tensorflow-metadata
-  pip install tensorly tensorly-torch
-  pip install pyarrow
-  pip install accelerate
-  pip install pytorch-lightning
-  pip install timm
-  pip install einops
-  pip install absl-py  
-  pip install aiohappyeyeballs             
-  pip install aiohttp                     
-  pip install aiosignal                    
-  pip install annotated-types             
-  pip install array_record                
-  pip install asttokens   
-  pip install astunparse                
-  pip install async-timeout
-  pip install attrs                        
-  pip install black                        
-  pip install certifi                      
-  pip install charset-normalizer           
-  pip install click                        
-  pip install cloudpickle                  
-  pip install colorama                     
-  pip install comm                         
-  pip install configmypy                   
-  pip install contourpy                    
-  pip install cycler                       
-  pip install dask                         
-  pip install datasets                     
-  pip install debugpy                      
-  pip install decorator                    
-  pip install deeptime                     
-  pip install dgl                          
-  pip install dill                         
-  pip install dm-tree                      
-  pip install docker-pycreds               
-  pip install docstring_parser             
-  pip install etils                        
-  pip install evaluate                     
-  pip install exceptiongroup               
-  pip install executing                    
-  pip install fdbench                      
-  pip install filelock                     
-  pip install frozenlist                   
-  pip install fsspec                       
-  pip install fvcore                       
-  pip install gast                         
-  pip install gitdb                        
-  pip install GitPython                    
-  pip install google-pasta                 
-  pip install grpcio                       
-  pip install h5py                         
-  pip install huggingface-hub              
-  pip install humanfriendly                
-  pip install idna                         
-  pip install immutabledict                
-  pip install importlib_metadata           
-  pip install importlib_resources           
-  pip install iniconfig                     
-  pip install iopath                       
-  pip install ipykernel                    
-  pip install ipython                      
-  pip install jedi                         
-  pip install Jinja2                       
-  pip install joblib                       
-  pip install jupyter_client               
-  pip install jupyter_core                 
-  pip install keras                        
-  pip install kiwisolver                   
-  pip install libclang                     
-  pip install lightning-utilities          
-  pip install littleutils                  
-  pip install llvmlite                     
-  pip install locket                       
-  pip install lxml                         
-  pip install Markdown                     
-  pip install markdown-it-py               
-  pip install MarkupSafe                            
-  pip install ml-dtypes                    
-  pip install mpmath                       
-  pip install multidict                    
-  pip install multiprocess                 
-  pip install mypy-extensions              
-  pip install namex                        
-  pip install nest_asyncio                 
-  pip install networkx                     
-  pip install neuraloperator               
-  pip install numba
-  pip install opt_einsum           
-  pip install optree         
-  pip install outdated                  
-  pip install packaging                    
-  pip install parso                        
-  pip install partd                        
-  pip install pathspec                     
-  pip install pexpect                      
-  pip install pickleshare                  
-  pip install pillow                       
-  pip install platformdirs                 
-  pip install pluggy                       
-  pip install portalocker                  
-  pip install promise                      
-  pip install prompt_toolkit               
-  pip install protobuf                     
-  pip install psutil                       
-  pip install ptyprocess                   
-  pip install pure_eval                    
-  pip install pyarrow                      
-  pip install pydantic                     
-  pip install pydantic_core                
-  pip install pyg-lib                      
-  pip install Pygments                     
-  pip install pyparsing                    
-  pip install pytest                       
-  pip install pytest-mock                  
-  pip install python-dateutil              
-  pip install pytorch-lightning            
-  pip install pytz                         
-  pip install PyYAML                       
-  pip install pyzmq                        
-  pip install regex                        
-  pip install requests                     
-  pip install rich                         
-  pip install ruamel.yaml                  
-  pip install ruamel.yaml.clib             
-  pip install sacrebleu                    
-  pip install safetensors                  
-  pip install seaborn                      
-  pip install sentry-sdk                   
-  pip install setproctitle                 
-  pip install setuptools                   
-  pip install simple-parsing               
-  pip install smmap                        
-  pip install stack-data                   
-  pip install sympy                        
-  pip install tabulate                     
-  pip install tensorboard                  
-  pip install tensorboard-data-server      
-  pip install tensorboardX                 
-  pip install termcolor  
-  pip install tokenizers
-  pip install toml
-  pip install wcwidth                      
-  pip install Werkzeug                     
-  pip install wheel                        
-  pip install wrapt                        
-  pip install xxhash                       
-  pip install yacs                         
-  pip install yarl                         
-  pip install zipp     
-  pip install thop                    
+  pip install --quite ogb gitpython wandb ray ray[tune] optuna
+  pip install --quite torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+  pip install --quite torch_geometric
+  pip install --quite torch-harmonics
+  pip install --quite torchdata 
+  pip install --quite torchmetrics
+  pip install --quite transformers  
+  pip install --quite pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.5.1+cu124.html
+  pip install --quite numpy scipy pandas matplotlib
+  pip install --quite scikit-learn
+  pip install --quite toml tqdm
+  pip install --quite torchsde
+  pip install --quite torchdiffeq
+  pip install --quite networkx
+  pip install --quite h5py 
+  pip install --quite tensorflow
+  pip install --quite tensorflow-datasets
+  pip install --quite tensorflow-io-gcs-filesystem
+  pip install --quite tensorflow-metadata
+  pip install --quite tensorly tensorly-torch
+  pip install --quite pyarrow
+  pip install --quite accelerate
+  pip install --quite pytorch-lightning
+  pip install --quite timm
+  pip install --quite einops
+  pip install --quite absl-py  
+  pip install --quite aiohappyeyeballs             
+  pip install --quite aiohttp                     
+  pip install --quite aiosignal                    
+  pip install --quite annotated-types             
+  pip install --quite array_record                
+  pip install --quite asttokens   
+  pip install --quite astunparse                
+  pip install --quite async-timeout
+  pip install --quite attrs                        
+  pip install --quite black                        
+  pip install --quite certifi                      
+  pip install --quite charset-normalizer           
+  pip install --quite click                        
+  pip install --quite cloudpickle                  
+  pip install --quite colorama                     
+  pip install --quite comm                         
+  pip install --quite configmypy                   
+  pip install --quite contourpy                    
+  pip install --quite cycler                       
+  pip install --quite dask                         
+  pip install --quite datasets                     
+  pip install --quite debugpy                      
+  pip install --quite decorator                    
+  pip install --quite deeptime                     
+  pip install --quite dgl                          
+  pip install --quite dill                         
+  pip install --quite dm-tree                      
+  pip install --quite docker-pycreds               
+  pip install --quite docstring_parser             
+  pip install --quite etils                        
+  pip install --quite evaluate                     
+  pip install --quite exceptiongroup               
+  pip install --quite executing                    
+  pip install --quite fdbench                      
+  pip install --quite filelock                     
+  pip install --quite frozenlist                   
+  pip install --quite fsspec                       
+  pip install --quite fvcore                       
+  pip install --quite gast                         
+  pip install --quite gitdb                        
+  pip install --quite GitPython                    
+  pip install --quite google-pasta                 
+  pip install --quite grpcio                       
+  pip install --quite h5py                         
+  pip install --quite huggingface-hub              
+  pip install --quite humanfriendly                
+  pip install --quite idna                         
+  pip install --quite immutabledict                
+  pip install --quite importlib_metadata           
+  pip install --quite importlib_resources           
+  pip install --quite iniconfig                     
+  pip install --quite iopath                       
+  pip install --quite ipykernel                    
+  pip install --quite ipython                      
+  pip install --quite jedi                         
+  pip install --quite Jinja2                       
+  pip install --quite joblib                       
+  pip install --quite jupyter_client               
+  pip install --quite jupyter_core                 
+  pip install --quite keras                        
+  pip install --quite kiwisolver                   
+  pip install --quite libclang                     
+  pip install --quite lightning-utilities          
+  pip install --quite littleutils                  
+  pip install --quite llvmlite                     
+  pip install --quite locket                       
+  pip install --quite lxml                         
+  pip install --quite Markdown                     
+  pip install --quite markdown-it-py               
+  pip install --quite MarkupSafe                            
+  pip install --quite ml-dtypes                    
+  pip install --quite mpmath                       
+  pip install --quite multidict                    
+  pip install --quite multiprocess                 
+  pip install --quite mypy-extensions              
+  pip install --quite namex                        
+  pip install --quite nest_asyncio                 
+  pip install --quite networkx                     
+  pip install --quite neuraloperator               
+  pip install --quite numba
+  pip install --quite opt_einsum           
+  pip install --quite optree         
+  pip install --quite outdated                  
+  pip install --quite packaging                    
+  pip install --quite parso                        
+  pip install --quite partd                        
+  pip install --quite pathspec                     
+  pip install --quite pexpect                      
+  pip install --quite pickleshare                  
+  pip install --quite pillow                       
+  pip install --quite platformdirs                 
+  pip install --quite pluggy                       
+  pip install --quite portalocker                  
+  pip install --quite promise                      
+  pip install --quite prompt_toolkit               
+  pip install --quite protobuf                     
+  pip install --quite psutil                       
+  pip install --quite ptyprocess                   
+  pip install --quite pure_eval                    
+  pip install --quite pyarrow                      
+  pip install --quite pydantic                     
+  pip install --quite pydantic_core                
+  pip install --quite pyg-lib                      
+  pip install --quite Pygments                     
+  pip install --quite pyparsing                    
+  pip install --quite pytest                       
+  pip install --quite pytest-mock                  
+  pip install --quite python-dateutil              
+  pip install --quite pytorch-lightning            
+  pip install --quite pytz                         
+  pip install --quite PyYAML                       
+  pip install --quite pyzmq                        
+  pip install --quite regex                        
+  pip install --quite requests                     
+  pip install --quite rich                         
+  pip install --quite ruamel.yaml                  
+  pip install --quite ruamel.yaml.clib             
+  pip install --quite sacrebleu                    
+  pip install --quite safetensors                  
+  pip install --quite seaborn                      
+  pip install --quite sentry-sdk                   
+  pip install --quite setproctitle                 
+  pip install --quite setuptools                   
+  pip install --quite simple-parsing               
+  pip install --quite smmap                        
+  pip install --quite stack-data                   
+  pip install --quite sympy                        
+  pip install --quite tabulate                     
+  pip install --quite tensorboard                  
+  pip install --quite tensorboard-data-server      
+  pip install --quite tensorboardX                 
+  pip install --quite termcolor  
+  pip install --quite tokenizers
+  pip install --quite toml
+  pip install --quite wcwidth                      
+  pip install --quite Werkzeug                     
+  pip install --quite wheel                        
+  pip install --quite wrapt                        
+  pip install --quite xxhash                       
+  pip install --quite yacs                         
+  pip install --quite yarl                         
+  pip install --quite zipp     
+  pip install --quite thop                    
 
   SPATIAL_REP="latent"
   TEMPORAL_REP="next_step"
