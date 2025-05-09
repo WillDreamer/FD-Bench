@@ -516,58 +516,11 @@ def main(args):
                 num_workers=args.num_workers
             )
         else:
-            # For graph data, we'll process only the subset we need
-            from torch_geometric.data import DataLoader as PyGDataLoader
-            
-            # Create a small dataset with just the samples we need
-            subset_data = []
-            for idx in subset_indices:
-                x, y, grid = gen_test_data[idx]
-                var_dim = x.shape[-1]
-                
-                # Process the data the same way as in get_graph_dataloader
-                all_grady = torch.cat([
-                    x[:, 1:2, :] - x[:, 0:1, :],            
-                    (x[:, 2:, :] - x[:, :-2, :]) / 2,        
-                    x[:, -1:, :] - x[:, -2:-1, :],                    
-                ], dim=1)
-                all_gradx = torch.cat([
-                    x[1:2,:,:] - x[0:1, :, :],            
-                    (x[2:,:,:] - x[:-2,:,:]) / 2,        
-                    x[-1:,:,:] - x[-2:-1,:,:],                    
-                ], dim=0)
-                
-                x = torch.cat([all_gradx, all_grady, x], dim=-1)
-                all_var_dim = x.shape[-1]
-                
-                if len(x.shape) == 4:
-                    temporal_dim = x.shape[-2]
-                else:
-                    temporal_dim = 1
-                    
-                coords = grid.reshape(-1, 2)  # shape: [16384, 2]
-                node_coords = coords[rand_idx]  # shape: [1000, 2]
-                x = x.reshape(-1, temporal_dim*all_var_dim)[rand_idx]
-                y = y.reshape(-1, temporal_dim*var_dim)[rand_idx]
-                
-                edge_index = compute_knn_graph(node_coords, k=args.neighbor)
-                
-                senders = edge_index[0].numpy()
-                receivers = edge_index[1].numpy()
-                crds_diff = x[senders] - x[receivers]
-                crds_norm = np.linalg.norm(crds_diff, axis=1, keepdims=True)
-                edge_attr = np.concatenate((crds_diff, crds_norm), axis=1)
-                edge_attr = torch.from_numpy(edge_attr)
-                
-                from torch_geometric.data import Data
-                data = Data(x=x, y=y, edge_index=edge_index, edge_attr=edge_attr, pos=node_coords)
-                subset_data.append(data)
-            
-            # Create a dataloader with the processed graph data
-            gen_data_loader = PyGDataLoader(
-                subset_data, batch_size=args.batch_size, 
-                shuffle=False, num_workers=args.num_workers
-            )
+            gen_data_loader, _ = get_graph_dataloader(gen_test_data, subset_indices, 
+                                                   batch_size=args.batch_size, 
+                                                   normalizer=normalizer, 
+                                                   normalizer_new=normalizer_new,
+                                                    is_train=False, k=args.neighbor)
         
         # Prepare the dataloader with accelerator
         gen_data_loader = accelerator.prepare(gen_data_loader)
