@@ -1,4 +1,4 @@
-name: stochastic-messagepassing-spdeode-rm-baseline-pde-fno2
+name: stochastic-messagepassing-spdeode-rm-baseline-pde-fno8
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
@@ -180,7 +180,7 @@ command: |-
   SPATIAL_REP="fourier"
   TEMPORAL_REP="next_step"
   TARGET="variable"
-  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}_scale16.yaml"
+  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}_scale8.yaml"
   REMARK='generalization'
   export WANDB_ENTITY="FD-Bench"
   export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
