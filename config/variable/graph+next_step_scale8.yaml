@@ -39,7 +39,7 @@ data:
   # reduced_resolution: 2
   
   PDE_type: 'DR'
-  data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  data_path: '/home/mosaicml/FD-Bench/'
   data_set: '2D_diff-react_NA_NA.h5'
   input_size: 128
   in_chans: 6
