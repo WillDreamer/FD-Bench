@@ -1,4 +1,4 @@
-name: stochastic-messagepassing-spdeode-rm-baseline-pde-graph-rd
+name: stochastic-messagepassing-spdeode-baseline-pde-graph-rd1
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml

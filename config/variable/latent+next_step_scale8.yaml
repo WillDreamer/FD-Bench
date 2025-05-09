@@ -21,9 +21,9 @@ model:
   drop: 0.0
   drop_path: 0.1
   latent_dim: 16     # Latent dimension n_z (default: 4)
-  Ly: 128
-  Lx: 128
-  resolution: 128
+  Ly: 64
+  Lx: 64
+  resolution: 64
    
   latent_resolution: 16
   is_periodic: True
