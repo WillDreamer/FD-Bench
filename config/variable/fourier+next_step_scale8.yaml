@@ -21,9 +21,9 @@ model:
   drop: 0.0
   drop_path: 0.1
   
-  modes1: 48
-  modes2: 48
-  width: 64
+  modes1: 24
+  modes2: 24
+  width: 20
   
   fno_bias: false
   fno_blocks: 1
