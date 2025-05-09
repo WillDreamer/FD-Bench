@@ -1,4 +1,4 @@
-name: stochastic-messagepassing-spdeode-rm-baseline-pde-fno-rd1
+name: stochastic-messagepassing-spdeode-rm-pde-fno-rd1
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
