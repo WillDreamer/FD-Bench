@@ -115,7 +115,11 @@ def main(args):
     #>>>>>> ===============================Model Design==================================
     if args.pred_tgt == 'variable':
         module_name = 'fdbench.models.' + args.spa_mod
-    class_name = args.spa_mod
+        class_name = args.spa_mod
+    elif args.pred_tgt == 'noise':
+        module_name = 'fdbench.models.diffusion'
+        class_name = 'diffusion'
+    
     module = getattr(importlib.import_module(module_name),class_name)
     model = module(args=args)
 
@@ -247,26 +251,27 @@ def main(args):
 
             model.train()
 
-            def print_layer_memory(name, backward=False):
-                def hook(module,input,output):
-                    allocated = torch.cuda.memory_allocated() / 1024 ** 2
-                    reserved = torch.cuda.memory_reserved() / 1024 ** 2
-                    if backward:
-                        logger.info(f"[{name}] after backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
-                    else:
-                        logger.info(f"[{name}] before backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
-                return hook
+            #### Monitor the memory usuage
+            # def print_layer_memory(name, backward=False):
+            #     def hook(module,input,output):
+            #         allocated = torch.cuda.memory_allocated() / 1024 ** 2
+            #         reserved = torch.cuda.memory_reserved() / 1024 ** 2
+            #         if backward:
+            #             logger.info(f"[{name}] after backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+            #         else:
+            #             logger.info(f"[{name}] before backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+            #     return hook
 
-            if tr_id == 1 and epoch==0 and accelerator.is_main_process:
-                for name, module in model.named_modules():
-                    module.register_forward_hook(print_layer_memory(name))
+            # if tr_id == 1 and epoch==0 and accelerator.is_main_process:
+            #     for name, module in model.named_modules():
+            #         module.register_forward_hook(print_layer_memory(name))
 
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
                 if args.tem_mod in {'next_step'}:
                     outputs, loss = model(samples,targets,grid,criterion)
                 
-                elif args.tem_mod in {'self_atten', 'node'}:
+                elif args.tem_mod in {'self_atten','temporal_bundling', 'node'}:
                     samples = samples.permute(0, 3, 4, 1, 2)
                     targets = targets.permute(0, 3, 4, 1, 2)
                     outputs, loss = model(samples,targets,grid,criterion)
@@ -346,13 +351,13 @@ def main(args):
 
                         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
                             if args.sample_method == "ddpm":
-                                model = model.ddpm_sample
+                                sample_fn = model.ddpm_sample
                             else:
-                                model = model.ddim_sample
-                            outputs, loss = model(input_test,target_test,grid,criterion)
+                                sample_fn = model.ddim_sample
+                            outputs, loss = sample_fn(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'next_step'}:
                             outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'self_atten','node'}:
+                        elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
                             input_test = input_test.permute(0, 3, 4, 1, 2)
                             target_test = target_test.permute(0, 3, 4, 1, 2)
                             outputs, loss = model(input_test,target_test,grid,criterion)
@@ -402,10 +407,12 @@ def main(args):
 
                     if global_step == 10 and accelerator.is_main_process:
                         from thop import profile
+                        
                         target_model = model.module if hasattr(model, "module") else model
+
                         if len(target_test.shape) < 5:
                             flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
-                        elif args.tem_mod in {'self_atten','node'}:
+                        elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
                             flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
                         elif args.tem_mod == 'auto_regressive':
                             flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
@@ -455,7 +462,7 @@ def main(args):
                             outputs, loss = samp_algo(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'next_step'}:
                             outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'self_atten','node'}:
+                        elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
                             target_test = target_test.permute(0, 3, 4, 1, 2)
                             input_test = input_test.permute(0, 3, 4, 1, 2)
                             outputs, loss = model(input_test,target_test,grid,criterion)

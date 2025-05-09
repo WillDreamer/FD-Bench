@@ -1,27 +1,31 @@
 # FD-Bench/train.sh
 #!/bin/bash
 
-SPATIAL_REP='self_atten'
+# SPATIAL_REP='self_atten'
 # SPATIAL_REP="graph"
 # SPATIAL_REP='latent'
 # SPATIAL_REP='fourier'
 # SPATIAL_REP='conv'
+SPATIAL_REP='diffusion'
 
 # TEMPORAL_REP='self_atten'
-# TEMPORAL_REP="next_step"
+TEMPORAL_REP="next_step"
 # TEMPORAL_REP="temporal_bundling"
 # TEMPORAL_REP="auto_regressive"
-TEMPORAL_REP="node"
+# TEMPORAL_REP="node"
 
-TARGET="variable"
+# TARGET="variable"
+TARGET="noise"
+
+#! Important for log name
+REMARK='Self_attention'
+
+
 CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
-
 if [ ! -f "$CONFIG_PATH" ]; then
     echo "Error: The modular combination ${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml does not exist!"
     exit 1
 fi
-
-REMARK='lambda'
 
 export WANDB_ENTITY="FD-Bench"
 export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"

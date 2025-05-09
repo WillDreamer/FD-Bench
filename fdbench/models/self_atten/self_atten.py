@@ -9,7 +9,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.layers import DropPath, to_2tuple, trunc_normal_
 import torch.fft
 from torch.nn.modules.container import Sequential
@@ -179,6 +178,9 @@ class FinalLayer(nn.Module):
         return x
 
 
+
+
+### Main function for self-atten
 class self_atten(nn.Module):
     def __init__(self, img_size=128, patch_size=4, in_chans=4,
                  embed_dim=256, depth=12,
@@ -232,6 +234,31 @@ class self_atten(nn.Module):
             grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
             num_patches = grid_size[0] * grid_size[1]
         
+        elif self.config.tem_mod in ['temporal_bundling']:
+            patch_dim = in_chans * patch_size ** 2
+            self.patch_embed = nn.Sequential(
+                Rearrange('b t c (h p1) (w p2) -> b t (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
+                nn.Linear(patch_dim, embed_dim),)
+            self.unpatch = Rearrange('b t (h w) (c p1 p2) -> b t c (h p1) (w p2)', p1=patch_size, p2=patch_size, h=img_size//patch_size)
+            grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
+            num_patches = grid_size[0] * grid_size[1]
+
+            self.forecast_horizon = args.window_size
+            self.time_window = args.window_size
+            self.latent_dim=32
+            
+            conv_params = {
+                5:  (23, 3, 5, 1)}
+                
+            if self.time_window in conv_params:
+                in_ker_size, stride_bund, out_ker_size, out_stride = conv_params[self.time_window]
+                self.output_mlp = nn.Sequential(
+                    nn.Conv1d(1, 8, in_ker_size, stride=stride_bund),
+                    Swish(),  
+                    nn.Conv1d(8, 1, out_ker_size, stride=out_stride),
+                )
+            self.final_layer = FinalLayer(self.latent_dim, patch_size, in_chans)
+        
         elif self.config.tem_mod in ['node']:
             self.forecast_horizon = args.forecast_horizon
             patch_dim = in_chans * patch_size ** 2
@@ -265,6 +292,7 @@ class self_atten(nn.Module):
                 img_size=img_size, patch_size=patch_size, out_chans=in_chans, embed_dim=embed_dim)
             grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
             num_patches = grid_size[0] * grid_size[1]
+        
         else:
             self.patch_embed = PatchEmbed(
                 img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
@@ -296,8 +324,6 @@ class self_atten(nn.Module):
             self.final_layer = FinalLayer(embed_dim, patch_size, in_chans)
         
         self.norm = norm_layer(embed_dim)
-
-        # Representation layer
         if representation_size:
             self.num_features = representation_size
             self.pre_logits = nn.Sequential(OrderedDict([
@@ -333,11 +359,12 @@ class self_atten(nn.Module):
 
     def forward_features(self, x):
 
+
         B = x.shape[0]
         x = self.patch_embed(x)
         x = x + self.pos_embed
 
-        if self.config.tem_mod in {'self_atten','node'}:
+        if self.config.tem_mod in {'self_atten','temporal_bundling','node'}:
             b, ts, seq_len, _ = x.shape
             x = rearrange(x, 'b t n d -> (b t) n d')
         
@@ -361,25 +388,40 @@ class self_atten(nn.Module):
             x = rearrange(x, '(b n) t d -> b t n d',t=ts,b=b)
             x = self.final_layer(x)
         
+        elif self.config.tem_mod == 'temporal_bundling':
+
+            x = rearrange(x, '(b t) n d -> b t n d',t=ts)[:, -1, :, :]
+            x = rearrange(x, 'b n d -> (b n) d')
+
+            dt = torch.cumsum(torch.ones(1, self.time_window, 1, device=x.device), dim=1).repeat(1,1,self.latent_dim)
+            # [batch*n_nodes, hidden_dim] -> 1DCNN([batch*n_nodes, 1, hidden_dim]) -> [batch*n_nodes, time_window]
+            diff = self.output_mlp(x[:, None]).squeeze(1)
+            diff = diff.reshape(-1, self.time_window, self.latent_dim)
+
+            u_last = x[:, -self.latent_dim:] 
+            u_last = u_last.unsqueeze(1) 
+            x = u_last + dt * diff
+
+            x = rearrange(x, '(b n) t d -> b t n d',b=b)
+            x = self.final_layer(x)
+            # x = x.reshape(-1, self.time_window*self.pred_var)  
+            
 
         elif self.config.tem_mod == 'node':
 
             # from torchdiffeq import odeint
             from torchdiffeq import odeint_adjoint as odeint
             
-            # def ode_func(t, y):
-            #     return self.derivative_net(y)
             class ODEFunc(nn.Module):
                 def __init__(self, derivative_net):
                     super().__init__()
-                    self.net = derivative_net  # 使用你已有的 self.derivative_net
+                    self.net = derivative_net
 
                 def forward(self, t, y):
                     return self.net(y)
             ode_func = ODEFunc(self.derivative_net)
             
             x = rearrange(x, '(b t) n d -> b t n d',t=ts)[:, -1, :, :].reshape(-1, x.size(-1))
-            
             t = torch.linspace(0, 1, self.forecast_horizon + 1).to(x.device)
             pred_z = odeint(ode_func, x, t, method='dopri5')
             # Remove the initial state, permute to [batch*seq_len, time, features]

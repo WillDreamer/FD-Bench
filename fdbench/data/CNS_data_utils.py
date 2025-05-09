@@ -35,7 +35,6 @@ class DatasetSingle(Dataset):
         reduced_batch=args.reduced_batch
         saved_folder = args.data_path
         initial_step=args.initial_step
-        window_size=args.window_size
         self.tem_mod = args.tem_mod
         
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
@@ -223,11 +222,11 @@ class DatasetSingle(Dataset):
         # Time steps used as initial conditions
         if args.tem_mod == 'next_step':
             self.window_size = 1
-        elif args.tem_mod in {'auto_regressive', 'temporal_bundling','self_atten','node'}:
-            self.window_size = window_size
+        elif args.tem_mod in {'auto_regressive','self_atten','node'}:
+            self.window_size = args.window_size
             self.forecast_horizon = args.forecast_horizon
         else:
-            self.window_size = initial_step
+            self.window_size = args.window_size
 
         self.data = self.data if torch.is_tensor(self.data) else torch.tensor(self.data)
 

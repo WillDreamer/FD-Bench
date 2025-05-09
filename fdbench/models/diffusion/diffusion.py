@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from .unet import UnetDenoiser
 from .fourier import FourierDenoiser
+from .self_attention import SADenoiser
 
 class diffusion(nn.Module):
     def __init__(self, args):
@@ -25,8 +26,8 @@ class diffusion(nn.Module):
             self.model = UnetDenoiser(args)
         elif args.denoiser_type == "fourier":
             self.model = FourierDenoiser(args)
-        elif args.denoiser_type == "self-attention":
-            self.model = None
+        elif args.denoiser_type == "self_attention":
+            self.model = SADenoiser(args=args)
             
         self.device = None
 

@@ -27,7 +27,6 @@ class DatasetSingle(Dataset):
         self.reduced_resolution=args.reduced_resolution
         self.reduced_resolution_t=args.reduced_resolution_t
         self.reduced_batch=args.reduced_batch
-        initial_step=args.initial_step
         self.tem_mod = args.tem_mod 
 
         # Time steps used as initial conditions
@@ -35,6 +34,7 @@ class DatasetSingle(Dataset):
             self.window_size = 1
         elif args.tem_mod in {'auto_regressive', 'temporal_bundling','self_atten','node'}:
             self.forecast_horizon = args.forecast_horizon
+            self.window_size = args.window_size
         else:
             self.window_size = args.window_size
 
@@ -104,13 +104,11 @@ class DatasetSingle(Dataset):
         inputs_v = (
             torch.from_numpy(self.data[idx, rand_idx : rand_idx + self.window_size, 0:2])
             .type(torch.float32)
-            .reshape(-1, 2, self.resolution, self.resolution)
-        )
+            .reshape(-1, 2, self.resolution, self.resolution))
         label_v = (
             torch.from_numpy(self.data[idx, rand_idx : rand_idx + self.window_size, 0:2])
             .type(torch.float32)
-            .reshape(-1, 2, self.resolution, self.resolution)
-        )
+            .reshape(-1, 2, self.resolution, self.resolution))
         self.density = torch.ones(self.window_size, 1, self.resolution, self.resolution)
         self.pressure = torch.zeros(self.window_size, 1, self.resolution, self.resolution)
 
@@ -127,17 +125,30 @@ class DatasetSingle(Dataset):
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
             input_seq = input_seq.permute(2,3,0,1)
             return input_seq, input_seq, self.grid
+        
+        elif self.tem_mod in {'temporal_bundling'}:
+            input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
+            target_seq = torch.cat([target_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
+            # shape [T, D, H, W]
 
-        elif self.tem_mod in {'self_attn', 'node'}:
-            # shape [B, H, W, T, D]
-            max_start = self.data.shape[-2] - self.window_size
-            if max_start <= 0:
-                raise ValueError("Data length is too short for the given window size.")
-            rand_idx = random.randint(0, max_start)
-            input_seq = self.data[idx, ..., rand_idx : rand_idx + self.forecast_horizon, :]
-            target_seq = self.data[idx, ..., rand_idx + self.forecast_horizon : rand_idx + self.window_size, :]
+            input_seq = input_seq.permute(2,3,0,1)
+            target_seq = target_seq.permute(2,3,0,1)
+            # shape [ H, W, T, D, ]
             return input_seq, target_seq, self.grid
 
+        elif self.tem_mod in {'self_attn', 'node'}:
+            input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
+            target_seq = torch.cat([target_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
+            # shape [T, D, H, W]
+
+            input_seq = input_seq.permute(2,3,0,1)
+            target_seq = target_seq.permute(2,3,0,1)
+            # shape [ H, W, T, D, ]
+
+            input_seq = input_seq[ ..., :self.forecast_horizon, :]
+            target_seq = self.data[..., self.forecast_horizon:, :]
+            return input_seq, target_seq, self.grid
+        
         else:
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)
             target_seq = torch.cat([target_seq, self.forcing.unsqueeze(0).repeat(self.window_size,1,1,1)], dim=1)

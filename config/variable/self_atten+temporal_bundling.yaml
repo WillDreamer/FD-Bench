@@ -5,7 +5,7 @@ paths:
 
 training:
   batch_size: 32
-  epochs: 1000
+  epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -16,7 +16,7 @@ training:
 
 model:
   spa_mod: 'self_atten'  
-  tem_mod: 'node'      
+  tem_mod: 'temporal_bundling'      
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
@@ -53,15 +53,15 @@ data:
   # auto-regressive is given 5 steps, predict next steps and then roll-out for next 5 steps
   # ode is given 5 steps, directlty predict next 5 steps
 
-  # PDE_type: 'DR'
-  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
-  # data_set: '2D_diff-react_NA_NA.h5'
-  # input_size: 128
-  # in_chans: 2
-  # reduced_resolution: 1
+  PDE_type: 'DR'
+  data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  data_set: '2D_diff-react_NA_NA.h5'
+  input_size: 128
+  in_chans: 2
+  reduced_resolution: 1
   # initial_step: 5
   # forecast_horizon: 5
-  # window_size: 10
+  window_size: 5
 
   # PDE_type: 'Well'
   # well_dataset_name: "shear_flow"
@@ -71,18 +71,18 @@ data:
   # in_chans: 4
   # reduced_resolution: 2
 
-  PDE_type: 'KF'
-  data_path: '/wanghaixin/FNS-KF/'
-  data_set: 'FNS-KF.nc'
-  num_trajectories: -1
-  max_trajectories: 1000
-  max_num_time_steps: 3
-  input_size: 128
-  in_chans: 5
-  reduced_resolution: 1
-  initial_step: 5
-  forecast_horizon: 5
-  window_size: 10
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
+  # initial_step: 5
+  # forecast_horizon: 5
+  # window_size: 10
 
   reduced_resolution_t: 1 
   reduced_batch: 1
