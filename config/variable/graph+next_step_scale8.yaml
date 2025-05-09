@@ -36,7 +36,7 @@ data:
   in_chans: 12 
   out_chans: 4 
   pred_var: -4
-  reduced_resolution: 8
+  reduced_resolution: 2
   
   # PDE_type: 'DR'
   # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
