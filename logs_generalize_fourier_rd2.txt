@@ -1,0 +1,50 @@
+
+Steps: 100%|██████████| 5600/5600 [08:28<00:00, 11.32it/s, train/grad_norm=0.034, train/loss=0.000406, train/lr=0.000994] [[34m2025-05-09 04:33:32[0m] Done!
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     model/GFlops ▁
+wandb:  model/memory_MB ▁
+wandb: model/num_params ▁
+wandb:          test/BD █▁▁▁
+wandb:         test/CSV █▁▁▁
+wandb:     test/MAX-ERR █▁▁▁
+wandb:       test/fRMSE █▁▁▁
+wandb:   test/test_RMSE █▁▁▁
+wandb:  test/test_nRMSE █▁▁▁
+wandb:  train/grad_norm ▄▄█▃▃▁▁▂▁▂▁▂▁▁▂▁▂▂▁▁▁▂▁▂▁▁▁▂▂▃▂▁▂▂▁▁▁▂▂▂
+wandb:       train/loss ▇█▇▃▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:         train/lr ▁▁▁▂▂▂▂▃▃▄▄▄▅▅▆▆▆▆▇▇▇▇▇█████████████████
+wandb:           val/BD █▁▁▁
+wandb:          val/CSV █▁▁▁
+wandb:      val/MAX-ERR █▆▁▆
+wandb:        val/fRMSE █▂▁▁
+wandb:     val/val_RMSE █▁▁▁
+wandb:    val/val_nRMSE █▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 0.03734
+wandb:  model/memory_MB 171.43701
+wandb: model/num_params 1.76228
+wandb:          test/BD 0.01344
+wandb:         test/CSV 0.31843
+wandb:     test/MAX-ERR 0.63156
+wandb:       test/fRMSE 0.00174
+wandb:   test/test_RMSE 0.01077
+wandb:  test/test_nRMSE 0.02119
+wandb:  train/grad_norm 0.03397
+wandb:       train/loss 0.00041
+wandb:         train/lr 0.00099
+wandb:           val/BD 0.0181
+wandb:          val/CSV 0.30693
+wandb:      val/MAX-ERR 2.20038
+wandb:        val/fRMSE 0.00462
+wandb:     val/val_RMSE 0.01579
+wandb:    val/val_nRMSE 0.02934
+wandb: 
+wandb: 🚀 View run fourier_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_DR_fourier_next_step_variable/runs/4k5u7z9o
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_DR_fourier_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_042503-4k5u7z9o/logs
+
+Steps: 100%|██████████| 5600/5600 [08:29<00:00, 10.98it/s, train/grad_norm=0.034, train/loss=0.000406, train/lr=0.000994]

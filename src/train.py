@@ -224,7 +224,7 @@ def main(args):
     for epoch in range(args.start_epoch, args.epochs):
         
         #### =========1. Data Loading=========
-        for batch in data_loader_train:
+        for tr_id, batch in enumerate(data_loader_train):
             if hasattr(batch, 'x') and hasattr(batch, 'y'):
                 data = batch.to(device)
                 samples = data
@@ -246,6 +246,20 @@ def main(args):
                 grid = grid.to(device) if grid is not None else None
 
             model.train()
+
+            def print_layer_memory(name, backward=False):
+                def hook(module,input,output):
+                    allocated = torch.cuda.memory_allocated() / 1024 ** 2
+                    reserved = torch.cuda.memory_reserved() / 1024 ** 2
+                    if backward:
+                        logger.info(f"[{name}] after backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+                    else:
+                        logger.info(f"[{name}] before backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+                return hook
+
+            if tr_id == 1 and epoch==0 and accelerator.is_main_process:
+                for name, module in model.named_modules():
+                    module.register_forward_hook(print_layer_memory(name))
 
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
@@ -277,7 +291,7 @@ def main(args):
             
                 if accelerator.sync_gradients:
                     update_ema(ema, model) # change ema function
-
+            
             if accelerator.sync_gradients:
                 progress_bar.update(1)
                 global_step += 1   

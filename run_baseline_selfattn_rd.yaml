@@ -1,4 +1,4 @@
-name: stochastic-messagepassing-spdeode-rm-pde-rd-lat4
+name: stochastic-messagepassing-spdeode-rm-pde-rd-attn1
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
@@ -178,7 +178,7 @@ command: |-
   pip install --quiet zipp     
   pip install --quiet thop                    
 
-  SPATIAL_REP="latent"
+  SPATIAL_REP="self_attn"
   TEMPORAL_REP="next_step"
   TARGET="variable"
   CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
