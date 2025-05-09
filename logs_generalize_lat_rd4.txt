@@ -1,0 +1,49 @@
+Steps: 100%|██████████| 12000/12000 [1:12:50<00:00,  3.12it/s, train/grad_norm=0.133, train/loss=0.000568, train/lr=8.43e-6][[34m2025-05-09 05:36:50[0m] Done!
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     model/GFlops ▁
+wandb:  model/memory_MB ▁
+wandb: model/num_params ▁
+wandb:          test/BD █▂▂▁▁▁▁
+wandb:         test/CSV █▂▁▁▁▁▁
+wandb:     test/MAX-ERR █▃▂▁▂▂▁
+wandb:       test/fRMSE █▂▁▁▁▁▁
+wandb:   test/test_RMSE █▂▂▁▁▁▁
+wandb:  test/test_nRMSE █▂▂▁▁▁▁
+wandb:  train/grad_norm ▄▅▂█▅▁▆▄▅▂▄▅▄▂▁▂▂▂▁▄▂▁▂▂▁▂▁▂▁▁▁▁▁▁▂▂▁▁▂▁
+wandb:       train/loss █▅▃▃▃▃▂▃▃▂▁▁▁▂▁▁▁▁▁▂▁▁▁▁▁▁▁▂▁▁▁▁▁▁▂▁▁▁▁▁
+wandb:         train/lr ▁▁▂▂▂▅▇▇████████████████████▇▇▇▇▇▇▇▇▇▇▇▇
+wandb:           val/BD █▃▂▂▁▁▁
+wandb:          val/CSV █▂▁▁▁▁▂
+wandb:      val/MAX-ERR █▄▂▂▁▁▁
+wandb:        val/fRMSE █▂▁▁▁▁▁
+wandb:     val/val_RMSE █▂▁▁▁▁▁
+wandb:    val/val_nRMSE █▂▂▂▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 81.95627
+wandb:  model/memory_MB 1509.64502
+wandb: model/num_params 88.96362
+wandb:          test/BD 0.03605
+wandb:         test/CSV 0.5723
+wandb:     test/MAX-ERR 0.22671
+wandb:       test/fRMSE 0.00194
+wandb:   test/test_RMSE 0.02147
+wandb:  test/test_nRMSE 0.05347
+wandb:  train/grad_norm 0.13312
+wandb:       train/loss 0.00057
+wandb:         train/lr 1e-05
+wandb:           val/BD 0.07695
+wandb:          val/CSV 6.61298
+wandb:      val/MAX-ERR 0.95913
+wandb:        val/fRMSE 0.00869
+wandb:     val/val_RMSE 0.04894
+wandb:    val/val_nRMSE 0.07418
+wandb: 
+wandb: 🚀 View run latent_next_step_generalization_scale16 at: https://wandb.ai/FD-Bench/PDE_DR_latent_next_step_variable/runs/0siv6ov3
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_DR_latent_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_042358-0siv6ov3/logs
+
+Steps: 100%|██████████| 12000/12000 [1:12:51<00:00,  2.75it/s, train/grad_norm=0.133, train/loss=0.000568, train/lr=8.43e-6]
