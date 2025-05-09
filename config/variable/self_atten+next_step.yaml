@@ -40,19 +40,19 @@ model:
   ls_dp_rank: 16
 
 data:
-  # PDE_type: 'CNS'      #* choices: ['CNS']
-  # data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
-  # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
-  # input_size: 128 
-  # in_chans: 4 
-  # reduced_resolution: 4
+  PDE_type: 'CNS'      #* choices: ['CNS']
+  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  input_size: 128 
+  in_chans: 4 
+  reduced_resolution: 4
 
-  PDE_type: 'DR'
-  data_path: '/home/mosaicml/FD-Bench/'
-  data_set: '2D_diff-react_NA_NA.h5'
-  input_size: 128
-  in_chans: 2
-  reduced_resolution: 1
+  # PDE_type: 'DR'
+  # data_path: '/home/mosaicml/FD-Bench/'
+  # data_set: '2D_diff-react_NA_NA.h5'
+  # input_size: 128
+  # in_chans: 2
+  # reduced_resolution: 1
 
   # PDE_type: 'Well'
   # well_dataset_name: "shear_flow"
