@@ -153,6 +153,7 @@ def main(args):
         data_loader_train, normalizer_new = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=None, is_train=True, k=args.neighbor)
         data_loader_val, _ = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
         data_loader_test, _ = get_graph_dataloader(test_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
+        print(f"finished loading data for graph")
     #<<<<<< =================================================================
     max_train_steps = int(args.epochs * len(data_loader_train))
 
@@ -400,22 +401,22 @@ def main(args):
                     val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg, 'val/BD':_err_BD_avg}
                     accelerator.log(val_log, step=global_step)
 
-                    if global_step == 10 and accelerator.is_main_process:
-                        from thop import profile
-                        target_model = model.module if hasattr(model, "module") else model
-                        if len(target_test.shape) < 5:
-                            flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
-                        elif args.tem_mod in {'self_atten','node'}:
-                            flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
-                        elif args.tem_mod == 'auto_regressive':
-                            flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
-                        gflops = flops / 1e9
-                        mem_alloc_MB = torch.cuda.memory_allocated(device) / (1024 ** 2)
-                        accelerator.log({
-                            "model/num_params": n_parameters,
-                            "model/GFlops": gflops,
-                            "model/memory_MB": mem_alloc_MB,
-                        }, step=global_step)
+                    # if global_step == 10 and accelerator.is_main_process:
+                    #     from thop import profile
+                    #     target_model = model.module if hasattr(model, "module") else model
+                    #     if len(target_test.shape) < 5:
+                    #         flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
+                    #     elif args.tem_mod in {'self_atten','node'}:
+                    #         flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
+                    #     elif args.tem_mod == 'auto_regressive':
+                    #         flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
+                    #     gflops = flops / 1e9
+                    #     mem_alloc_MB = torch.cuda.memory_allocated(device) / (1024 ** 2)
+                    #     accelerator.log({
+                    #         "model/num_params": n_parameters,
+                    #         "model/GFlops": gflops,
+                    #         "model/memory_MB": mem_alloc_MB,
+                    #     }, step=global_step)
             
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
