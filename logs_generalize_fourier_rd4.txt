@@ -1,0 +1,49 @@
+Steps: 100%|██████████| 5600/5600 [06:48<00:00, 16.63it/s, train/grad_norm=0.00951, train/loss=0.000131, train/lr=0.000994][[34m2025-05-09 06:48:24[0m] Done!
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     model/GFlops ▁
+wandb:  model/memory_MB ▁
+wandb: model/num_params ▁
+wandb:          test/BD █▁▁▁
+wandb:         test/CSV █▁▁▁
+wandb:     test/MAX-ERR █▂▆▁
+wandb:       test/fRMSE █▁▂▁
+wandb:   test/test_RMSE █▁▁▁
+wandb:  test/test_nRMSE █▁▁▁
+wandb:  train/grad_norm █▄▂▅▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▂▁▁▁▂▁▁▁▁▁▁▁▁▂▁▁▁▂▁
+wandb:       train/loss ██▂▂▂▂▂▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:         train/lr ▁▁▁▁▂▂▂▃▃▃▃▃▄▄▄▄▅▅▅▅▅▅▅▇▇███████████████
+wandb:           val/BD █▁▁▁
+wandb:          val/CSV █▁▁▁
+wandb:      val/MAX-ERR █▂▇▁
+wandb:        val/fRMSE █▁▂▁
+wandb:     val/val_RMSE █▁▁▁
+wandb:    val/val_nRMSE █▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 0.00715
+wandb:  model/memory_MB 106.69482
+wandb: model/num_params 0.28465
+wandb:          test/BD 0.00895
+wandb:         test/CSV 0.04923
+wandb:     test/MAX-ERR 0.25174
+wandb:       test/fRMSE 0.00136
+wandb:   test/test_RMSE 0.00759
+wandb:  test/test_nRMSE 0.01525
+wandb:  train/grad_norm 0.00951
+wandb:       train/loss 0.00013
+wandb:         train/lr 0.00099
+wandb:           val/BD 0.01093
+wandb:          val/CSV 0.06364
+wandb:      val/MAX-ERR 0.34283
+wandb:        val/fRMSE 0.00182
+wandb:     val/val_RMSE 0.00938
+wandb:    val/val_nRMSE 0.01864
+wandb: 
+wandb: 🚀 View run fourier_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_DR_fourier_next_step_variable/runs/yik6hb0w
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_DR_fourier_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_064136-yik6hb0w/logs
+
+Steps: 100%|██████████| 5600/5600 [06:48<00:00, 13.70it/s, train/grad_norm=0.00951, train/loss=0.000131, train/lr=0.000994]

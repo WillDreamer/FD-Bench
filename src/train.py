@@ -247,19 +247,19 @@ def main(args):
 
             model.train()
 
-            def print_layer_memory(name, backward=False):
-                def hook(module,input,output):
-                    allocated = torch.cuda.memory_allocated() / 1024 ** 2
-                    reserved = torch.cuda.memory_reserved() / 1024 ** 2
-                    if backward:
-                        logger.info(f"[{name}] after backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
-                    else:
-                        logger.info(f"[{name}] before backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
-                return hook
+            # def print_layer_memory(name, backward=False):
+            #     def hook(module,input,output):
+            #         allocated = torch.cuda.memory_allocated() / 1024 ** 2
+            #         reserved = torch.cuda.memory_reserved() / 1024 ** 2
+            #         if backward:
+            #             logger.info(f"[{name}] after backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+            #         else:
+            #             logger.info(f"[{name}] before backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+            #     return hook
 
-            if tr_id == 1 and epoch==0 and accelerator.is_main_process:
-                for name, module in model.named_modules():
-                    module.register_forward_hook(print_layer_memory(name))
+            # if tr_id == 1 and epoch==0 and accelerator.is_main_process:
+            #     for name, module in model.named_modules():
+            #         module.register_forward_hook(print_layer_memory(name))
 
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
