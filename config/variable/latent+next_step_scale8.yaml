@@ -53,7 +53,7 @@ data:
   # reduced_resolution: 8
   # in_channels: 4   
 
-  # PDE_type: 'DR'
+  PDE_type: 'DR'
   data_path: '/home/mosaicml/FD-Bench/'
   data_set: '2D_diff-react_NA_NA.h5'
   input_size: 128

@@ -21,9 +21,9 @@ model:
   drop: 0.0
   drop_path: 0.1
   
-  modes1: 48
-  modes2: 48
-  width: 64
+  modes1: 24
+  modes2: 24
+  width: 20
   
   fno_bias: false
   fno_blocks: 1
@@ -43,7 +43,7 @@ data:
   # in_chans: 4 
   # reduced_resolution: 16
   
-  # PDE_type: 'DR'
+  PDE_type: 'DR'
   data_path: '/home/mosaicml/FD-Bench/'
   data_set: '2D_diff-react_NA_NA.h5'
   input_size: 128
