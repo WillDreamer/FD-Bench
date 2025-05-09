@@ -1,0 +1,50 @@
+Steps: 100%|██████████| 52000/52000 [2:18:38<00:00,  5.07it/s, train/grad_norm=nan, train/loss=nan, train/lr=8.37e-5][[34m2025-05-09 09:23:08[0m] Done!
+wandb: uploading output.log
+wandb: uploading data
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     model/GFlops ▁
+wandb:  model/memory_MB ▁
+wandb: model/num_params ▁
+wandb:          test/BD █▁▁▁▁▁▁▁▁▂▁▁▁▁             
+wandb:         test/CSV █▁▁▂▁▁▁▁▁▂▂▂▁▂             
+wandb:     test/MAX-ERR █▁▅▂▆▂▃▃▃▃▁▅▁▂             
+wandb:       test/fRMSE █▁▁▁▂▁▁▁▁▂▁▂▁▁             
+wandb:   test/test_RMSE █▁▁▁▁▁▁▁▁▂▁▁▁▁             
+wandb:  test/test_nRMSE █▁▁▁▁▁▁▁▁▂▁▁▁▁             
+wandb:  train/grad_norm ▅▄█▄▂▃▃▃▃▃▁▁▁▁▁▅▄▄▃▄▃                   
+wandb:       train/loss █▁▁▂▁▁▂▂▁▁▁▁▂▁▂▂▂▂▂▁▁                   
+wandb:         train/lr ▇▇▆▆▅▄▂▁▁▁████▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+wandb:           val/BD █▁▁▁▁▁▁▁▁▂▁▁▁▁             
+wandb:          val/CSV █▁▁▁▁▁▁▁▁▂▂▂▁▂             
+wandb:      val/MAX-ERR █▁▁▁▃▁▄▃▃▄▅▃▃▃             
+wandb:        val/fRMSE █▁▁▁▁▁▁▁▁▂▂▂▁▂             
+wandb:     val/val_RMSE █▁▁▁▁▁▁▁▁▂▂▁▁▁             
+wandb:    val/val_nRMSE █▁▁▁▁▁▁▁▁▂▁▁▁▁             
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 43.77747
+wandb:  model/memory_MB 1389.19775
+wandb: model/num_params 81.32446
+wandb:          test/BD nan
+wandb:         test/CSV nan
+wandb:     test/MAX-ERR nan
+wandb:       test/fRMSE nan
+wandb:   test/test_RMSE nan
+wandb:  test/test_nRMSE nan
+wandb:  train/grad_norm nan
+wandb:       train/loss nan
+wandb:         train/lr 8e-05
+wandb:           val/BD nan
+wandb:          val/CSV nan
+wandb:      val/MAX-ERR nan
+wandb:        val/fRMSE nan
+wandb:     val/val_RMSE nan
+wandb:    val/val_nRMSE nan
+wandb: 
+wandb: 🚀 View run self_atten_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_DR_self_atten_next_step_variable/runs/k7pehy3x
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_DR_self_atten_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_070428-k7pehy3x/logs
+Steps: 100%|██████████| 52000/52000 [2:18:51<00:00,  6.24it/s, train/grad_norm=nan, train/loss=nan, train/lr=8.37e-5]

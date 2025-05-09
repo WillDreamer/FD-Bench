@@ -21,9 +21,9 @@ model:
   drop: 0.0
   drop_path: 0.1
   latent_dim: 16     # Latent dimension n_z (default: 4)
-  Ly: 128
-  Lx: 128
-  resolution: 128
+  Ly: 256
+  Lx: 256
+  resolution: 256
    
   latent_resolution: 16
   is_periodic: True
@@ -47,7 +47,7 @@ data:
   PDE_type: 'CNS'      #* choices: ['CNS']
   data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
   data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
-  input_size: 128 
+  input_size: 256 
   in_chans: 4
   out_chans: 4 
   reduced_resolution: 2

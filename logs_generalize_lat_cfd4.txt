@@ -1,0 +1,30 @@
+wandb:      val/MAX-ERR █▂▂▁▂▂▁
+wandb:        val/fRMSE █▃▁▁▁▁▁
+wandb:     val/val_RMSE █▃▂▁▁▁▁
+wandb:    val/val_nRMSE █▃▂▁▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 81.96466
+wandb:  model/memory_MB 1521.64893
+wandb: model/num_params 88.96387
+wandb:          test/BD 0.08469
+wandb:         test/CSV 3.48068
+wandb:     test/MAX-ERR 1.13178
+wandb:       test/fRMSE 0.0104
+wandb:   test/test_RMSE 0.11135
+wandb:  test/test_nRMSE 0.1671
+wandb:  train/grad_norm 0.66448
+wandb:       train/loss 0.0163
+wandb:         train/lr 1e-05
+wandb:           val/BD 0.11478
+wandb:          val/CSV 7.1206
+wandb:      val/MAX-ERR 2.01652
+wandb:        val/fRMSE 0.02135
+wandb:     val/val_RMSE 0.15858
+wandb:    val/val_nRMSE 0.22411
+wandb: 
+wandb: 🚀 View run latent_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_CNS_latent_next_step_variable/runs/jdgi2bk0
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_CNS_latent_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_063454-jdgi2bk0/logs
+Steps: 100%|██████████| 12000/12000 [1:56:46<00:00,  1.71it/s, train/grad_norm=0.664, train/loss=0.0163, train/lr=8.43e-6]

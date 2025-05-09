@@ -1,0 +1,50 @@
+[[34m2025-05-09 11:44:53[0m] RMSE: 0.0596, nRMSE: 0.0724, fRMSE:0.0038, MAX-ERR:1.9346, BD:0.0439, CSV:0.3018
+Steps: 100%|██████████| 52000/52000 [4:58:20<00:00,  2.68it/s, train/grad_norm=0.0384, train/loss=0.00617, train/lr=1.01e-8][[34m2025-05-09 11:44:53[0m] Done!
+wandb: uploading output.log
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     model/GFlops ▁
+wandb:  model/memory_MB ▁
+wandb: model/num_params ▁
+wandb:          test/BD █▅▃▂▂▂▂▁▁▅▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:         test/CSV █▃▂▃▂▁▁▁▁▃▂▂▂▂▁▂▂▂▁▁▂▁▁▁▁▁▁
+wandb:     test/MAX-ERR █▇▅▄▄▃▃▃▃▆▄▄▅▄▃▃▃▂▃▂▂▂▁▂▁▁▂
+wandb:       test/fRMSE █▅▄▃▂▂▂▁▁▆▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   test/test_RMSE █▅▃▂▂▂▂▁▁▅▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:  test/test_nRMSE █▄▃▂▂▂▁▁▁▄▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:  train/grad_norm ▄▄▃▅█▅▅█▆▆▅▄▄▃▃▃▃▂▂█▄▄▄▅▄▄▂▄▃▂▂▃▃▃▃▂▂▃▁▁
+wandb:       train/loss █▅▆▇▄▃▄▃▂▂▁▂▁▁▁▁█▇██▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:         train/lr ██▇▆▆▃▃▂▁▁▁█████▇▇▇▇▆▅▅▅▅▅▄▄▄▃▃▃▂▂▂▂▂▂▁▁
+wandb:           val/BD █▅▄▂▂▂▂▁▁▅▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          val/CSV █▃▂▂▂▁▁▁▁▃▂▂▂▂▁▂▂▁▁▁▁▁▁▁▁▁▁
+wandb:      val/MAX-ERR █▆▅▄▄▃▃▃▃▆▃▄▄▃▃▂▂▂▂▃▁▂▁▂▁▂▁
+wandb:        val/fRMSE █▅▄▃▂▂▂▂▁▆▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:     val/val_RMSE █▅▃▂▂▂▂▁▁▅▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:    val/val_nRMSE █▄▃▂▂▂▁▁▁▄▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 176.41852
+wandb:  model/memory_MB 1456.94775
+wandb: model/num_params 81.93384
+wandb:          test/BD 0.04388
+wandb:         test/CSV 0.30179
+wandb:     test/MAX-ERR 1.93457
+wandb:       test/fRMSE 0.00378
+wandb:   test/test_RMSE 0.05963
+wandb:  test/test_nRMSE 0.07236
+wandb:  train/grad_norm 0.03838
+wandb:       train/loss 0.00617
+wandb:         train/lr 0.0
+wandb:           val/BD 0.05099
+wandb:          val/CSV 0.29316
+wandb:      val/MAX-ERR 1.94132
+wandb:        val/fRMSE 0.00435
+wandb:     val/val_RMSE 0.06612
+wandb:    val/val_nRMSE 0.06708
+wandb: 
+wandb: 🚀 View run self_atten_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_CNS_self_atten_next_step_variable/runs/8pgaox73
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_CNS_self_atten_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_064632-8pgaox73/logs
+Steps: 100%|██████████| 52000/52000 [4:58:37<00:00,  2.90it/s, train/grad_norm=0.0384, train/loss=0.00617, train/lr=1.01e-8]

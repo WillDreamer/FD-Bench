@@ -1,0 +1,50 @@
+[[34m2025-05-09 08:20:12[0m] [] before backward Allocated : 3098.40 MB | Reserved : 57652.00 MB
+[[34m2025-05-09 08:20:13[0m] RMSE: 0.1202, nRMSE: 0.1062, fRMSE:0.0112, MAX-ERR:5.2865, BD:0.0967, CSV:5.8226
+Steps: 100%|██████████| 5600/5600 [1:22:39<00:00,  1.13it/s, train/grad_norm=0.674, train/loss=0.0271, train/lr=0.000994][[34m2025-05-09 08:20:13[0m] Done!
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     model/GFlops ▁
+wandb:  model/memory_MB ▁
+wandb: model/num_params ▁
+wandb:          test/BD █▁▁▁
+wandb:         test/CSV █▁▁▁
+wandb:     test/MAX-ERR █▁▂▁
+wandb:       test/fRMSE █▁▁▁
+wandb:   test/test_RMSE █▁▁▁
+wandb:  test/test_nRMSE █▂▁▁
+wandb:  train/grad_norm ▄▄▆▂█▃▂▃▃▂▅▆▆▃▄▆▃▅▆▃▂▄▂▃▃▂▂▃▂▂▁▁▃▁▁▁▃▃▁▁
+wandb:       train/loss ████▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:         train/lr ▁▁▁▂▂▂▂▂▂▂▃▃▃▄▄▄▅▅▆▆▆▆▇▇▇███████████████
+wandb:           val/BD █▁▁▁
+wandb:          val/CSV █▁▁▁
+wandb:      val/MAX-ERR █▃▁▁
+wandb:        val/fRMSE █▁▁▁
+wandb:     val/val_RMSE █▁▁▁
+wandb:    val/val_nRMSE █▂▁▁
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 3.35557
+wandb:  model/memory_MB 3138.40381
+wandb: model/num_params 72.0246
+wandb:          test/BD 0.0967
+wandb:         test/CSV 5.82262
+wandb:     test/MAX-ERR 5.28647
+wandb:       test/fRMSE 0.01117
+wandb:   test/test_RMSE 0.12024
+wandb:  test/test_nRMSE 0.10615
+wandb:  train/grad_norm 0.67421
+wandb:       train/loss 0.02714
+wandb:         train/lr 0.00099
+wandb:           val/BD 0.10882
+wandb:          val/CSV 6.00261
+wandb:      val/MAX-ERR 4.24168
+wandb:        val/fRMSE 0.01174
+wandb:     val/val_RMSE 0.13101
+wandb:    val/val_nRMSE 0.1002
+wandb: 
+wandb: 🚀 View run fourier_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_CNS_fourier_next_step_variable/runs/oholh4z7
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_CNS_fourier_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_065733-oholh4z7/logs
+Steps: 100%|██████████| 5600/5600 [1:22:41<00:00,  1.13it/s, train/grad_norm=0.674, train/loss=0.0271, train/lr=0.000994]

@@ -1,0 +1,50 @@
+wandb: uploading output.log
+wandb: uploading output.log; uploading history steps 51919-51999, summary, console lines 10404996-10421674
+wandb: uploading output.log
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:     model/GFlops ▁
+wandb:  model/memory_MB ▁
+wandb: model/num_params ▁
+wandb:          test/BD █▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▆
+wandb:         test/CSV ▅▁▁▁▁▁▁▁▁█▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▅
+wandb:     test/MAX-ERR ▅▂▂▂▂▁▂▂▁█▁▁▂▂▁▁▂▂▂▂▂▁▂▁▂▁▃
+wandb:       test/fRMSE █▂▁▂▁▁▁▁▁▇▁▁▂▁▁▁▂▁▁▁▁▁▂▁▁▁▅
+wandb:   test/test_RMSE █▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅
+wandb:  test/test_nRMSE █▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅
+wandb:  train/grad_norm ▆█▄▃▄▂▂▁▁▆▄▄▄▄▄▃▄▃▃▃▃▂▂▂▃▃▂▂▂▂▂▂▂▁▁▁▁▁▁▁
+wandb:       train/loss █▃▅▂▃▁▃▁▂▄▂▁▂▁▁▁▂▁▁▁▃▃▁▄▁▃▃▁▁▁▂▁▁▁▁▁▁▂▁▂
+wandb:         train/lr ▇▇▇▆▆▄▄▄▄▃▃▂▂▁▁▁████▇▇▇▆▆▆▅▅▅▄▄▄▄▃▂▂▂▁▁▁
+wandb:           val/BD █▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▆
+wandb:          val/CSV ▅▁▁▁▁▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄
+wandb:      val/MAX-ERR █▄▂▁▁▁▂▂▂▄▁▂▁▂▂▂▂▁▂▂▂▂▂▁▁▁▄
+wandb:        val/fRMSE █▂▁▁▁▁▁▁▁▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄
+wandb:     val/val_RMSE █▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅
+wandb:    val/val_nRMSE █▁▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅
+wandb: 
+wandb: Run summary:
+wandb:     model/GFlops 10.93729
+wandb:  model/memory_MB 1382.07275
+wandb: model/num_params 81.18384
+wandb:          test/BD 0.61804
+wandb:         test/CSV 3.66941
+wandb:     test/MAX-ERR 2.51193
+wandb:       test/fRMSE 0.04571
+wandb:   test/test_RMSE 0.58236
+wandb:  test/test_nRMSE 1.20792
+wandb:  train/grad_norm 12.60416
+wandb:       train/loss 0.35569
+wandb:         train/lr 0.0001
+wandb:           val/BD 0.61392
+wandb:          val/CSV 3.7418
+wandb:      val/MAX-ERR 2.4549
+wandb:        val/fRMSE 0.04464
+wandb:     val/val_RMSE 0.57655
+wandb:    val/val_nRMSE 1.23007
+wandb: 
+wandb: 🚀 View run self_atten_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_DR_self_atten_next_step_variable/runs/2gbe40v4
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_DR_self_atten_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250509_070500-2gbe40v4/logs
+Steps: 100%|██████████| 52000/52000 [1:58:13<00:00,  7.33it/s, train/grad_norm=12.6, train/loss=0.356, train/lr=0.0001]

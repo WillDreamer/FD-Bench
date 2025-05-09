@@ -1,5 +1,6 @@
-
-Steps: 100%|██████████| 5600/5600 [07:39<00:00, 15.27it/s, train/grad_norm=0.216, train/loss=0.0273, train/lr=0.000994][[34m2025-05-09 07:04:37[0m] Done!
+[[34m2025-05-09 07:04:37[0m] [] before backward Allocated : 168.87 MB | Reserved : 1592.00 MB
+[[34m2025-05-09 07:04:37[0m] RMSE: 0.1228, nRMSE: 0.1642, fRMSE:0.0144, MAX-ERR:2.7679, BD:0.1094, CSV:1.2607
+Steps: 100%|██████████| 5600/5600 [07:39<00:00, 15.27it/s, train/grad_norm=0.216, train/loss=0.0273, train/lr=0.000994][[34m2025-05-09 07:04:37[0m] Done!
 wandb:                                                                                
 wandb: 
 wandb: Run history:
@@ -46,5 +47,4 @@ wandb: 🚀 View run fourier_next_step_generalization at: https://wandb.ai/FD-Be
 wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_CNS_fourier_next_step_variable
 wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
 wandb: Find logs at: ./wandb/run-20250509_065657-edtdklwk/logs
-
-Steps: 100%|██████████| 5600/5600 [07:40<00:00, 12.16it/s, train/grad_norm=0.216, train/loss=0.0273, train/lr=0.000994]
+Steps: 100%|██████████| 5600/5600 [07:40<00:00, 12.16it/s, train/grad_norm=0.216, train/loss=0.0273, train/lr=0.000994]
