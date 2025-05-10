@@ -4,7 +4,7 @@ paths:
   tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 768
+  batch_size: 128
   epochs: 100
   resume_step: 0
   checkpointing_steps: 5
@@ -25,30 +25,30 @@ model:
   model_ema_force_cpu: false
   
   # CNO
-  size: 64
-  N_layers: 3
+  size: 128
+  N_layers: 4
   N_res: 4
   N_res_neck: 4
   channel_multiplier: 16
 
 data:
-  # PDE_type: 'CNS'      #* choices: ['CNS']
-  # data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
-  # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
-  # input_size: 128 
-  # in_chans: 4 
-  # reduced_resolution: 8
-  # in_dim: 4
-  # out_dim: 4 
+  PDE_type: 'CNS'      #* choices: ['CNS']
+  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  input_size: 128 
+  in_chans: 4 
+  reduced_resolution: 8
+  in_dim: 4
+  out_dim: 4 
 
-  PDE_type: 'DR'
-  data_path: '/home/mosaicml/FD-Bench/'
-  data_set: '2D_diff-react_NA_NA.h5'
-  input_size: 64
-  in_chans: 2
-  reduced_resolution: 2
-  in_dim: 2
-  out_dim: 2
+  # PDE_type: 'DR'
+  # data_path: '/home/mosaicml/FD-Bench/'
+  # data_set: '2D_diff-react_NA_NA.h5'
+  # input_size: 64
+  # in_chans: 2
+  # reduced_resolution: 2
+  # in_dim: 2
+  # out_dim: 2
 
   # PDE_type: 'KF'
   # data_path: '/home/mosaicml/FNS-KF/'
