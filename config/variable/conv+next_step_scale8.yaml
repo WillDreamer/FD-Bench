@@ -25,7 +25,7 @@ model:
   model_ema_force_cpu: false
   
   # CNO
-  size: 128
+  size: 64
   N_layers: 4
   N_res: 4
   N_res_neck: 4
@@ -35,7 +35,7 @@ data:
   PDE_type: 'CNS'      #* choices: ['CNS']
   data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
   data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
-  input_size: 128 
+  input_size: 64 
   in_chans: 4 
   reduced_resolution: 8
   in_dim: 4

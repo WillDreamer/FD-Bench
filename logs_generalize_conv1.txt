@@ -1,0 +1,50 @@
+wandb:           model/GFlops ▁
+wandb:        model/memory_MB ▁
+wandb:       model/num_params ▁
+wandb:                test/BD █████▆▅▅▄▄▄▄▄▄▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▁▂▁▂▁▁▂▁▁▁
+wandb:               test/CSV █▇▇▆▅▃▃▃▂▂▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▂▂▁▂
+wandb:           test/MAX-ERR █▆▅▇▅▅▅▄▃▄▃▅▃▁▂▂▃▃▄▃▁▃▁▃▂▃▄▁▃▄▃▃▂▂▃▂▂▂▂▂
+wandb:              test/RMSE ██▇▅▄▃▃▂▂▂▂▂▂▂▂▂▂▂▁▂▂▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:             test/fRMSE ██▇▇▆▅▄▄▄▃▃▃▂▂▂▂▂▂▂▂▂▁▂▂▁▂▂▂▂▁▁▂▁▁▂▁▁▂▁▁
+wandb:             test/nRMSE ████▇█▅▅▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▁▂▁▁▁▂▁▁▁▂▁▁▁▂▁▁▁
+wandb:        train/grad_norm ▆▆█▇█▃▄▂▁▅▆▂▁▃▂▃▃▇▃▄▃▃▂▆▄▂▂▃▃▄▂▃▄▃▁▁▂▃▂▂
+wandb:             train/loss █▇▆▆▆▄▃▃▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:               train/lr ▁▂▂▂▂▃▃▃▃▄▄▄▄▄▄▅▅▅▆▆▆▇▇▇▇███████████████
+wandb:                 val/BD █▇▆▆▄▄▄▅▄▄▄▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                val/CSV ███▄▃▃▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▂▁▁▁▂▁▂▁▁
+wandb:            val/MAX-ERR ██▅▅▄▄▅▅▆▃▄▄▄▂▄▃▄▂▄▃▃▃▂▄▃▃▃▅▂▂▁▁▁▃▄▃▂▁▃▂
+wandb:               val/RMSE ██▇▆▆▅▃▃▃▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:              val/fRMSE ████▆▆▄▄▃▂▂▂▂▂▂▂▂▂▂▂▁▂▂▂▁▁▁▂▁▁▁▂▁▁▁▁▁▁▁▁
+wandb:              val/nRMSE ███▇▇▆▄▄▄▃▃▃▂▂▂▂▂▂▂▂▂▁▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:      generalization/BD 0.17615
+wandb:     generalization/CSV 11.71147
+wandb: generalization/MAX-ERR 2.77296
+wandb:    generalization/RMSE 0.15737
+wandb:   generalization/fRMSE 0.02309
+wandb:   generalization/nRMSE 0.68451
+wandb:           model/GFlops 1.69309
+wandb:        model/memory_MB 182.90869
+wandb:       model/num_params 1.92082
+wandb:                test/BD 0.31876
+wandb:               test/CSV 13.04108
+wandb:           test/MAX-ERR 5.01982
+wandb:              test/RMSE 0.27229
+wandb:             test/fRMSE 0.03432
+wandb:             test/nRMSE 0.37854
+wandb:        train/grad_norm 1.37444
+wandb:             train/loss 0.14572
+wandb:               train/lr 0.00099
+wandb:                 val/BD 0.34849
+wandb:                val/CSV 13.70187
+wandb:            val/MAX-ERR 5.25788
+wandb:               val/RMSE 0.29205
+wandb:              val/fRMSE 0.03674
+wandb:              val/nRMSE 0.32606
+wandb: 
+wandb: 🚀 View run conv_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_CNS_conv_next_step_variable/runs/pbg17spk
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_CNS_conv_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250510_104458-pbg17spk/logs
+Steps: 100%|██████████| 700/700 [13:30<00:00,  1.16s/it, train/grad_norm=1.37, train/loss=0.146, train/lr=0.000995]

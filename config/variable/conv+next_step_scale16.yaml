@@ -4,7 +4,7 @@ paths:
   tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 128
+  batch_size: 32
   epochs: 100
   resume_step: 0
   checkpointing_steps: 5
@@ -25,7 +25,7 @@ model:
   model_ema_force_cpu: false
   
   # CNO
-  size: 128
+  size: 256
   N_layers: 4
   N_res: 4
   N_res_neck: 4
