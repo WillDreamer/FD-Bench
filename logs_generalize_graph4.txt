@@ -1,0 +1,51 @@
+wandb:           model/GFlops ▁
+wandb:        model/memory_MB ▁
+wandb:       model/num_params ▁
+wandb:                test/BD █▆▄▂▂▂▁▁▁▁▁▁▁▁
+wandb:               test/CSV █▇▃▂▁▁▁▁▁▁▁▁▁▁
+wandb:           test/MAX-ERR █▄▃▄▄▄▄▄▂▂▃▂▃▁
+wandb:              test/RMSE █▆▄▃▂▂▂▂▂▂▂▁▁▁
+wandb:             test/fRMSE █▇▄▂▂▂▁▁▁▁▁▁▁▁
+wandb:             test/nRMSE █▆▄▃▂▂▂▂▂▂▁▁▁▁
+wandb:        train/grad_norm ▅▅▄▂▂▁▂▁▁▁▁▁▁▂▁▁▂▂▁▃▃▅▃▆▄██▇▆▅▅▇▅▅▅▅▅▅▅▅
+wandb:             train/loss █▆▅▃▂▃▃▃▂▂▃▂▂▂▂▂▂▂▃▃▃▂▂▂▃▂▂▂▂▂▂▁▁▂▂▁▁▁▁▁
+wandb:               train/lr ▁▁▁▂▂▂▂▃▃▃▄▄▄▄▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▆▆▇▇▇▇▇████
+wandb:                 val/BD █▇▄▂▂▂▁▂▁▁▂▁▁▁
+wandb:                val/CSV █▇▄▂▁▁▁▁▁▁▁▁▁▁
+wandb:            val/MAX-ERR █▆▆▇▆▄▅▄▅▄▃▅▃▁
+wandb:               val/RMSE █▆▄▃▃▃▂▃▂▂▂▁▁▁
+wandb:              val/fRMSE █▇▄▂▂▂▁▁▁▁▁▁▁▁
+wandb:              val/nRMSE █▆▄▃▃▂▂▂▂▂▁▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:      generalization/BD 0.83592
+wandb:     generalization/CSV 0.44087
+wandb: generalization/MAX-ERR 6.45316
+wandb:    generalization/RMSE 0.81184
+wandb:   generalization/fRMSE 0.12058
+wandb:   generalization/nRMSE 0.98626
+wandb:           model/GFlops 0
+wandb:        model/memory_MB 261.17334
+wandb:       model/num_params 3.13343
+wandb:                test/BD 0.26096
+wandb:               test/CSV 0.02147
+wandb:           test/MAX-ERR 4.40807
+wandb:              test/RMSE 0.35806
+wandb:             test/fRMSE 0.01315
+wandb:             test/nRMSE 0.4108
+wandb:        train/grad_norm 2.47654
+wandb:             train/loss 0.25947
+wandb:               train/lr 0.00019
+wandb:                 val/BD 0.30693
+wandb:                val/CSV 0.02681
+wandb:            val/MAX-ERR 5.43469
+wandb:               val/RMSE 0.40625
+wandb:              val/fRMSE 0.01541
+wandb:              val/nRMSE 0.43724
+wandb: 
+wandb: 🚀 View run graph_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_CNS_graph_next_step_variable/runs/zson8jp1
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_CNS_graph_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250510_013413-zson8jp1/logs
+
+Steps: 100%|██████████| 2600/2600 [26:24<00:00,  1.64it/s, train/grad_norm=2.48, train/loss=0.259, train/lr=0.000195]

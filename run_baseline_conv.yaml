@@ -192,7 +192,7 @@ command: |-
 
 compute:
   cluster: r4z13p2
-  gpus: 2
+  gpus: 1
 scheduling:
   priority: auto
 integrations:
