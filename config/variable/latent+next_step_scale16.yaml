@@ -20,7 +20,7 @@ model:
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
-  latent_dim: 16     # Latent dimension n_z (default: 4)
+  latent_dim: 32     # Latent dimension n_z (default: 4)
   Ly: 256
   Lx: 256
   resolution: 256

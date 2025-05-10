@@ -1,0 +1,50 @@
+[[34m2025-05-10 19:35:35[0m] RMSE: 0.2605, nRMSE: 0.3340, fRMSE:0.0344, MAX-ERR:4.2251, BD:0.3065, CSV:4.0426
+[[34m2025-05-10 19:35:35[0m] RMSE: 0.2378, nRMSE: 0.3430, fRMSE:0.0317, MAX-ERR:4.0136, BD:0.2700, CSV:4.1412
+Steps:  99%|█████████▊| 690/700 [03:52<00:02,  4.07it/s, train/grad_norm=1.05, train/loss=0.0913, train/lr=0.000995]Steps:  99%|█████████▊| 691/700 [03:52<00:04,  2.20it/s, train/grad_norm=1.05, train/loss=0.0913, train/lr=0.000995]Steps:  99%|█████████▊| 691/700 [03:52<00:04,  2.20it/s, train/grad_norm=0.8, train/loss=0.104, train/lr=0.000995]  Steps:  99%|█████████▉| 692/700 [03:52<00:02,  2.83it/s, train/grad_norm=0.8, train/loss=0.104, train/lr=0.000995]Steps:  99%|█████████▉| 692/700 [03:52<00:02,  2.83it/s, train/grad_norm=0.676, train/loss=0.11, train/lr=0.000995]Steps:  99%|█████████▉| 693/700 [03:52<00:02,  3.29it/s, train/grad_norm=0.676, train/loss=0.11, train/lr=0.000995]Steps:  99%|█████████▉| 693/700 [03:52<00:02,  3.29it/s, train/grad_norm=1.72, train/loss=0.168, train/lr=0.000995]Steps:  99%|█████████▉| 694/700 [03:53<00:01,  3.08it/s, train/grad_norm=1.72, train/loss=0.168, train/lr=0.000995]Steps:  99%|█████████▉| 694/700 [03:53<00:01,  3.08it/s, train/grad_norm=0.888, train/loss=0.0997, train/lr=0.000995]Steps:  99%|█████████▉| 695/700 [03:53<00:01,  3.78it/s, train/grad_norm=0.888, train/loss=0.0997, train/lr=0.000995][[34m2025-05-10 19:35:36[0m] Saved checkpoint to /home/mosaicml/FD-Bench/exps/PDE_CNS_conv_next_step_variable_ _0510-19:29/checkpoints/0000695.pt
+[[34m2025-05-10 19:35:37[0m] RMSE: 0.2665, nRMSE: 0.3490, fRMSE:0.0360, MAX-ERR:5.2016, BD:0.3053, CSV:5.3104
+[[34m2025-05-10 19:35:37[0m] RMSE: 0.2414, nRMSE: 0.3618, fRMSE:0.0321, MAX-ERR:3.6967, BD:0.2765, CSV:5.4350
+Steps:  99%|█████████▉| 695/700 [03:54<00:01,  3.78it/s, train/grad_norm=0.721, train/loss=0.0888, train/lr=0.000995]Steps:  99%|█████████▉| 696/700 [03:54<00:01,  2.08it/s, train/grad_norm=0.721, train/loss=0.0888, train/lr=0.000995]Steps:  99%|█████████▉| 696/700 [03:54<00:01,  2.08it/s, train/grad_norm=0.704, train/loss=0.105, train/lr=0.000995] Steps: 100%|█████████▉| 697/700 [03:54<00:01,  2.70it/s, train/grad_norm=0.704, train/loss=0.105, train/lr=0.000995]Steps: 100%|█████████▉| 697/700 [03:54<00:01,  2.70it/s, train/grad_norm=1.01, train/loss=0.108, train/lr=0.000995] Steps: 100%|█████████▉| 698/700 [03:54<00:00,  3.39it/s, train/grad_norm=1.01, train/loss=0.108, train/lr=0.000995]Steps: 100%|█████████▉| 698/700 [03:54<00:00,  3.39it/s, train/grad_norm=0.715, train/loss=0.109, train/lr=0.000995]Steps: 100%|█████████▉| 699/700 [03:54<00:00,  4.14it/s, train/grad_norm=0.715, train/loss=0.109, train/lr=0.000995]Steps: 100%|█████████▉| 699/700 [03:54<00:00,  4.14it/s, train/grad_norm=0.618, train/loss=0.111, train/lr=0.000995]Steps: 100%|██████████| 700/700 [03:54<00:00,  4.59it/s, train/grad_norm=0.618, train/loss=0.111, train/lr=0.000995][[34m2025-05-10 19:35:38[0m] Saved checkpoint to /home/mosaicml/FD-Bench/exps/PDE_CNS_conv_next_step_variable_ _0510-19:29/checkpoints/0000700.pt
+[[34m2025-05-10 19:35:38[0m] RMSE: 0.2767, nRMSE: 0.3624, fRMSE:0.0386, MAX-ERR:4.1987, BD:0.3019, CSV:7.3198
+[[34m2025-05-10 19:35:38[0m] RMSE: 0.2618, nRMSE: 0.3729, fRMSE:0.0372, MAX-ERR:4.1732, BD:0.2791, CSV:7.7766
+Steps: 100%|██████████| 700/700 [03:55<00:00,  4.59it/s, train/grad_norm=1.79, train/loss=0.109, train/lr=0.000995] [[34m2025-05-10 19:35:38[0m] Done!
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:         test/BD ██▇▆▆▅▄▄▄▄▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁
+wandb:        test/CSV █▆▄▃▃▂▂▁▂▂▁▁▁▁▁▁▁▁▁▁▂▁▂▁▂▁▂▂▁▁▁▂▂▂▁▂▁▂▁▁
+wandb:    test/MAX-ERR █▅▆▅▆▄▅▅▅▃▄▃▅▃▃▂▁▃▂▂▂▂▃▂▂▁▂▂▂▃▂▃▃▃▂▂▂▁▂▁
+wandb:      test/fRMSE ████▇▆▅▄▄▄▃▄▃▃▂▂▂▂▂▂▂▂▂▂▂▁▂▂▂▁▁▂▂▁▁▁▂▁▁▁
+wandb:  test/test_RMSE ███▆▅▄▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▁▂▂▁▂▁▂▁▁▁▁▁▁▁▁▁▁▁
+wandb: test/test_nRMSE ██▅▅▅▄▄▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▂▂▁▁▁▁▁▁▁▁▁
+wandb: train/grad_norm ▅▄▄▃▅▁▆▂▁▁▂▂▂▇▁▂█▂▄▃▄▃▅▃▄▃▃▃▂▃▂▃▃▃▆▃▂▂▃▂
+wandb:      train/loss █▇▆▅▆▄▃▃▃▂▂▂▂▂▂▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:        train/lr ▁▁▁▁▂▂▂▂▃▃▄▄▄▄▄▅▅▅▅▆▆▆▆▆▇▇▇█████████████
+wandb:          val/BD █████▆▆▅▅▄▄▄▃▃▃▃▃▂▃▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▂▁▁▁▁
+wandb:         val/CSV ██▄▃▃▂▂▂▂▂▂▁▁▁▁▂▁▂▂▁▂▁▁▂▂▂▃▂▂▂▂▂▂▁▁▂▂▁▂▂
+wandb:     val/MAX-ERR ██▆█▇▆▄▄▅▄▃▄▃▄▄▃▃▄▂▃▃▂▃▄▃▄▂▃▂▂▁▃▁▂▁▃▃▂▂▄
+wandb:       val/fRMSE █▇▇▆▆▅▄▄▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:    val/val_RMSE █▅▅▄▄▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   val/val_nRMSE ███▆▆▅▅▅▄▄▃▃▃▂▂▂▂▂▂▂▂▂▂▂▁▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb: 
+wandb: Run summary:
+wandb:         test/BD 0.2791
+wandb:        test/CSV 7.77657
+wandb:    test/MAX-ERR 4.17322
+wandb:      test/fRMSE 0.03719
+wandb:  test/test_RMSE 0.26183
+wandb: test/test_nRMSE 0.37288
+wandb: train/grad_norm 1.78793
+wandb:      train/loss 0.10932
+wandb:        train/lr 0.00099
+wandb:          val/BD 0.30186
+wandb:         val/CSV 7.31983
+wandb:     val/MAX-ERR 4.19874
+wandb:       val/fRMSE 0.03861
+wandb:    val/val_RMSE 0.27666
+wandb:   val/val_nRMSE 0.36243
+wandb: 
+wandb: 🚀 View run conv_next_step_generalization at: https://wandb.ai/FD-Bench/PDE_CNS_conv_next_step_variable/runs/yl2g78oj
+wandb: ⭐️ View project at: https://wandb.ai/FD-Bench/PDE_CNS_conv_next_step_variable
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250510_193142-yl2g78oj/logs
+Steps: 100%|██████████| 700/700 [03:56<00:00,  2.96it/s, train/grad_norm=1.79, train/loss=0.109, train/lr=0.000995]
