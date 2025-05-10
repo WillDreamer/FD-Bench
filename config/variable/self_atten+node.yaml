@@ -5,7 +5,7 @@ paths:
 
 training:
   batch_size: 32
-  epochs: 1000
+  epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -40,15 +40,15 @@ model:
   ls_dp_rank: 16
 
 data:
-  # PDE_type: 'CNS'      #* choices: ['CNS']
-  # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
-  # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
-  # input_size: 128 
-  # in_chans: 4 
-  # reduced_resolution: 4
-  # initial_step: 5
-  # forecast_horizon: 5
-  # window_size: 10
+  PDE_type: 'CNS'      #* choices: ['CNS']
+  data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
+  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  input_size: 128 
+  in_chans: 4 
+  reduced_resolution: 4
+  initial_step: 5
+  forecast_horizon: 5
+  window_size: 10
 
   # auto-regressive is given 5 steps, predict next steps and then roll-out for next 5 steps
   # ode is given 5 steps, directlty predict next 5 steps
@@ -71,18 +71,18 @@ data:
   # in_chans: 4
   # reduced_resolution: 2
 
-  PDE_type: 'KF'
-  data_path: '/wanghaixin/FNS-KF/'
-  data_set: 'FNS-KF.nc'
-  num_trajectories: -1
-  max_trajectories: 1000
-  max_num_time_steps: 3
-  input_size: 128
-  in_chans: 5
-  reduced_resolution: 1
-  initial_step: 5
-  forecast_horizon: 5
-  window_size: 10
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
+  # initial_step: 5
+  # forecast_horizon: 5
+  # window_size: 10
 
   reduced_resolution_t: 1 
   reduced_batch: 1

@@ -34,7 +34,7 @@ class DatasetSingle(Dataset):
         reduced_resolution_t=args.reduced_resolution_t
         reduced_batch=args.reduced_batch
         saved_folder = args.data_path
-        initial_step=args.initial_step
+        # initial_step=args.initial_step
         self.tem_mod = args.tem_mod
         
         root_path = os.path.join(os.path.abspath(saved_folder), filename)

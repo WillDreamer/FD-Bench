@@ -54,8 +54,8 @@ model:
   denoiser_type: "self_attention"
   patch_size: 4
   num_attention_heads: 8
-  hidden_size: 512
-  embed_dim: 512
+  hidden_size: 768
+  embed_dim: 768
   num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
@@ -65,7 +65,6 @@ model:
   checkpoint_activations: false
   ls_w: 4
   ls_dp_rank: 16
-  denoiser_time_dim: 8
   in_chans_ratio: 4
   denoiser_theta: 10000
 
@@ -79,6 +78,26 @@ data:
   in_chans: 4
   finetune: ''
   reduced_resolution: 4
+  denoiser_time_dim: 8
+
+  # PDE_type: 'DR'
+  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  # data_set: '2D_diff-react_NA_NA.h5'
+  # input_size: 128
+  # in_chans: 2
+  # reduced_resolution: 1
+  # denoiser_time_dim: 4
+
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
+  # denoiser_time_dim: 10
 
   window_size: 1
   reduced_resolution_t: 1 
@@ -98,14 +117,14 @@ optimizer:
   adam_epsilon: 1.0e-8
 
 lr_scheduler:
-  scheduler: 'CosineAnnealingWarmRestarts'
+  scheduler: 'lambda'
+  lr: 5.0e-4
   step_size_up: 1000
   step_size_down: 1000
-  lr: 1.0e-4
   lr_noise: null
   lr_noise_pct: 0.67
   lr_noise_std: 1.0
-  warmup_lr: 1.0e-4
+  warmup_lr: 1.0e-3
   min_lr: 5.0e-5
   decay_epochs: 30
   warmup_epochs: 5
