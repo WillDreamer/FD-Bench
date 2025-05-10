@@ -26,7 +26,7 @@ model:
   
   # CNO
   size: 128 
-  N_layers: 4
+  N_layers: 2
   N_res: 4
   N_res_neck: 4
   channel_multiplier: 16
