@@ -25,7 +25,7 @@ model:
   Lx: 256
   resolution: 256
    
-  latent_resolution: 16
+  latent_resolution: 32
   is_periodic: True
   encoder_channels: [64, 64, 64, 128, 128]  # compression ratio: 16
   fourier_resolutions: []  # truncate high-frequency components
