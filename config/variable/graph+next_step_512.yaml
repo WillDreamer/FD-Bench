@@ -4,7 +4,7 @@ paths:
   tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 64
+  batch_size: 32
   epochs: 200
   resume_step: 0
   checkpointing_steps: 200
