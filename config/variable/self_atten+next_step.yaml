@@ -29,7 +29,7 @@ model:
   num_attention_heads: 8
   hidden_size: 768
   embed_dim: 768
-  num_layers: 12
+  num_layers: 10
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
   fno_blocks: 1
