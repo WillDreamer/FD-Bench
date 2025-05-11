@@ -11,7 +11,7 @@ training:
   eval_steps: 200
   start_epoch: 0
   seed: 42
-  num_workers: 4
+  num_workers: 0
   pin_mem: true
 
 model:

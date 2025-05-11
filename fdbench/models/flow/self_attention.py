@@ -2,27 +2,21 @@ import math
 import logging
 from functools import partial
 from collections import OrderedDict
-from copy import Error, deepcopy
-from re import S
-from numpy.lib.arraypad import pad
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from timm.layers import DropPath, to_2tuple, trunc_normal_
 import torch.fft
-from torch.nn.modules.container import Sequential
 from torch.utils.checkpoint import checkpoint_sequential
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 
-from .afno2d import AFNO2D
-from .bfno2d import BFNO2D
-from .ls import AttentionLS
-from .sa import SelfAttention
-from .gfn import GlobalFilter
-import warnings
-warnings.filterwarnings('ignore')
+from fdbench.models.self_atten.afno2d import AFNO2D
+from fdbench.models.self_atten.bfno2d import BFNO2D
+from fdbench.models.self_atten.ls import AttentionLS
+from fdbench.models.self_atten.sa import SelfAttention
+from fdbench.models.self_atten.gfn import GlobalFilter
 
 
 _logger = logging.getLogger(__name__)
@@ -181,7 +175,7 @@ class FinalLayer(nn.Module):
 
 
 ### Main function for self-atten
-class self_atten(nn.Module):
+class SADenoiser(nn.Module):
     def __init__(self, img_size=128, patch_size=4, in_chans=4,
                  embed_dim=256, depth=12,
                  mlp_ratio=4., representation_size=None, uniform_drop=False,
@@ -210,8 +204,7 @@ class self_atten(nn.Module):
         self.config = args
         img_size = args.input_size
         patch_size = args.patch_size
-        # in_chans = args.in_chans
-        in_chans = args.in_chans + 2 if getattr(args, 'if_coordinate', False) else args.in_chans
+        in_chans = args.in_chans * args.in_chans_ratio
         out_chans = args.in_chans
         embed_dim = args.hidden_size 
         depth = args.num_layers
@@ -259,7 +252,7 @@ class self_atten(nn.Module):
                     Swish(),  
                     nn.Conv1d(8, 1, out_ker_size, stride=out_stride),
                 )
-            self.final_layer = FinalLayer(self.latent_dim, patch_size, in_chans)
+            self.final_layer = FinalLayer(self.latent_dim, patch_size, out_chans)
         
         elif self.config.tem_mod in ['node']:
             self.forecast_horizon = args.forecast_horizon
@@ -282,7 +275,7 @@ class self_atten(nn.Module):
                                                 nn.Linear(embed_dim, self.embed_dim),
                                                 Swish()
                                                 )
-            self.final_layer = FinalLayer(embed_dim, patch_size, in_chans)
+            self.final_layer = FinalLayer(embed_dim, patch_size, out_chans)
         
         elif self.config.tem_mod in ['auto_regressive']:
             patch_dim = args.initial_step * in_chans * patch_size ** 2
@@ -323,7 +316,7 @@ class self_atten(nn.Module):
                     h=h, w=w, use_fno=use_fno, use_blocks=use_blocks,
                     args = self.config)
                 for i in range(depth//2)])
-            self.final_layer = FinalLayer(embed_dim, patch_size, in_chans)
+            self.final_layer = FinalLayer(embed_dim, patch_size, out_chans)
         
         self.norm = norm_layer(embed_dim)
         if representation_size:
@@ -346,6 +339,14 @@ class self_atten(nn.Module):
         
         self.mixing_type = args.mixing_type
 
+        self.sinu_pos_emb = SinusoidalPosEmb(dim = args.denoiser_time_dim, theta = args.denoiser_theta)
+
+        self.time_mlp = nn.Sequential(
+            self.sinu_pos_emb,
+            nn.Linear(args.denoiser_time_dim, args.denoiser_time_dim),
+            nn.GELU(),
+            nn.Linear(args.denoiser_time_dim, args.denoiser_time_dim))
+
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             trunc_normal_(m.weight, std=.02)
@@ -360,7 +361,6 @@ class self_atten(nn.Module):
         return {'pos_embed', 'cls_token'}
 
     def forward_features(self, x):
-
 
         B = x.shape[0]
         x = self.patch_embed(x)
@@ -431,16 +431,20 @@ class self_atten(nn.Module):
             x = rearrange(pred_z, '(b n) t d -> b t n d',n=seq_len)
             x = self.final_layer(x)
 
-
         x = self.unpatch(x)
 
         return x
 
-    def forward(self, x, target, grid, criterion=None):
+    def forward(self, x, t):
+        t_embed = self.time_mlp(t)
+
+        t_embed = t_embed.unsqueeze(2).unsqueeze(3)
+        t_embed = t_embed.expand(-1, -1, x.shape[-1], x.shape[-1])
+        x = torch.cat((x, t_embed), dim=1)
+
         x = self.forward_features(x)
         x = self.final_dropout(x)
-        loss = criterion(x, target)
-        return x, loss
+        return x
 
 
 def resize_pos_embed(posemb, posemb_new):
@@ -461,6 +465,20 @@ def resize_pos_embed(posemb, posemb_new):
     posemb_grid = posemb_grid.permute(0, 2, 3, 1).reshape(1, gs_new * gs_new, -1)
     posemb = torch.cat([posemb_tok, posemb_grid], dim=1)
     return posemb
+
+class SinusoidalPosEmb(nn.Module):
+    def __init__(self, dim, theta=10000):
+        super(SinusoidalPosEmb, self).__init__()
+        self.dim = dim
+        self.theta = theta
+
+    def forward(self, x):
+        half_dim = self.dim // 2
+        emb = math.log(self.theta) / (half_dim - 1)
+        emb = torch.exp(torch.arange(half_dim, device=x.device) * -emb)
+        emb = x[:, None] * emb[None, :]
+        emb = torch.cat((emb.sin(), emb.cos()), dim=-1)
+        return emb
 
 
 def checkpoint_filter_fn(state_dict, model):

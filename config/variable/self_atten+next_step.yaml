@@ -1,23 +1,25 @@
 paths:
   output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
-  report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
+  report_to: tensorboard    #* choices: ['wandb', 'tensorboard', 'all']
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 64
+  batch_size: 4
   epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
   start_epoch: 0
   seed: 42
-  num_workers: 4
+  num_workers: 0
   pin_mem: true
 
 model:
   spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'next_step'      #* choices: ['linear', ]
   pred_tgt: 'variable'
+  if_pde_residual: True
+  if_coordinate: True
   drop: 0.0
   drop_path: 0.1
   model_ema: false
@@ -27,8 +29,8 @@ model:
   # Self-atten
   patch_size: 4
   num_attention_heads: 8
-  hidden_size: 768
-  embed_dim: 768
+  hidden_size: 256
+  embed_dim: 256
   num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false

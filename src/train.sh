@@ -9,8 +9,8 @@ SPATIAL_REP='self_atten'
 # SPATIAL_REP='diffusion'
 
 # TEMPORAL_REP='self_atten'
-# TEMPORAL_REP="next_step"
-TEMPORAL_REP="temporal_bundling"
+TEMPORAL_REP="next_step"
+# TEMPORAL_REP="temporal_bundling"
 # TEMPORAL_REP="auto_regressive"
 # TEMPORAL_REP="node"
 
@@ -19,8 +19,8 @@ TARGET="variable"
 
 #! Important for log name
 # REMARK='Self_attention_CNS_lambda'
+# REMARK='lambdalr_PDE_residual'
 REMARK='lambdalr'
-
 
 CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 if [ ! -f "$CONFIG_PATH" ]; then

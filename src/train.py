@@ -1,10 +1,9 @@
 import argparse
 from argparse import Namespace
-import datetime
 import math
 import numpy as np
 import torch
-import os, sys, socket
+import os
 import json
 from pathlib import Path
 import importlib
@@ -188,7 +187,13 @@ def main(args):
             return 0.5*(1+math.cos(math.pi*progress))
         scheduler = LambdaLR(optimizer, lr_lambda)
         
-    criterion = torch.nn.MSELoss()
+    if hasattr(args, 'if_pde_residual') and args.if_pde_residual:
+        module = importlib.import_module("fdbench.utils.pde_utils")
+        residual_fn = getattr(module, f"pde_{args.PDE_type}")
+
+        criterion = torch.nn.MSELoss() 
+    else:
+        criterion = torch.nn.MSELoss() 
 
     # Prepare models for training:
     update_ema(ema, model, decay=0)  # Ensure EMA is initialized with synced weights
@@ -269,6 +274,12 @@ def main(args):
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
                 if args.tem_mod in {'next_step'}:
+                    if getattr(args, 'if_coordinate', False):
+                        grid = grid.permute(0,3,1,2)
+                        samples.requires_grad_(True)
+                        grid.requires_grad_(True)
+                        samples = torch.concat([samples,grid],dim=1)
+                        
                     outputs, loss = model(samples,targets,grid,criterion)
                 
                 elif args.tem_mod in {'self_atten','temporal_bundling', 'node'}:
@@ -284,6 +295,10 @@ def main(args):
                         target_t = samples[...,tt+args.initial_step,:].permute(0, 3, 1, 2)
                         output_t, loss_batch = model(sample_t, target_t, grid, criterion)
                         loss += loss_batch
+
+                if hasattr(args, 'if_pde_residual') and args.if_pde_residual:
+
+                    loss += 0.1*residual_fn(outputs,grid)
 
                 optimizer.zero_grad()
                 accelerator.backward(loss)
@@ -538,5 +553,6 @@ if __name__ == '__main__':
     ## ComplexData <-> DDP
     if args.spa_mod == 'fourier' or args.spa_mod == 'frequency':
         args.mixed_precision = "no"
+
     main(args) 
     
