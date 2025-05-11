@@ -1,13 +1,13 @@
 paths:
-  output_dir: '/Users/fredxu/Desktop/Github/FD-Bench/data/exps'  #* your path to save exp log and ckpt
+  output_dir: '/local2/fredxu/FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: wandb   #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/Users/fredxu/Desktop/Github/FD-Bench/data/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: '/local2/fredxu/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 128
   epochs: 800
   resume_step: 0
-  checkpointing_steps: 20
+  checkpointing_steps: 100
   eval_steps: 20
   start_epoch: 0
   seed: 42
@@ -37,7 +37,7 @@ model:
 
 data:
   PDE_type: 'SPDE' 
-  data_path: '/Users/fredxu/Desktop/Github/FD-Bench/NS_u0_xi_nu4'                  #* your path to data
+  data_path: '/local2/fredxu/FD-Bench/NS_u0_xi_nu4'                  #* your path to data
   data_set: '0.mat' 
   input_size: 128
   in_chans: 1
