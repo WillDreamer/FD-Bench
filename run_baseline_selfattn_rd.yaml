@@ -1,4 +1,4 @@
-name: stochastic-messagepassing-spdeode-rm-pde-attn-rd768
+name: stochastic-messagepassing-spdeode-rm-pde-attn-rd1
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
@@ -181,7 +181,7 @@ command: |-
   SPATIAL_REP="self_atten"
   TEMPORAL_REP="next_step"
   TARGET="variable"
-  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}_768.yaml"
+  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
   REMARK='generalization'
   export WANDB_ENTITY="FD-Bench"
   export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"

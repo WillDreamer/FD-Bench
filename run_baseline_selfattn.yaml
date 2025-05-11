@@ -182,7 +182,7 @@ command: |-
   SPATIAL_REP="self_atten"
   TEMPORAL_REP="next_step"
   TARGET="variable"
-  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}_scale16.yaml"
+  CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
   REMARK='generalization'
   export WANDB_ENTITY="FD-Bench"
   export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
