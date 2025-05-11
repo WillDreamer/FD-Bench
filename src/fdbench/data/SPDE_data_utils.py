@@ -28,7 +28,6 @@ class DatasetSPDESingle(Dataset):
         reduced_batch = args.reduced_batch
         saved_folder = args.data_path
         initial_step = args.initial_step
-        window_size = args.window_size
         self.tem_mod = args.tem_mod
         # Load the mat file
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
@@ -115,7 +114,7 @@ class DatasetSPDESingle(Dataset):
         if args.tem_mod == 'next_step':
             self.window_size = 1
         elif args.tem_mod in {'auto_regressive', 'temporal_bundling'}:
-            self.window_size = window_size
+            self.window_size = args.window_size
         else:
             self.window_size = initial_step
 

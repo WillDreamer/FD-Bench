@@ -14,6 +14,9 @@ import logging
 from collections import OrderedDict
 import warnings
 warnings.filterwarnings('ignore')
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for saving plots
 
 from fdbench.utils.utils import *
 from fdbench.utils.metrics import metric_func
@@ -278,6 +281,12 @@ def main(args):
                 _err_csv_avg = 0
                 _err_BD_avg = 0
                 _err_F_avg = 0
+                
+                # Variable to store a sample for visualization
+                vis_sample = None
+                vis_target = None
+                vis_output = None
+                
                 with torch.no_grad():
                     
                     for batch in data_loader_val:
@@ -325,6 +334,12 @@ def main(args):
                             outputs = torch.cat(predicted_outputs, dim=1).contiguous()
                             target_test = target_test_raw[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
                         
+                        # Store a sample for visualization (only once)
+                        if vis_sample is None:
+                            vis_sample = input_test.detach().cpu()
+                            vis_target = target_test.detach().cpu()
+                            vis_output = outputs.detach().cpu()
+                        
                         if hasattr(batch, 'x') and hasattr(batch, 'y'):
                             batch_size = batch.num_graphs
                         else:
@@ -347,6 +362,74 @@ def main(args):
                     _err_F_avg /= len(data_loader_val)
                     _err_BD_avg /= len(data_loader_val)
                     logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, BD:{_err_BD_avg:.4f}, CSV:{_err_csv_avg:.4f}')
+                    
+                    # Generate visualization plots every 100 epochs
+                    current_epoch = global_step // len(data_loader_train)
+                    if current_epoch % 100 == 0 or global_step == max_train_steps:
+                        print("visualization")
+                        print(f"Creating visualization at epoch {current_epoch}")
+                        vis_dir = os.path.join(save_dir, "visualizations", args.spa_mod)
+                        os.makedirs(vis_dir, exist_ok=True)
+                        
+                        # Determine the shape and prepare data for plotting
+                        if len(vis_output.shape) == 4:  # [B, C, H, W]
+                            # For next_step mode
+                            sample_idx = 0  # First sample in batch
+                            
+                            # Get number of channels to visualize (multiple timesteps)
+                            num_channels = min(vis_output.shape[1], 4)  # Visualize up to 4 channels/timesteps
+                            
+                            for channel_idx in range(num_channels):
+                                # Get the 2D fields
+                                prediction = vis_output[sample_idx, channel_idx].numpy()
+                                ground_truth = vis_target[sample_idx, channel_idx].numpy()
+                                
+                                # Create and save prediction plot
+                                plt.figure(figsize=(6, 6))
+                                plt.contourf(prediction, levels=20, cmap='coolwarm')
+                                plt.axis('off')  # Turn off axis
+                                plt.savefig(f"{vis_dir}/pred_epoch{current_epoch}_ts{channel_idx}.pdf", 
+                                          bbox_inches='tight', pad_inches=0.1, format='pdf')
+                                plt.close()
+                                
+                                # Create and save ground truth plot
+                                plt.figure(figsize=(6, 6))
+                                plt.contourf(ground_truth, levels=20, cmap='coolwarm')
+                                plt.axis('off')  # Turn off axis
+                                plt.savefig(f"{vis_dir}/truth_epoch{current_epoch}_ts{channel_idx}.pdf", 
+                                          bbox_inches='tight', pad_inches=0.1, format='pdf')
+                                plt.close()
+                            
+                        elif len(vis_output.shape) == 5:  # [B, T, C, H, W]
+                            # For auto_regressive mode
+                            sample_idx = 0  # First sample in batch
+                            channel_idx = 0  # First channel
+                            
+                            # Get number of time steps to visualize
+                            num_timesteps = min(vis_output.shape[1], 4)  # Visualize up to 4 timesteps
+                            
+                            for time_idx in range(num_timesteps):
+                                # Get the 2D fields
+                                prediction = vis_output[sample_idx, time_idx, channel_idx].numpy()
+                                ground_truth = vis_target[sample_idx, time_idx, channel_idx].numpy()
+                                
+                                # Create and save prediction plot
+                                plt.figure(figsize=(6, 6))
+                                plt.contourf(prediction, levels=20, cmap='coolwarm')
+                                plt.axis('off')  # Turn off axis
+                                plt.savefig(f"{vis_dir}/pred_epoch{current_epoch}_ts{time_idx}.pdf", 
+                                          bbox_inches='tight', pad_inches=0.1, format='pdf')
+                                plt.close()
+                                
+                                # Create and save ground truth plot
+                                plt.figure(figsize=(6, 6))
+                                plt.contourf(ground_truth, levels=20, cmap='coolwarm')
+                                plt.axis('off')  # Turn off axis
+                                plt.savefig(f"{vis_dir}/truth_epoch{current_epoch}_ts{time_idx}.pdf", 
+                                          bbox_inches='tight', pad_inches=0.1, format='pdf')
+                                plt.close()
+                            
+                        logger.info(f"Visualizations saved to {vis_dir}")
                     
                     # Calculate model stats (simplified without thop)
                     if global_step == 10:
