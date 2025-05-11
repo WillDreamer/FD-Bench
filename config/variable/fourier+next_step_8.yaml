@@ -21,8 +21,8 @@ model:
   drop: 0.0
   drop_path: 0.1
   
-  modes1: 48
-  modes2: 48
+  modes1: 32
+  modes2: 32
   width: 64
   
   fno_bias: false
@@ -30,7 +30,7 @@ model:
   fno_softshrink: 0.00
   double_skip: false
   hidden_size: 512
-  num_layers: 8
+  num_layers: 12
   checkpoint_activations: false
   ls_w: 4
   ls_dp_rank: 16
