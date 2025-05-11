@@ -4,11 +4,11 @@ paths:
   tensorboard_dir: '/Users/fredxu/Desktop/Github/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 64
+  batch_size: 128
   epochs: 4000
   resume_step: 0
-  checkpointing_steps: 2000
-  eval_steps: 2000
+  checkpointing_steps: 20
+  eval_steps: 20
   start_epoch: 0
   seed: 42
   num_workers: 4

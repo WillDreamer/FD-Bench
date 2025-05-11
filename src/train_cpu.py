@@ -226,21 +226,22 @@ def main(args):
             model.train()
 
             #### =========2. Model Training=========
-            print(f"samples.shape: {samples.shape}")
-            print(f"targets.shape: {targets.shape}")
-            print(f"grid.shape: {grid.shape}")
-            if args.tem_mod == 'next_step':
-                outputs, loss = model(samples, targets, grid, criterion)
+            if args.tem_mod in {'next_step'}:
+                    outputs, loss = model(samples,targets,grid,criterion)
+                
+            elif args.tem_mod in {'self_atten', 'node'}:
+                samples = samples.permute(0, 3, 4, 1, 2)
+                targets = targets.permute(0, 3, 4, 1, 2)
+                outputs, loss = model(samples,targets,grid,criterion)
+            
             elif args.tem_mod == 'auto_regressive':
                 loss = 0
                 for tt in range(int(args.window_size) - int(args.initial_step)):
+
                     sample_t = samples[...,tt:tt+args.initial_step,:].reshape(B_field,-1,H_field,W_field)
                     target_t = samples[...,tt+args.initial_step,:].permute(0, 3, 1, 2)
                     output_t, loss_batch = model(sample_t, target_t, grid, criterion)
                     loss += loss_batch
-
-                    print(f"sample_t.shape: {sample_t.shape}")
-                    print(f"target_t.shape: {target_t.shape}")
             optimizer.zero_grad()
             loss.backward()
             
@@ -365,8 +366,8 @@ def main(args):
                     
                     # Generate visualization plots every 100 epochs
                     current_epoch = global_step // len(data_loader_train)
-                    if current_epoch % 100 == 0 or global_step == max_train_steps:
-                        print("visualization")
+                    print(f"current_epoch: {current_epoch}")
+                    if current_epoch % 10 == 0 or global_step == max_train_steps:
                         print(f"Creating visualization at epoch {current_epoch}")
                         vis_dir = os.path.join(save_dir, "visualizations", args.spa_mod)
                         os.makedirs(vis_dir, exist_ok=True)
