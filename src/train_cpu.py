@@ -371,7 +371,6 @@ def main(args):
                         print(f"Creating visualization at epoch {current_epoch}")
                         vis_dir = os.path.join(save_dir, "visualizations", args.spa_mod)
                         os.makedirs(vis_dir, exist_ok=True)
-                        
                         # Determine the shape and prepare data for plotting
                         if len(vis_output.shape) == 4:  # [B, C, H, W]
                             # For next_step mode
@@ -384,6 +383,8 @@ def main(args):
                                 # Get the 2D fields
                                 prediction = vis_output[sample_idx, channel_idx].numpy()
                                 ground_truth = vis_target[sample_idx, channel_idx].numpy()
+                                # Calculate residual (difference)
+                                residual = ground_truth - prediction
                                 
                                 # Create and save prediction plot
                                 plt.figure(figsize=(6, 6))
@@ -400,6 +401,14 @@ def main(args):
                                 plt.savefig(f"{vis_dir}/truth_epoch{current_epoch}_ts{channel_idx}.pdf", 
                                           bbox_inches='tight', pad_inches=0.1, format='pdf')
                                 plt.close()
+                                
+                                # Create and save residual plot
+                                plt.figure(figsize=(6, 6))
+                                plt.contourf(residual, levels=20, cmap='coolwarm')
+                                plt.axis('off')  # Turn off axis
+                                plt.savefig(f"{vis_dir}/residual_epoch{current_epoch}_ts{channel_idx}.pdf", 
+                                         bbox_inches='tight', pad_inches=0.1, format='pdf')
+                                plt.close()
                             
                         elif len(vis_output.shape) == 5:  # [B, T, C, H, W]
                             # For auto_regressive mode
@@ -413,6 +422,8 @@ def main(args):
                                 # Get the 2D fields
                                 prediction = vis_output[sample_idx, time_idx, channel_idx].numpy()
                                 ground_truth = vis_target[sample_idx, time_idx, channel_idx].numpy()
+                                # Calculate residual (difference)
+                                residual = ground_truth - prediction
                                 
                                 # Create and save prediction plot
                                 plt.figure(figsize=(6, 6))
@@ -429,8 +440,16 @@ def main(args):
                                 plt.savefig(f"{vis_dir}/truth_epoch{current_epoch}_ts{time_idx}.pdf", 
                                           bbox_inches='tight', pad_inches=0.1, format='pdf')
                                 plt.close()
+                                
+                                # Create and save residual plot
+                                plt.figure(figsize=(6, 6))
+                                plt.contourf(residual, levels=20, cmap='coolwarm')
+                                plt.axis('off')  # Turn off axis
+                                plt.savefig(f"{vis_dir}/residual_epoch{current_epoch}_ts{time_idx}.pdf", 
+                                         bbox_inches='tight', pad_inches=0.1, format='pdf')
+                                plt.close()
                             
-                        logger.info(f"Visualizations saved to {vis_dir}")
+                            logger.info(f"Visualizations saved to {vis_dir}")
                     
                     # Calculate model stats (simplified without thop)
                     if global_step == 10:
