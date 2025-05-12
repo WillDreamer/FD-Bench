@@ -6,13 +6,18 @@ paths:
 training:
   batch_size: 4
   epochs: 4000
-  resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
   start_epoch: 0
   seed: 42
   num_workers: 0
   pin_mem: true
+
+rollout:
+  resume_step: 0
+  if_rollout: True
+  roll_step: 10
+  start_step: 0
 
 model:
   spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']

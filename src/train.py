@@ -361,38 +361,61 @@ def main(args):
                                 W_field = input_test.shape[2]
                                 B_field = input_test.shape[0]
                         grid_test = grid_test.to(device)
-
-                        if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
-                            if args.sample_method == "ddpm":
-                                sample_fn = model.ddpm_sample
-                            else:
-                                sample_fn = model.ddim_sample
-                            outputs, loss = sample_fn(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'next_step'}:
-                            if getattr(args, 'if_coordinate', False):
-                                grid_test = grid_test.permute(0,3,1,2)
-                                input_test = torch.concat([input_test,grid_test],dim=1)
-                            outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
-                            input_test = input_test.permute(0, 3, 4, 1, 2)
-                            target_test = target_test.permute(0, 3, 4, 1, 2)
-                            outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod == 'auto_regressive':
-                            rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
-                            predicted_outputs = []
-                            
-                            for tt in range(args.window_size - args.initial_step):
-                                input_test = rolling_input.reshape(B_field, -1, H_field, W_field)
-                                target_test = target_test_raw[..., tt+args.initial_step, :].permute(0, 3, 1, 2)
+                        
+                        if hasattr(args, "if_rollout") and args.if_rollout:
+                            if args.tem_mod in {'next_step'}:
+                                outputs = []
+                                if args.roll_step == -1:
+                                    roll_step = input_test.shape[-2]
+                                else:
+                                    roll_step = args.roll_step
+                                if hasattr(args, "start_step"):
+                                    start_t = args.start_step
+                                else:
+                                    start_t = 0
+                                input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
                                 
-                                output_test_t, _ = model(input_test, target_test, grid, criterion)
-                                predicted_outputs.append(output_test_t.unsqueeze(1))  
-                                rolling_input = torch.cat([
-                                    rolling_input[..., 1:, :],       
-                                    output_test_t.permute(0,2,3,1).unsqueeze(-2)        
-                                ], dim=-2) 
-                            outputs = torch.cat(predicted_outputs, dim=1).contiguous()  # B [T] C H W
-                            target_test = target_test_raw[..., args.initial_step:, :].permute(0, 3, 4, 1, 2)
+                                for roll_t in range(roll_step-start_t-1):
+                                    target_test_t = input_test[...,roll_t+1,:].permute(0, 3, 1, 2)
+                                    outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                                    input_test_t = outputs_t
+                                    outputs.append(outputs_t)
+                                    
+                                target_test = input_test[...,1:,:]
+                                outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1).permute(0,3,4,1,2)  
+                        else:
+
+                            if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                                if args.sample_method == "ddpm":
+                                    sample_fn = model.ddpm_sample
+                                else:
+                                    sample_fn = model.ddim_sample
+                                outputs, loss = sample_fn(input_test,target_test,grid,criterion)
+                            elif args.tem_mod in {'next_step'}:
+                                if getattr(args, 'if_coordinate', False):
+                                    grid_test = grid_test.permute(0,3,1,2)
+                                    input_test = torch.concat([input_test,grid_test],dim=1)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
+                                input_test = input_test.permute(0, 3, 4, 1, 2)
+                                target_test = target_test.permute(0, 3, 4, 1, 2)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            elif args.tem_mod == 'auto_regressive':
+                                rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                                predicted_outputs = []
+                                
+                                for tt in range(args.window_size - args.initial_step):
+                                    input_test = rolling_input.reshape(B_field, -1, H_field, W_field)
+                                    target_test = target_test_raw[..., tt+args.initial_step, :].permute(0, 3, 1, 2)
+                                    
+                                    output_test_t, _ = model(input_test, target_test, grid, criterion)
+                                    predicted_outputs.append(output_test_t.unsqueeze(1))  
+                                    rolling_input = torch.cat([
+                                        rolling_input[..., 1:, :],       
+                                        output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                                    ], dim=-2) 
+                                outputs = torch.cat(predicted_outputs, dim=1).contiguous()  # B [T] C H W
+                                target_test = target_test_raw[..., args.initial_step:, :].permute(0, 3, 4, 1, 2)
                         
                         if hasattr(batch, 'x') and hasattr(batch, 'y'):
                             batch_size = batch.num_graphs
@@ -469,38 +492,59 @@ def main(args):
                                 W_field = input_test.shape[2]
                                 B_field = input_test.shape[0]
                             grid_test = grid_test.to(device) if grid_test is not None else None
-
-                        if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
-                            if args.sample_method == "ddpm":
-                                samp_algo = model.ddpm_sample
-                            else:
-                                samp_algo = model.ddim_sample
-                            outputs, loss = samp_algo(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'next_step'}:
-                            if getattr(args, 'if_coordinate', False):
-                                grid_test = grid_test.permute(0,3,1,2)
-                                input_test = torch.concat([input_test,grid_test],dim=1)
-                            outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
-                            target_test = target_test.permute(0, 3, 4, 1, 2)
-                            input_test = input_test.permute(0, 3, 4, 1, 2)
-                            outputs, loss = model(input_test,target_test,grid,criterion)
-                        elif args.tem_mod == 'auto_regressive':
-                            rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
-                            predicted_outputs = []
-                            
-                            for tt in range(args.window_size - args.initial_step):
-                                input_test_t = rolling_input.reshape(B_field, -1, H_field, W_field)
-                                target_test_t = input_test[..., tt+args.initial_step, :].permute(0,3,1,2)
+                        if hasattr(args, "if_rollout") and args.if_rollout:
+                            if args.tem_mod in {'next_step'}:
+                                outputs = []
+                                if args.roll_step == -1:
+                                    roll_step = input_test.shape[-2]
+                                else:
+                                    roll_step = args.roll_step
+                                if hasattr(args, "start_step"):
+                                    start_t = args.start_step
+                                else:
+                                    start_t = 0
+                                input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
                                 
-                                output_test_t, _ = model(input_test_t, target_test_t, grid, criterion)
-                                predicted_outputs.append(output_test_t.unsqueeze(1))  
-                                rolling_input = torch.cat([
-                                    rolling_input[..., 1:, :],       
-                                    output_test_t.permute(0,2,3,1).unsqueeze(-2)        
-                                ], dim=-2) 
-                            outputs = torch.cat(predicted_outputs, dim=1).contiguous()
-                            target_test = input_test[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
+                                for roll_t in range(roll_step-start_t-1):
+                                    target_test_t = input_test[...,roll_t+1,:].permute(0, 3, 1, 2)
+                                    outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                                    input_test_t = outputs_t
+                                    outputs.append(outputs_t)
+                                    
+                                target_test = input_test[...,1:,:]
+                                outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1).permute(0,3,4,1,2)  
+                        else:
+                            if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                                if args.sample_method == "ddpm":
+                                    samp_algo = model.ddpm_sample
+                                else:
+                                    samp_algo = model.ddim_sample
+                                outputs, loss = samp_algo(input_test,target_test,grid,criterion)
+                            elif args.tem_mod in {'next_step'}:
+                                if getattr(args, 'if_coordinate', False):
+                                    grid_test = grid_test.permute(0,3,1,2)
+                                    input_test = torch.concat([input_test,grid_test],dim=1)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
+                                target_test = target_test.permute(0, 3, 4, 1, 2)
+                                input_test = input_test.permute(0, 3, 4, 1, 2)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            elif args.tem_mod == 'auto_regressive':
+                                rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                                predicted_outputs = []
+                                
+                                for tt in range(args.window_size - args.initial_step):
+                                    input_test_t = rolling_input.reshape(B_field, -1, H_field, W_field)
+                                    target_test_t = input_test[..., tt+args.initial_step, :].permute(0,3,1,2)
+                                    
+                                    output_test_t, _ = model(input_test_t, target_test_t, grid, criterion)
+                                    predicted_outputs.append(output_test_t.unsqueeze(1))  
+                                    rolling_input = torch.cat([
+                                        rolling_input[..., 1:, :],       
+                                        output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                                    ], dim=-2) 
+                                outputs = torch.cat(predicted_outputs, dim=1).contiguous()
+                                target_test = input_test[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
                         
                         if hasattr(batch, 'x') and hasattr(batch, 'y'):
                             batch_size = batch.num_graphs
