@@ -20,7 +20,7 @@ TARGET="variable"
 #! Important for log name
 # REMARK='Self_attention_CNS_CosineAnnealingWarmRestarts'
 # REMARK='lambdalr_PDE_residual'
-REMARK='lambdalr'
+REMARK='lambdalr_temp'
 
 CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 if [ ! -f "$CONFIG_PATH" ]; then

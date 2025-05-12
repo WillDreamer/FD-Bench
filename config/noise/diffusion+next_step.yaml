@@ -74,22 +74,22 @@ model:
 
 
 data:
-  PDE_type: 'CNS'      #* choices: ['CNS']
-  data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                #* your path to data
-  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5' #* file_name
-  input_size: 128  
-  in_chans: 4
-  finetune: ''
-  reduced_resolution: 4
-  denoiser_time_dim: 8
+  # PDE_type: 'CNS'      #* choices: ['CNS']
+  # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                #* your path to data
+  # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5' #* file_name
+  # input_size: 128  
+  # in_chans: 4
+  # finetune: ''
+  # reduced_resolution: 4
+  # denoiser_time_dim: 8
 
-  # PDE_type: 'DR'
-  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
-  # data_set: '2D_diff-react_NA_NA.h5'
-  # input_size: 128
-  # in_chans: 2
-  # reduced_resolution: 1
-  # denoiser_time_dim: 4
+  PDE_type: 'DR'
+  data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  data_set: '2D_diff-react_NA_NA.h5'
+  input_size: 128
+  in_chans: 2
+  reduced_resolution: 1
+  denoiser_time_dim: 4
 
   # PDE_type: 'KF'
   # data_path: '/wanghaixin/FNS-KF/'

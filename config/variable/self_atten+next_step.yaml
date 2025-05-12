@@ -4,7 +4,7 @@ paths:
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 64
+  batch_size: 4
   epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
@@ -34,8 +34,8 @@ model:
   # Self-atten
   patch_size: 4
   num_attention_heads: 8
-  hidden_size: 256
-  embed_dim: 256
+  hidden_size: 384
+  embed_dim: 384
   num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
