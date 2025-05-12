@@ -37,25 +37,59 @@ def create_logger(logging_dir):
     logger = logging.getLogger(__name__)
     return logger
 
-def align_and_load_state_dict(model, state_dict):
+def align_and_load_state_dict(model, state_dict, strict=False, verbose=True):
+    def strip_prefix_if_present(state_dict, prefix):
+        return {k[len(prefix):] if k.startswith(prefix) else k: v for k, v in state_dict.items()}
+
+    def add_prefix(state_dict, prefix):
+        return {f"{prefix}{k}": v for k, v in state_dict.items()}
+
+    # Step 1: Remove profiling keys like 'total_ops' and 'total_params'
+    filtered_state_dict = {
+        k: v for k, v in state_dict.items()
+        if not any(x in k for x in ['total_ops', 'total_params'])
+    }
+
+    # Step 2: Handle 'module.' prefix alignment
     model_keys = list(model.state_dict().keys())
-    ckpt_keys = list(state_dict.keys())
+    ckpt_keys = list(filtered_state_dict.keys())
 
     model_has_module = any(k.startswith('module.') for k in model_keys)
     ckpt_has_module = any(k.startswith('module.') for k in ckpt_keys)
 
-
     if model_has_module and not ckpt_has_module:
-
-        print("Model expects 'module.' prefix but checkpoint does not have it. Adding prefix...")
-        state_dict = {f'module.{k}': v for k, v in state_dict.items()}
+        if verbose:
+            print("Model expects 'module.' prefix but checkpoint does not have it. Adding prefix...")
+        filtered_state_dict = add_prefix(filtered_state_dict, 'module.')
     elif not model_has_module and ckpt_has_module:
-        print("Checkpoint has 'module.' prefix but model does not expect it. Removing prefix...")
-        state_dict = {k[len('module.'):]: v for k, v in state_dict.items()}
+        if verbose:
+            print("Checkpoint has 'module.' prefix but model does not expect it. Removing prefix...")
+        filtered_state_dict = strip_prefix_if_present(filtered_state_dict, 'module.')
     else:
-        print("No prefix adjustment needed.")
+        if verbose:
+            print("No prefix adjustment needed.")
 
-    model.load_state_dict(state_dict)
+    # Step 3: Load the state_dict
+    model.load_state_dict(filtered_state_dict, strict=strict)
+
+# def align_and_load_state_dict(model, state_dict):
+#     model_keys = list(model.state_dict().keys())
+#     ckpt_keys = list(state_dict.keys())
+
+#     model_has_module = any(k.startswith('module.') for k in model_keys)
+#     ckpt_has_module = any(k.startswith('module.') for k in ckpt_keys)
+
+#     if model_has_module and not ckpt_has_module:
+
+#         print("Model expects 'module.' prefix but checkpoint does not have it. Adding prefix...")
+#         state_dict = {f'module.{k}': v for k, v in state_dict.items()}
+#     elif not model_has_module and ckpt_has_module:
+#         print("Checkpoint has 'module.' prefix but model does not expect it. Removing prefix...")
+#         state_dict = {k[len('module.'):]: v for k, v in state_dict.items()}
+#     else:
+#         print("No prefix adjustment needed.")
+
+#     model.load_state_dict(state_dict)
 
 def main(args):
     
@@ -146,7 +180,8 @@ def main(args):
     _err_BD_avg = 0
     _err_F_avg = 0
     with torch.no_grad():
-        for bat_idx, batch in enumerate(data_loader_test):
+        
+        for bat_idx,batch in enumerate(data_loader_test):
             if hasattr(batch, 'x') and hasattr(batch, 'y'):
                 data = batch.to(device)
                 input_test = data
@@ -154,48 +189,69 @@ def main(args):
                 grid = getattr(data, 'grid', None)
             else:
                 input_test, target_test, grid = batch
-                if len(samples.shape) == 4:
+                input_test = input_test.to(device)
+                target_test = target_test.to(device)
+                if len(input_test.shape) == 4:
                     input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
                     target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-                elif len(samples.shape) == 5:
+                elif len(input_test.shape) == 5:
                     # [B, H, W, T, D]
                     input_test = input_test.to(device, non_blocking=True)
-                    target_test = target_test.to(device, non_blocking=True)
+                    target_test_raw = target_test.to(device, non_blocking=True)
                     H_field = input_test.shape[1]
                     W_field = input_test.shape[2]
                     B_field = input_test.shape[0]
-                grid = grid.to(device) if grid is not None else None
+            grid = grid.to(device)
 
-            if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
-                if args.sample_method == "ddpm":
-                    samp_algo = model.ddpm_sample
-                else:
-                    samp_algo = model.ddim_sample
-                outputs, _ = samp_algo(input_test,target_test,grid,criterion)
-            elif args.tem_mod in {'next_step'}:
-                outputs, loss = model(input_test,target_test,grid,criterion)
-            elif args.tem_mod in {'self_atten'}:
-                target_test = target_test.permute(0, 3, 4, 1, 2)
-                input_test = input_test.permute(0, 3, 4, 1, 2)
-                outputs, loss = model(input_test,target_test,grid,criterion)
-            elif args.tem_mod == 'auto_regressive':
-                rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
-                predicted_outputs = []
-                
-                for tt in range(args.window_size - args.initial_step):
-                    input_test_t = rolling_input.reshape(B_field, -1, H_field, W_field)
-                    target_test_t = input_test[..., tt+args.initial_step, :].permute(0,3,1,2)
-                    
-                    output_test_t, _ = model(input_test_t, target_test_t, grid, criterion)
-                    predicted_outputs.append(output_test_t.unsqueeze(1))  
-                    rolling_input = torch.cat([
-                        rolling_input[..., 1:, :],       
-                        output_test_t.permute(0,2,3,1).unsqueeze(-2)        
-                    ], dim=-2) 
-                outputs = torch.cat(predicted_outputs, dim=1).contiguous()
-                target_test = input_test[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
+            if hasattr(args, "if_rollout") and args.if_rollout:
+               if args.tem_mod in {'next_step'}:
+                   outputs = []
+                   if args.roll_steps == -1:
+                       roll_step = input_test.shape[-2]
+                   else:
+                       roll_step = args.roll_step
+                   input_test_t = input_test[...,0,:].permute(0, 3, 1, 2)
+                   for roll_t in range(roll_step-1):
+                       target_test_t = input_test[...,roll_t+1,:].permute(0, 3, 1, 2)
+                       outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                       input_test_t = outputs_t
+                       outputs.append(outputs_t)
+
+                   target_test = input_test[...,1:,:]
+                   outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1).permute(0,3,4,1,2)  
             else:
-                outputs, _ = model(input_test,target_test,grid,criterion)
+
+                if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                    if args.sample_method == "ddpm":
+                        sample_fn = model.ddpm_sample
+                    else:
+                        sample_fn = model.ddim_sample
+                    outputs, loss = sample_fn(input_test,target_test,grid,criterion)
+                elif args.tem_mod in {'next_step'}:
+                    if getattr(args, 'if_coordinate', False):
+                        grid_test = grid_test.permute(0,3,1,2)
+                        input_test = torch.concat([input_test,grid_test],dim=1)
+                    outputs, loss = model(input_test,target_test,grid,criterion)
+                elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
+                    input_test = input_test.permute(0, 3, 4, 1, 2)
+                    target_test = target_test.permute(0, 3, 4, 1, 2)
+                    outputs, loss = model(input_test,target_test,grid,criterion)
+                elif args.tem_mod == 'auto_regressive':
+                    rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                    predicted_outputs = []
+                    
+                    for tt in range(args.window_size - args.initial_step):
+                        input_test = rolling_input.reshape(B_field, -1, H_field, W_field)
+                        target_test = target_test_raw[..., tt+args.initial_step, :].permute(0, 3, 1, 2)
+                        
+                        output_test_t, _ = model(input_test, target_test, grid, criterion)
+                        predicted_outputs.append(output_test_t.unsqueeze(1))  
+                        rolling_input = torch.cat([
+                            rolling_input[..., 1:, :],       
+                            output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                        ], dim=-2) 
+                    outputs = torch.cat(predicted_outputs, dim=1).contiguous()  # B [T] C H W
+                    target_test = target_test_raw[..., args.initial_step:, :].permute(0, 3, 4, 1, 2)
             
             if hasattr(batch, 'x') and hasattr(batch, 'y'):
                 batch_size = batch.num_graphs
@@ -218,15 +274,15 @@ def main(args):
                 }
 
                 if len(outputs.shape) == 4:
-                    samples = rearrange(outputs, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
+                    input_test = rearrange(outputs, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
                     targets = rearrange(target_test, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
                 elif len(outputs.shape) == 5:
-                    samples = rearrange(outputs, "B T C H W -> B H W T C").detach().cpu()
+                    input_test = rearrange(outputs, "B T C H W -> B H W T C").detach().cpu()
                     targets = rearrange(target_test, "B T C H W -> B H W T C").detach().cpu()
 
-                for i in range(min(samples.size(0), 4)):
-                    T = samples.size(-2)
-                    C = samples.size(-1)
+                for i in range(min(input_test.size(0), 4)):
+                    T = input_test.size(-2)
+                    C = input_test.size(-1)
                     fig, axes = plt.subplots(2 * T, C, figsize=(16, 9))
 
                     # 安全处理 axes
@@ -240,7 +296,7 @@ def main(args):
                             idx = k * C + j
 
                             # 输出预测
-                            axes[idx].imshow(samples[i, :, :, k, j].numpy(), cmap='coolwarm')
+                            axes[idx].imshow(input_test[i, :, :, k, j].numpy(), cmap='coolwarm')
                             axes[idx].axis('off')
                             axes[idx].set_title(f'Sample {i+1}, Step {k+1}, Ch {j+1}',fontdict=fontdict)
 
@@ -287,6 +343,9 @@ if __name__ == '__main__':
     parser.add_argument("--config_file", type=str, required=True, help="Path to the configuration file")
     parser.add_argument("--remark", type=str, default=' ', help="Training remark")
     parser.add_argument("--exp_name", type=str, default=' ', help="Training remark")
+    parser.add_argument("--resume_step", type=int, default=10000, help="Training remark")
+    parser.add_argument("--roll_step", type=int, default=-1, help="Training remark")
+    parser.add_argument("--if_rollout", type=bool, default=False, help="Training remark")
     default_args = parser.parse_args()
     
     args = get_config(config_path=default_args.config_file)

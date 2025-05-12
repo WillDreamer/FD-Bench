@@ -191,9 +191,7 @@ def main(args):
         module = importlib.import_module("fdbench.utils.pde_utils")
         residual_fn = getattr(module, f"pde_{args.PDE_type}")
 
-        criterion = torch.nn.MSELoss() 
-    else:
-        criterion = torch.nn.MSELoss() 
+    criterion = torch.nn.MSELoss() 
 
     # Prepare models for training:
     update_ema(ema, model, decay=0)  # Ensure EMA is initialized with synced weights
@@ -349,7 +347,7 @@ def main(args):
                             target_test = data.y
                             grid = getattr(data, 'grid', None)
                         else:
-                            input_test, target_test, grid = batch
+                            input_test, target_test, grid_test = batch
                             input_test = input_test.to(device)
                             target_test = target_test.to(device)
                             if len(samples.shape) == 4:
@@ -362,7 +360,7 @@ def main(args):
                                 H_field = input_test.shape[1]
                                 W_field = input_test.shape[2]
                                 B_field = input_test.shape[0]
-                            grid = grid.to(device) if grid is not None else None
+                        grid_test = grid_test.to(device)
 
                         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
                             if args.sample_method == "ddpm":
@@ -371,6 +369,9 @@ def main(args):
                                 sample_fn = model.ddim_sample
                             outputs, loss = sample_fn(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'next_step'}:
+                            if getattr(args, 'if_coordinate', False):
+                                grid_test = grid_test.permute(0,3,1,2)
+                                input_test = torch.concat([input_test,grid_test],dim=1)
                             outputs, loss = model(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
                             input_test = input_test.permute(0, 3, 4, 1, 2)
@@ -456,7 +457,7 @@ def main(args):
                             target_test = data.y
                             grid = getattr(data, 'grid', None)
                         else:
-                            input_test, target_test, grid = batch
+                            input_test, target_test, grid_test = batch
                             if len(samples.shape) == 4:
                                 input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
                                 target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
@@ -467,7 +468,7 @@ def main(args):
                                 H_field = input_test.shape[1]
                                 W_field = input_test.shape[2]
                                 B_field = input_test.shape[0]
-                            grid = grid.to(device) if grid is not None else None
+                            grid_test = grid_test.to(device) if grid_test is not None else None
 
                         if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
                             if args.sample_method == "ddpm":
@@ -476,6 +477,9 @@ def main(args):
                                 samp_algo = model.ddim_sample
                             outputs, loss = samp_algo(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'next_step'}:
+                            if getattr(args, 'if_coordinate', False):
+                                grid_test = grid_test.permute(0,3,1,2)
+                                input_test = torch.concat([input_test,grid_test],dim=1)
                             outputs, loss = model(input_test,target_test,grid,criterion)
                         elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
                             target_test = target_test.permute(0, 3, 4, 1, 2)

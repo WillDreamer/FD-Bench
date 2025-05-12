@@ -36,6 +36,7 @@ class DatasetSingle(Dataset):
         saved_folder = args.data_path
         # initial_step=args.initial_step
         self.tem_mod = args.tem_mod
+        self.args = args
         
         root_path = os.path.join(os.path.abspath(saved_folder), filename)
         if filename[-2:] != 'h5':
@@ -220,13 +221,16 @@ class DatasetSingle(Dataset):
         self.data = (self.data - self.train_mean) / self.train_std
 
         # Time steps used as initial conditions
-        if args.tem_mod == 'next_step':
-            self.window_size = 1
-        elif args.tem_mod in {'auto_regressive','self_atten','node'}:
-            self.window_size = args.window_size
-            self.forecast_horizon = args.forecast_horizon
+        if hasattr(args, "if_rollout") and args.if_rollout:
+            self.window_size=self.data.shape[-2] - 1
         else:
-            self.window_size = args.window_size
+            if args.tem_mod == 'next_step':
+                self.window_size = 1
+            elif args.tem_mod in {'auto_regressive','self_atten','node'}:
+                self.window_size = args.window_size
+                self.forecast_horizon = args.forecast_horizon
+            else:
+                self.window_size = args.window_size
 
         self.data = self.data if torch.is_tensor(self.data) else torch.tensor(self.data)
 
@@ -265,17 +269,19 @@ class DatasetSingle(Dataset):
             return input_seq, target_seq, self.grid
         
         else:
-            max_start = self.data.shape[-2] - 2 * self.window_size
-            if max_start <= 0:
-                raise ValueError("Data length is too short for the given window size.")
+            max_start = max(self.data.shape[-2] - 2 * self.window_size,0)
             rand_idx = random.randint(0, max_start)
-            input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
-            target_seq = self.data[idx, ..., rand_idx + self.window_size : rand_idx + 2 * self.window_size, :]
-            if self.window_size == 1:
-                input_seq = input_seq.squeeze(-2)
-                target_seq = target_seq.squeeze(-2)
+            if hasattr(self.args, "if_rollout") and self.args.if_rollout:
+                input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
+                return input_seq, input_seq, self.grid
+            else:
+                input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
+                target_seq = self.data[idx, ..., rand_idx + self.window_size : rand_idx + 2 * self.window_size, :]
+                if self.window_size == 1:
+                    input_seq = input_seq.squeeze(-2)
+                    target_seq = target_seq.squeeze(-2)
 
-            return input_seq, target_seq, self.grid
+                return input_seq, target_seq, self.grid
 
 
 class DatasetMult(Dataset):

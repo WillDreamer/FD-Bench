@@ -70,6 +70,7 @@ class diffusion(nn.Module):
 
         perturbed, epsilon = self.forward_diffusion(target, t)
 
+
         x = torch.concat([perturbed, x], dim = 1)
         pred_epsilon = self.model(x, t)
         

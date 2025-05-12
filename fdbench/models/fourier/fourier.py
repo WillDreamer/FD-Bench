@@ -197,8 +197,8 @@ class FNO2d(nn.Module):
         self.gamma = gamma
         self.width = args.width
         self.padding = 2 # pad the domain if input is non-periodic
-        self.fc0 = nn.Linear(initial_step*num_channels, self.width)
-        # input channel is 12: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
+        in_chans = initial_step*num_channels + 2 if getattr(args, 'if_coordinate', False) else initial_step*num_channels
+        self.fc0 = nn.Linear(in_chans, self.width)
 
         self.conv0 = SpectralConv2d_fast(self.width, self.width, self.modes1, self.modes2)
         self.conv1 = SpectralConv2d_fast(self.width, self.width, self.modes1, self.modes2)

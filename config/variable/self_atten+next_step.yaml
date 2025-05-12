@@ -1,6 +1,6 @@
 paths:
   output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
-  report_to: tensorboard    #* choices: ['wandb', 'tensorboard', 'all']
+  report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
@@ -18,8 +18,8 @@ model:
   spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'next_step'      #* choices: ['linear', ]
   pred_tgt: 'variable'
-  if_pde_residual: True
-  if_coordinate: True
+  # if_pde_residual: True
+  # if_coordinate: True
   drop: 0.0
   drop_path: 0.1
   model_ema: false
