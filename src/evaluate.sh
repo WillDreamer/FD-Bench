@@ -5,7 +5,7 @@ EXP_NAME="/wanghaixin/FD-Bench/exps/PDE_CNS_self_atten_next_step_variable_lambda
 RESUME_STEP=28000
 
 IF_ROLLOUT=True
-ROLL_STEP=-1
+ROLL_STEP=5
 
 CONFIG_PATH="config/test/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 

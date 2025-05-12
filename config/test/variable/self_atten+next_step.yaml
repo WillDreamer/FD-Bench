@@ -39,6 +39,7 @@ model:
   ls_dp_rank: 16
 
 data:
+  start_step: 5
   PDE_type: 'CNS'      #* choices: ['CNS']
   data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
   data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name

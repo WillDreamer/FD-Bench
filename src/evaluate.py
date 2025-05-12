@@ -206,17 +206,21 @@ def main(args):
             if hasattr(args, "if_rollout") and args.if_rollout:
                if args.tem_mod in {'next_step'}:
                    outputs = []
-                   if args.roll_steps == -1:
+                   if args.roll_step == -1:
                        roll_step = input_test.shape[-2]
                    else:
                        roll_step = args.roll_step
-                   input_test_t = input_test[...,0,:].permute(0, 3, 1, 2)
-                   for roll_t in range(roll_step-1):
+                   if hasattr(args, "start_step"):
+                       start_t = args.start_step
+                   else:
+                       start_t = 0
+                   input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
+                   for roll_t in range(roll_step-start_t-1):
                        target_test_t = input_test[...,roll_t+1,:].permute(0, 3, 1, 2)
                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
                        input_test_t = outputs_t
                        outputs.append(outputs_t)
-
+                    
                    target_test = input_test[...,1:,:]
                    outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1).permute(0,3,4,1,2)  
             else:
