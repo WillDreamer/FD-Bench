@@ -272,13 +272,20 @@ def main(args):
             #### =========2. Model Training=========
             with accelerator.accumulate(model):
                 if args.tem_mod in {'next_step'}:
-                    if getattr(args, 'if_coordinate', False):
-                        grid = grid.permute(0,3,1,2)
-                        samples.requires_grad_(True)
-                        grid.requires_grad_(True)
-                        samples = torch.concat([samples,grid],dim=1)
+                    if hasattr(args, "if_rollout") and args.if_rollout:
+                        train_t = random.randint(0, samples.shape[-2]-2)
+                        samples = samples[...,train_t,:].permute(0, 3, 1, 2)
+                        targets = targets[...,train_t+1,:].permute(0, 3, 1, 2)
+                        outputs, loss = model(samples,targets,grid,criterion)
+                    
+                    else:
+                        if getattr(args, 'if_coordinate', False):
+                            grid = grid.permute(0,3,1,2)
+                            samples.requires_grad_(True)
+                            grid.requires_grad_(True)
+                            samples = torch.concat([samples,grid],dim=1)
                         
-                    outputs, loss = model(samples,targets,grid,criterion)
+                        outputs, loss = model(samples,targets,grid,criterion)
                 
                 elif args.tem_mod in {'self_atten','temporal_bundling', 'node'}:
                     samples = samples.permute(0, 3, 4, 1, 2)
@@ -350,10 +357,10 @@ def main(args):
                             input_test, target_test, grid_test = batch
                             input_test = input_test.to(device)
                             target_test = target_test.to(device)
-                            if len(samples.shape) == 4:
+                            if len(input_test.shape) == 4:
                                 input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
                                 target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-                            elif len(samples.shape) == 5:
+                            elif len(input_test.shape) == 5:
                                 # [B, H, W, T, D]
                                 input_test = input_test.to(device, non_blocking=True)
                                 target_test_raw = target_test.to(device, non_blocking=True)
@@ -380,9 +387,8 @@ def main(args):
                                     outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
                                     input_test_t = outputs_t
                                     outputs.append(outputs_t)
-                                    
-                                target_test = input_test[...,1:,:]
-                                outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1).permute(0,3,4,1,2)  
+                                target_test = input_test[...,1+start_t:roll_step,:].permute(0,3,4,1,2)
+                                outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
                         else:
 
                             if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
@@ -449,12 +455,16 @@ def main(args):
                         
                         target_model = model.module if hasattr(model, "module") else model
 
-                        if len(target_test.shape) < 5:
-                            flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
-                        elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
-                            flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
-                        elif args.tem_mod == 'auto_regressive':
-                            flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
+                        if hasattr(args, "if_rollout") and args.if_rollout:
+                            if args.tem_mod in {'next_step'}:
+                                flops, params = profile(target_model, inputs=(input_test[:2,:,:,0,:].permute(0,3,1,2),target_test[:2,0],grid,criterion))
+                        else:
+                            if len(target_test.shape) < 5:
+                                flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
+                            elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
+                                flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
+                            elif args.tem_mod == 'auto_regressive':
+                                flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
                         gflops = flops / 1e9
                         mem_alloc_MB = torch.cuda.memory_allocated(device) / (1024 ** 2)
                         accelerator.log({
@@ -481,10 +491,10 @@ def main(args):
                             grid = getattr(data, 'grid', None)
                         else:
                             input_test, target_test, grid_test = batch
-                            if len(samples.shape) == 4:
+                            if len(input_test.shape) == 4:
                                 input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
                                 target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
-                            elif len(samples.shape) == 5:
+                            elif len(input_test.shape) == 5:
                                 # [B, H, W, T, D]
                                 input_test = input_test.to(device, non_blocking=True)
                                 target_test = target_test.to(device, non_blocking=True)
@@ -511,8 +521,8 @@ def main(args):
                                     input_test_t = outputs_t
                                     outputs.append(outputs_t)
                                     
-                                target_test = input_test[...,1:,:]
-                                outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1).permute(0,3,4,1,2)  
+                                target_test = input_test[...,1+start_t:roll_step,:].permute(0,3,4,1,2)
+                                outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)   
                         else:
                             if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
                                 if args.sample_method == "ddpm":

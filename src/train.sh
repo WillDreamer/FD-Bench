@@ -1,12 +1,12 @@
 # FD-Bench/train.sh
 #!/bin/bash
 
-# SPATIAL_REP='self_atten'
+SPATIAL_REP='self_atten'
 # SPATIAL_REP="graph"
 # SPATIAL_REP='latent'
 # SPATIAL_REP='fourier'
 # SPATIAL_REP='conv'
-SPATIAL_REP='diffusion'
+# SPATIAL_REP='diffusion'
 
 # TEMPORAL_REP='self_atten'
 TEMPORAL_REP="next_step"
@@ -14,13 +14,13 @@ TEMPORAL_REP="next_step"
 # TEMPORAL_REP="auto_regressive"
 # TEMPORAL_REP="node"
 
-# TARGET="variable"
-TARGET="noise"
+TARGET="variable"
+# TARGET="noise"
 
 #! Important for log name
-REMARK='Self_attention_CNS_CosineAnnealingWarmRestarts'
+# REMARK='Self_attention_CNS_CosineAnnealingWarmRestarts'
 # REMARK='lambdalr_PDE_residual'
-# REMARK='lambdalr_PDE_residual'
+REMARK='lambdalr'
 
 CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 if [ ! -f "$CONFIG_PATH" ]; then

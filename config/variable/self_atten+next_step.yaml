@@ -4,8 +4,9 @@ paths:
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 4
+  batch_size: 64
   epochs: 4000
+  resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
   start_epoch: 0
@@ -14,7 +15,6 @@ training:
   pin_mem: true
 
 rollout:
-  resume_step: 0
   if_rollout: True
   roll_step: 10
   start_step: 0

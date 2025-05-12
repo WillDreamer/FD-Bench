@@ -221,9 +221,9 @@ def main(args):
                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
                        input_test_t = outputs_t
                        outputs.append(outputs_t)
-                    
-                   target_test = input_test[...,1:,:]
-                   outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1).permute(0,3,4,1,2)  
+                   
+                   target_test = input_test[...,1+start_t:roll_step,:].permute(0,3,4,1,2)
+                   outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
             else:
 
                 if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
