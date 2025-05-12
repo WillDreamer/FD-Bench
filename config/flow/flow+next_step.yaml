@@ -3,13 +3,13 @@ paths:
   tensorboard_dir: '/wanghaixin/FD-Bench/runs'
   autoresume: false
   resume: false
-  report_to: 'wandb'
+  report_to: 'tensorboard'
 
 training:
-  batch_size: 96
-  epochs: 30000
+  batch_size: 32
+  epochs: 6000
   resume_step: 0
-  checkpointing_steps: 5000
+  checkpointing_steps: 2000
   eval_steps: 2000
   start_epoch: 0
   seed: 42
@@ -33,10 +33,10 @@ model:
 
   # # For Fourier
   # denoiser_type: "fourier"
-  # denoiser_modes1: 24
-  # denoiser_modes2: 24
+  # denoiser_modes1: 32
+  # denoiser_modes2: 32
   # denoiser_gamma:
-  # denoiser_width: 64
+  # denoiser_width: 128
   # denoiser_time_dim: 16
   # denoiser_theta: 10000
   # denoiser_out_chans: 4
@@ -55,10 +55,10 @@ model:
 
   # For self-attention
   denoiser_type: "self_attention"
-  patch_size: 8
-  num_attention_heads: 6
-  hidden_size: 384
-  embed_dim: 384
+  patch_size: 4
+  num_attention_heads: 8
+  hidden_size: 1024
+  embed_dim: 1024
   num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
@@ -120,8 +120,8 @@ optimizer:
   adam_epsilon: 1.0e-8
 
 lr_scheduler:
-  scheduler: 'CosineAnnealingWarmRestarts'
-  lr: 5.0e-4
+  scheduler: 'lambda'
+  lr: 1.0e-4
   step_size_up: 1000
   step_size_down: 1000
   lr_noise: null

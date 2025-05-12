@@ -11,13 +11,20 @@ training:
   eval_steps: 2000
   start_epoch: 0
   seed: 42
-  num_workers: 4
+  num_workers: 0
   pin_mem: true
+
+rollout:
+  if_rollout: True
+  roll_step: 10
+  start_step: 0
 
 model:
   spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'next_step'      #* choices: ['linear', ]
   pred_tgt: 'variable'
+  # if_pde_residual: True
+  # if_coordinate: True
   drop: 0.0
   drop_path: 0.1
   model_ema: false
@@ -27,9 +34,9 @@ model:
   # Self-atten
   patch_size: 4
   num_attention_heads: 8
-  hidden_size: 768
-  embed_dim: 768
-  num_layers: 10
+  hidden_size: 256
+  embed_dim: 256
+  num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
   fno_blocks: 1

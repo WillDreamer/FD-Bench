@@ -15,7 +15,7 @@ conda create -n fdbench python=3.10
 pip install -r requirements.txt
 ```
 
-All our experiments are based on 2 $\times$ A100 (80G).
+All our experiments are based on 8 $\times$ A6000 (40G).
 
 ---
 
@@ -99,6 +99,12 @@ bash src/train.sh
 ```
 The default setting starts with distributed training with multiple GPUs. Note that NCCL Backend does not support ComplexFloat data type, so avoid using DDP when `SPATIAL_REP='Fourier'`
 
+
+### 📖 Modular Design
+
+- For `TARGET = noise`, you will be took to `FD-Bench/config/noise`, and we don't specialize the `SPATIAL_REP` in the name. You can refer to the args inside for changing saptial architecture.
+
+- For `TARGET = PDE Residual`, there is no specific yaml. You need to add `if_pde_residual: True` and `if_coordinate: True` in the yaml file. Then it will find the corresponding residual loss in `fdbench/utils/pde_utils.py`. For example, add these two args in `self_atten+next_step.yaml`, it will add the PDE residual loss.
 
 ---
 

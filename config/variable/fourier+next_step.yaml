@@ -4,32 +4,34 @@ paths:
   tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 128
+  batch_size: 32
   epochs: 800
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
   start_epoch: 0
   seed: 42
-  num_workers: 4
+  num_workers: 0
   pin_mem: true
 
 model:
   spa_mod: 'fourier'  
   tem_mod: 'next_step'      
   pred_tgt: 'variable'
+  if_pde_residual: True
+  if_coordinate: True
   drop: 0.0
   drop_path: 0.1
   
-  modes1: 48
-  modes2: 48
-  width: 64
+  modes1: 24
+  modes2: 24
+  width: 48
   
   fno_bias: false
   fno_blocks: 1
   fno_softshrink: 0.00
   double_skip: false
-  hidden_size: 512
+  hidden_size: 256
   num_layers: 12
   checkpoint_activations: false
   ls_w: 4
