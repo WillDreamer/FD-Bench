@@ -14,6 +14,12 @@ training:
   num_workers: 0
   pin_mem: true
 
+rollout:
+  resume_step: 0
+  if_rollout: True
+  roll_step: 6
+  start_step: 0
+
 model:
   spa_mod: 'latent'  #* choices: ['self_atten', 'fourier', 'graph', 'latent']
   tem_mod: 'next_step'      #* choices: ['linear', 'next_step']
@@ -41,17 +47,15 @@ model:
 
   # for resolution
 
-  # latent_resolution: 16
-  # Ly: 128
-  # Lx: 128
-  # resolution: 128
+  latent_resolution: 16
+  Ly: 128
+  Lx: 128
+  resolution: 128
 
-  Ly: 256
-  Lx: 256
-  resolution: 256
-  latent_resolution: 32
-
-
+  # Ly: 256
+  # Lx: 256
+  # resolution: 256
+  # latent_resolution: 32
 
 data:
   PDE_type: 'CNS'      #* choices: ['CNS']
