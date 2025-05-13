@@ -63,7 +63,7 @@ data:
   input_size: 128 
   in_chans: 4
   out_chans: 4 
-  reduced_resolution: 2
+  reduced_resolution: 4
   in_channels: 4   
 
   # PDE_type: 'DR'
