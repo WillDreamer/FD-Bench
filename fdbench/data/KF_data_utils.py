@@ -156,9 +156,7 @@ class DatasetSingle(Dataset):
             return input_seq, target_seq, self.grid
         
         else:
-            max_start = self.data.shape[1] - 2 * self.window_size
-            if max_start <= 0:
-                raise ValueError("Data length is too short for the given window size.")
+            max_start = max(self.data.shape[1] - 2 * self.window_size,0)
             
             rand_idx = random.randint(0, max_start)
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.data.shape[1],1,1,1)], dim=1)
