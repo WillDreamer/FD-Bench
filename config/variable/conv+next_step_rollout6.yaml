@@ -15,7 +15,6 @@ training:
   pin_mem: true
 
 rollout:
-  resume_step: 0
   if_rollout: True
   roll_step: 6
   start_step: 0
