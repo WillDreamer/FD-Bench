@@ -1,11 +1,11 @@
 paths:
   output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
-  report_to: 'wandb'    #* choices: ['wandb', 'tensorboard', 'all']
+  report_to: wandb   #* choices: ['wandb', 'tensorboard', 'all']
   tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 32 # cannot be 1
-  epochs: 4000
+  batch_size: 32
+  epochs: 800
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -14,65 +14,56 @@ training:
   num_workers: 0
   pin_mem: true
 
-rollout:
-  if_rollout: True
-  roll_step: 4
-  start_step: 0
-
 model:
-  spa_mod: 'latent'  #* choices: ['self_atten', 'fourier', 'graph', 'latent']
-  tem_mod: 'next_step'      #* choices: ['linear', 'next_step']
+  spa_mod: 'fourier'  
+  tem_mod: 'next_step'      
   pred_tgt: 'variable'
+  # if_pde_residual: True
+  # if_coordinate: True
   drop: 0.0
   drop_path: 0.1
-  latent_dim: 16     # Latent dimension n_z (default: 4)
+  
+  modes1: 24
+  modes2: 24
+  width: 48
+  
+  fno_bias: false
+  fno_blocks: 1
+  fno_softshrink: 0.00
+  double_skip: false
+  hidden_size: 256
+  num_layers: 12
+  checkpoint_activations: false
+  ls_w: 4
+  ls_dp_rank: 16
 
-  is_periodic: True
-  encoder_channels: [64, 64, 64, 128, 128]  # compression ratio: 16
-  fourier_resolutions: []  # truncate high-frequency components
-  encoder_res_blocks: 6
-  use_attn_enc: False
-  use_fa: True
-  decoder_channels: [128, 128, 64, 64, 64]
-  attn_resolutions: [32, 64]
-  decoder_res_blocks: 6
-  final_smoothing: False
-  attn_heads: 8
-  attn_dim: 512
-  disable_coarse_attn: False
-  prop_n_block: 6
-  prop_n_embd: 512
-  dilation: 1
-
-  # for resolution
-
-  latent_resolution: 16
-  Ly: 128
-  Lx: 128
-  resolution: 128
-
-  # Ly: 256
-  # Lx: 256
-  # resolution: 256
-  # latent_resolution: 32
+rollout:
+  if_rollout: True
+  roll_step: 12
+  start_step: 0
 
 data:
-  PDE_type: 'CNS'      #* choices: ['CNS']
+  PDE_type: 'CNS'      
   data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
   data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
   input_size: 128 
-  in_chans: 4
-  out_chans: 4 
+  in_chans: 4 
   reduced_resolution: 4
-  in_channels: 4   
-
+  
   # PDE_type: 'DR'
-  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  # data_path: '/home/mosaicml/FD-Bench/' 
   # data_set: '2D_diff-react_NA_NA.h5'
   # input_size: 128
   # in_chans: 2
-  # in_channels: 2  
   # reduced_resolution: 1
+
+  # PDE_type: 'Well'
+  # well_dataset_name: "shear_flow"
+  # data_path: '/wanghaixin/well/datasets/'
+  # data_set: 'shear_flow_Reynolds_1e5_Schmidt_1e1.hdf5'
+  # input_size: 128
+  # in_chans: 4
+  # reduced_resolution: 2
 
   # PDE_type: 'KF'
   # data_path: '/wanghaixin/FNS-KF/'
@@ -82,13 +73,12 @@ data:
   # max_num_time_steps: 3
   # input_size: 128
   # in_chans: 5
-  # in_channels: 5
   # reduced_resolution: 1
   
-  reduced_resolution_t: 1 
-  reduced_batch: 10
-  initial_step: 1
   
+  reduced_resolution_t: 1 
+  reduced_batch: 1
+  initial_step: 1
 
 optimizer:
   opt: 'adamw'
@@ -104,10 +94,11 @@ optimizer:
 
 
 lr_scheduler:
-  scheduler: 'lambda' #*'CosineAnnealingWarmRestarts','cyc'
+  # scheduler: 'CosineAnnealing'
+  scheduler: 'lambda'
   step_size_up: 1000
   step_size_down: 1000
-  lr: 1.0e-5
+  lr: 1.0e-3
   lr_noise: null
   lr_noise_pct: 0.67
   lr_noise_std: 1.0
@@ -122,4 +113,4 @@ lr_scheduler:
 distribution:
   gradient_accumulation_steps: 1
   allow_tf32: True
-  mixed_precision: "fp16"
+  mixed_precision: "no"

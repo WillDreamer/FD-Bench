@@ -16,7 +16,7 @@ training:
 
 rollout:
   if_rollout: True
-  roll_step: 4
+  roll_step: 12
   start_step: 0
 
 model:
