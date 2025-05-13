@@ -18,8 +18,8 @@ model:
   spa_mod: 'fourier'  
   tem_mod: 'next_step'      
   pred_tgt: 'variable'
-  if_pde_residual: True
-  if_coordinate: True
+  # if_pde_residual: True
+  # if_coordinate: True
   drop: 0.0
   drop_path: 0.1
   
