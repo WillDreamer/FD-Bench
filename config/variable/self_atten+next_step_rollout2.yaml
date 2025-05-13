@@ -1,0 +1,119 @@
+paths:
+  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
+  report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
+  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+
+training:
+  batch_size: 4
+  epochs: 4000
+  resume_step: 0
+  checkpointing_steps: 2000
+  eval_steps: 2000
+  start_epoch: 0
+  seed: 42
+  num_workers: 0
+  pin_mem: true
+
+rollout:
+  if_rollout: True
+  roll_step: 2
+  start_step: 0
+
+model:
+  spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']
+  tem_mod: 'next_step'      #* choices: ['linear', ]
+  pred_tgt: 'variable'
+  # if_pde_residual: True
+  # if_coordinate: True
+  drop: 0.0
+  drop_path: 0.1
+  model_ema: false
+  model_ema_decay: 0.99996
+  model_ema_force_cpu: false
+  
+  # Self-atten
+  patch_size: 4
+  num_attention_heads: 8
+  hidden_size: 384
+  embed_dim: 384
+  num_layers: 12
+  mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
+  fno_bias: false
+  fno_blocks: 1
+  fno_softshrink: 0.00
+  double_skip: false
+  checkpoint_activations: false
+  ls_w: 4
+  ls_dp_rank: 16
+
+data:
+  PDE_type: 'CNS'      #* choices: ['CNS']
+  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  input_size: 128 
+  in_chans: 4 
+  reduced_resolution: 4
+
+  # PDE_type: 'DR'
+  # data_path: '/home/mosaicml/FD-Bench/'
+  # data_set: '2D_diff-react_NA_NA.h5'
+  # input_size: 128
+  # in_chans: 2
+  # reduced_resolution: 1
+
+  # PDE_type: 'Well'
+  # well_dataset_name: "shear_flow"
+  # data_path: '/wanghaixin/well/datasets/'
+  # data_set: 'shear_flow_Reynolds_1e5_Schmidt_1e1.hdf5'
+  # input_size: 128
+  # in_chans: 4
+  # reduced_resolution: 2
+
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
+
+  window_size: 1
+  reduced_resolution_t: 1 
+  reduced_batch: 1
+  initial_step: 1
+
+optimizer:
+  opt: 'adamw'
+  opt_eps: 1.0e-8
+  opt_betas: null
+  clip_grad: 1
+  momentum: 0.9
+  weight_decay: 0.05
+  adam_beta1: 0.9
+  adam_beta2: 0.999 
+  adam_weight_decay: 0
+  adam_epsilon: 1.0e-8
+
+
+lr_scheduler:
+  scheduler: 'CosineAnnealingWarmRestarts'
+  step_size_up: 1000
+  step_size_down: 1000
+  lr: 5.0e-5
+  lr_noise: null
+  lr_noise_pct: 0.67
+  lr_noise_std: 1.0
+  warmup_lr: 1.0e-4
+  min_lr: 1.0e-5
+  decay_epochs: 30
+  warmup_epochs: 5
+  cooldown_epochs: 10
+  patience_epochs: 10
+  decay_rate: 0.1
+
+distribution:
+  gradient_accumulation_steps: 1
+  allow_tf32: True
+  mixed_precision: "fp16"
