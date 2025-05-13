@@ -75,7 +75,7 @@ data:
   # num_workers: 0
 
   PDE_type: 'KF'
-  batch_size: 32
+  batch_size: 16
   data_path: '/wanghaixin/FNS-KF/'
   data_set: 'FNS-KF.nc'
   num_trajectories: -1

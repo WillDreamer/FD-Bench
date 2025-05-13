@@ -14,12 +14,19 @@ training:
   num_workers: 0
   pin_mem: true
 
+rollout:
+  if_rollout: True
+  roll_step: 10
+  start_step: 5
+
+# residual:
+  # if_pde_residual: True
+  # if_coordinate: True
+
 model:
   spa_mod: 'fourier'  
   tem_mod: 'next_step'      
   pred_tgt: 'variable'
-  if_pde_residual: True
-  if_coordinate: True
   drop: 0.0
   drop_path: 0.1
   

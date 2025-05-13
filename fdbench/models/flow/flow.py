@@ -2,125 +2,204 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .unet import UnetDenoiser
-from .fourier import FourierDenoiser
 from .self_attention import SADenoiser
 
-class diffusion(nn.Module):
-    def __init__(self, args):
-        super(diffusion, self).__init__()
-        self.beta_min = args.beta_min
-        self.beta_max = args.beta_max
-        self.timesteps = args.timesteps
+def expand_t_like_x(t, x_cur):
+    """Function to reshape time t to broadcastable dimension of x
+    Args:
+      t: [batch_dim,], time vector
+      x: [batch_dim,...], data point
+    """
+    dims = [1] * (len(x_cur.size()) - 1)
+    t = t.view(t.size(0), *dims)
+    return t
 
-        self.betas = torch.linspace(start=self.beta_min, end=self.beta_max, steps=self.timesteps)
-        self.sqrt_betas = torch.sqrt(self.betas)
+def get_score_from_velocity(vt, xt, t, path_type="linear"):
+    """Wrapper function: transfrom velocity prediction model to score
+    Args:
+        velocity: [batch_dim, ...] shaped tensor; velocity model output
+        x: [batch_dim, ...] shaped tensor; x_t data point
+        t: [batch_dim,] time tensor
+    """
+    t = expand_t_like_x(t, xt)
+    if path_type == "linear":
+        alpha_t, d_alpha_t = 1 - t, torch.ones_like(xt, device=xt.device) * -1
+        sigma_t, d_sigma_t = t, torch.ones_like(xt, device=xt.device)
+    elif path_type == "cosine":
+        alpha_t = torch.cos(t * np.pi / 2)
+        sigma_t = torch.sin(t * np.pi / 2)
+        d_alpha_t = -np.pi / 2 * torch.sin(t * np.pi / 2)
+        d_sigma_t =  np.pi / 2 * torch.cos(t * np.pi / 2)
+    else:
+        raise NotImplementedError
 
-        self.alphas = 1 - self.betas
-        self.sqrt_alphas = torch.sqrt(self.alphas)
-        self.alpha_bars = torch.cumprod(self.alphas, dim=0)
-        self.sqrt_one_minus_alpha_bars = torch.sqrt(1 - self.alpha_bars)
-        self.sqrt_alpha_bars = torch.sqrt(self.alpha_bars)
+    mean = xt
+    reverse_alpha_ratio = alpha_t / d_alpha_t
+    var = sigma_t**2 - reverse_alpha_ratio * d_sigma_t * sigma_t
+    score = (reverse_alpha_ratio * vt - mean) / var
 
-        if args.denoiser_type == "unet":
-            self.model = UnetDenoiser(args)
-        elif args.denoiser_type == "fourier":
-            self.model = FourierDenoiser(args)
-        elif args.denoiser_type == "self_attention":
-            self.model = SADenoiser(args=args)
-            
-        self.device = None
+    return score
 
-    def to(self, *args, **kwargs):
-        """Override the default `to` method to ensure all tensors are moved to the specified device."""
-        super(diffusion, self).to(*args, **kwargs)
 
-        device = next(self.parameters()).device
-        self.betas = self.betas.to(device)
-        self.sqrt_betas = self.sqrt_betas.to(device)
-        self.alphas = self.alphas.to(device)
-        self.sqrt_alphas = self.sqrt_alphas.to(device)
-        self.alpha_bars = self.alpha_bars.to(device)
-        self.sqrt_one_minus_alpha_bars = self.sqrt_one_minus_alpha_bars.to(device)
-        self.sqrt_alpha_bars = self.sqrt_alpha_bars.to(device)
+def compute_diffusion(t_cur):
+    return 2 * t_cur
 
-        self.model = self.model.to(device)
 
-        self.device = device
+def euler_sampler(
+        model,
+        latents,
+        condition,
+        num_steps=20,
+        heun=False,
+        cfg_scale=1.0,
+        guidance_low=0.0,
+        guidance_high=1.0,
+        path_type="linear", # not used, just for compatability
+        ):
+    # setup conditioning
+    # if cfg_scale > 1.0:
+    #     y_null = torch.tensor([1000] * y.size(0), device=y.device)
+    _dtype = latents.dtype    
+    t_steps = torch.linspace(1, 0, num_steps+1, dtype=torch.float64)
+    x_next = latents.to(torch.float64)
+    device = x_next.device
 
-        return self
-    
-    def extract(self, a, t):
-        b = t.shape[0]
-        out = a.gather(-1, t)
-        return out.reshape(b, 1, 1, 1)
+    with torch.no_grad():
+        for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):
+            x_cur = x_next
+            if cfg_scale > 1.0 and t_cur <= guidance_high and t_cur >= guidance_low:
+                model_input = torch.cat([x_cur] * 2, dim=0)
+                condition_ = torch.cat([condition] * 2, dim=0)
+            else:
+                model_input = x_cur
+                condition_ = condition
+                # y_cur = y            
+            kwargs = dict()
+            time_input = torch.ones(model_input.size(0)).to(device=device, dtype=torch.float64) * t_cur
+            # print(condition.shape,model_input.shape)
+            d_cur = model(
+                model_input.to(dtype=_dtype), time_input.to(dtype=_dtype),condition=condition_, **kwargs
+                )[0].to(torch.float64)
+            if cfg_scale > 1. and t_cur <= guidance_high and t_cur >= guidance_low:
+                d_cur_cond, d_cur_uncond = d_cur.chunk(2)
+                d_cur = d_cur_uncond + cfg_scale * (d_cur_cond - d_cur_uncond)                
+            x_next = x_cur + (t_next - t_cur) * d_cur
 
-    def forward_diffusion(self, x_zeros, t): 
-        epsilon = torch.randn_like(x_zeros).to(x_zeros.device)
-        
-        sqrt_alpha_bar = self.extract(self.sqrt_alpha_bars, t)
-        sqrt_one_minus_alpha_bar = self.extract(self.sqrt_one_minus_alpha_bars, t)
-        
-        noisy_sample = x_zeros * sqrt_alpha_bar + epsilon * sqrt_one_minus_alpha_bar
 
-        return noisy_sample, epsilon
-    
-    def forward(self, x, target, grid, criterion=None):
-        t = torch.randint(low=0, high=self.timesteps, size=(target.shape[0],)).to(x.device)
+            if heun and (i < num_steps - 1):
+                if cfg_scale > 1.0 and t_cur <= guidance_high and t_cur >= guidance_low:
+                    model_input = torch.cat([x_next] * 2)
+                    condition = torch.cat([condition] * 2, dim=0)
+                else:
+                    model_input = x_next
+                    # y_cur = y
+                kwargs = dict()
+                time_input = torch.ones(model_input.size(0)).to(
+                    device=model_input.device, dtype=torch.float64
+                    ) * t_next
+                d_prime = model(
+                    model_input.to(dtype=_dtype), time_input.to(dtype=_dtype), **kwargs
+                    )[0].to(torch.float64)
+                if cfg_scale > 1.0 and t_cur <= guidance_high and t_cur >= guidance_low:
+                    d_prime_cond, d_prime_uncond = d_prime.chunk(2)
+                    d_prime = d_prime_uncond + cfg_scale * (d_prime_cond - d_prime_uncond)
+                x_next = x_cur + (t_next - t_cur) * (0.5 * d_cur + 0.5 * d_prime)
+                
+    return x_next
 
-        perturbed, epsilon = self.forward_diffusion(target, t)
+class SILoss:
+    def __init__(
+            self,
+            prediction='v',
+            path_type="linear",
+            weighting="uniform",
+            encoders=[], 
+            latents_scale=None, 
+            latents_bias=None,
+            ):
+        self.prediction = prediction
+        self.weighting = weighting
+        self.path_type = path_type
+        self.encoders = encoders
+        self.latents_scale = latents_scale
+        self.latents_bias = latents_bias
 
-        x = torch.concat([perturbed, x], dim = 1)
-        pred_epsilon = self.model(x, t)
-        
-        loss = criterion(epsilon, pred_epsilon)
-
-        return pred_epsilon, loss
-    
-    def denoise_at_t(self, x_t, condition, t):
-        timestep = torch.full((x_t.shape[0],), t, dtype=torch.long, device=x_t.device)
-        # timestep_minus_1 = torch.full((x_t.shape[0],), t-1, dtype=torch.long, device=x_t.device)
-
-        if t > 0:
-            # z = torch.randn_like(x_t).to(x_t.device)
-            alpha = self.extract(self.alphas, timestep)
-            sqrt_one_minus_alpha_bar = self.extract(self.sqrt_one_minus_alpha_bars, timestep)
-            sqrt_alpha = self.extract(self.sqrt_alphas, timestep)
-            # beta = self.extract(self.betas, timestep)
-            # alpha_bar = self.extract(self.alpha_bars, timestep)
-            # alpha_bar_minus_1 = self.extract(self.alpha_bars, timestep_minus_1)
-
-            temp_x_t = torch.concat([x_t, condition], dim = 1)
-            pred_epsilon = self.model(temp_x_t, timestep)
-
-            # sigma = (1-alpha_bar_minus_1) / (1-alpha_bar) * beta
-            # x_t_minus_1 = 1/sqrt_alpha * (x_t - (1-alpha) / sqrt_one_minus_alpha_bar * pred_epsilon) + sigma*z
-
-            x_t_minus_1 = 1/sqrt_alpha * (x_t - (1-alpha) / sqrt_one_minus_alpha_bar * pred_epsilon)
-
-            return x_t_minus_1
+    def interpolant(self, t):
+        if self.path_type == "linear":
+            alpha_t = 1 - t
+            sigma_t = t
+            d_alpha_t = -1
+            d_sigma_t =  1
+        elif self.path_type == "cosine":
+            alpha_t = torch.cos(t * np.pi / 2)
+            sigma_t = torch.sin(t * np.pi / 2)
+            d_alpha_t = -np.pi / 2 * torch.sin(t * np.pi / 2)
+            d_sigma_t =  np.pi / 2 * torch.cos(t * np.pi / 2)
         else:
-            alpha = self.extract(self.alphas, timestep)
-            sqrt_one_minus_alpha_bar = self.extract(self.sqrt_one_minus_alpha_bars, timestep)
-            sqrt_alpha = self.extract(self.sqrt_alphas, timestep)
+            raise NotImplementedError()
 
-            temp_x_t = torch.concat([x_t, condition], dim = 1)
-            pred_epsilon = self.model(temp_x_t, timestep)
+        return alpha_t, sigma_t, d_alpha_t, d_sigma_t
 
-            pred_x0 = 1/sqrt_alpha * (x_t - (1-alpha) / sqrt_one_minus_alpha_bar * pred_epsilon)
+    def __call__(self, model, images, raw_image, model_kwargs=None, zs=None):
+        if model_kwargs == None:
+            model_kwargs = {}
+        # sample timesteps
+        if self.weighting == "uniform":
+            time_input = torch.rand((images.shape[0], 1, 1, 1))
+        elif self.weighting == "lognormal":
+            # sample timestep according to log-normal distribution of sigmas following EDM
+            rnd_normal = torch.randn((images.shape[0], 1 ,1, 1))
+            sigma = rnd_normal.exp()
+            if self.path_type == "linear":
+                time_input = sigma / (1 + sigma)
+            elif self.path_type == "cosine":
+                time_input = 2 / np.pi * torch.atan(sigma)
+                
+        time_input = time_input.to(device=images.device, dtype=images.dtype)
+        condition = raw_image
+        noises = torch.randn_like(images)
+        alpha_t, sigma_t, d_alpha_t, d_sigma_t = self.interpolant(time_input)
+            
+        model_input = alpha_t * images + sigma_t * noises
+        model_target = d_alpha_t * images + d_sigma_t * noises
 
-            return pred_x0
-        
+        model_output = model(x = model_input, t=time_input.flatten(),condition=condition, **model_kwargs)
+        denoising_loss = mean_flat((model_output - model_target) ** 2)
+
+        return model_output,denoising_loss
+
+class flow(nn.Module):
+    def __init__(self, args):
+        super(flow, self).__init__()
+        self.args = args
+
+        if args.denoiser_type == "self_attention":
+            self.model = SADenoiser(args=args)
+        self.loss_fn = SILoss(
+            prediction=args.prediction,
+            path_type=args.path_type, 
+            encoders=[],
+            weighting=args.weighting
+        )
+
+    def forward(self, x, target, grid, criterion=None):
+
+        model_output, loss = self.loss_fn(self.model, target, x, self.args)
+
+        return model_output, loss
     
-    def ddpm_sample(self, x, target, grid, criterion=None):
-        x_t = torch.randn(target.shape).to(target.device)
-
-        for t in range(self.timesteps-1, 0, -1):
-            x_t = self.denoise_at_t(x_t, x, t)
-
-        loss = criterion(x_t, target)
-
-        return x_t, loss
-
-    def ddim_sample(self, x, target, grid, criterion=None):
-        pass
+    def euler_sample(self, x, target, grid, criterion=None):
+        sample_input = torch.randn_like(target, device=target.device)
+        samples = euler_sampler(
+            self.model, 
+            sample_input, 
+            x,
+            num_steps=self.args.eval_sample_steps, 
+            cfg_scale=4.0,
+            guidance_low=0.,
+            guidance_high=1.,
+            path_type=self.args.path_type,
+            heun=False,
+        ).to(torch.float32)
+        loss = criterion(samples, target)
+        return samples, loss

@@ -27,6 +27,7 @@ model:
   size: 128 
   N_layers: 4
   N_res: 4
+  N_res_neck: 4
   channel_multiplier: 32
   
 data:
@@ -34,10 +35,10 @@ data:
   data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
   data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
   input_size: 128 
-  in_chans: 4              #* 4 *  initial_step
+  in_chans: 4             
   reduced_resolution: 4
-  initial_step: 10
-  window_size: 15
+  initial_step: 5
+  window_size: 10
 
   # PDE_type: 'DR'
   # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'

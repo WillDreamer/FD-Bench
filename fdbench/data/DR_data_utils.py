@@ -92,7 +92,7 @@ class DatasetSingle(Dataset):
         else:
             if args.tem_mod == 'next_step':
                 self.window_size = 1
-            elif args.tem_mod in {'self_atten','node','auto_regressive'}:
+            elif args.tem_mod in {'self_atten','node'}:
                 self.window_size = args.window_size
                 self.forecast_horizon = args.forecast_horizon
             else:

@@ -79,7 +79,7 @@ class DatasetSingle(Dataset):
         else:
             if args.tem_mod == 'next_step':
                 self.window_size = 1
-            elif args.tem_mod in {'auto_regressive','self_atten','node'}:
+            elif args.tem_mod in {'self_atten','node'}:
                 self.forecast_horizon = args.forecast_horizon
                 self.window_size = args.window_size
             else:
@@ -136,6 +136,11 @@ class DatasetSingle(Dataset):
         #     return input_seq, target_seq, self.grid
 
         elif self.tem_mod in {'self_attn', 'node'}:
+            max_start = self.data.shape[1] - 2 * self.window_size
+            if max_start <= 0:
+                raise ValueError("Data length is too short for the given window size.")
+            
+            rand_idx = random.randint(0, max_start)
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.data.shape[1],1,1,1)], dim=1)
             # shape [T, D, H, W]
 
@@ -151,6 +156,11 @@ class DatasetSingle(Dataset):
             return input_seq, target_seq, self.grid
         
         else:
+            max_start = self.data.shape[1] - 2 * self.window_size
+            if max_start <= 0:
+                raise ValueError("Data length is too short for the given window size.")
+            
+            rand_idx = random.randint(0, max_start)
             input_seq = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.data.shape[1],1,1,1)], dim=1)
             if hasattr(self.args, "if_rollout") and self.args.if_rollout:
                 input_seq = input_seq[rand_idx : rand_idx + self.window_size, :]

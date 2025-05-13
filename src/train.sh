@@ -7,20 +7,22 @@ SPATIAL_REP='self_atten'
 # SPATIAL_REP='fourier'
 # SPATIAL_REP='conv'
 # SPATIAL_REP='diffusion'
+# SPATIAL_REP='flow'
 
 # TEMPORAL_REP='self_atten'
-TEMPORAL_REP="next_step"
+# TEMPORAL_REP="next_step"
 # TEMPORAL_REP="temporal_bundling"
 # TEMPORAL_REP="auto_regressive"
-# TEMPORAL_REP="node"
+TEMPORAL_REP="node"
 
 TARGET="variable"
 # TARGET="noise"
+# TARGET='flow'
 
 #! Important for log name
-# REMARK='Self_attention_CNS_CosineAnnealingWarmRestarts'
+# REMARK='Fourier_CNS_CosineAnnealingWarmRestarts'
 # REMARK='lambdalr_PDE_residual'
-REMARK='lambdalr_temp'
+REMARK='lambdalr_KF'
 
 CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 if [ ! -f "$CONFIG_PATH" ]; then
@@ -35,6 +37,6 @@ export WANDB_API_KEY="ba70fcbc92808cc7a1750dd80ac3908295e6854f"
 
 # 运行训练
 cd /wanghaixin/FD-Bench
-/root/anaconda3/bin/accelerate launch --main_process_port 29513 src/train.py \
+/root/anaconda3/bin/accelerate launch --main_process_port 29514 src/train.py \
     --config_file "$CONFIG_PATH" \
     --remark "$REMARK" \

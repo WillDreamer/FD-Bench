@@ -118,6 +118,9 @@ def main(args):
     elif args.pred_tgt == 'noise':
         module_name = 'fdbench.models.diffusion'
         class_name = 'diffusion'
+    elif args.pred_tgt == 'flow':
+        module_name = 'fdbench.models.flow'
+        class_name = 'flow'
     
     module = getattr(importlib.import_module(module_name),class_name)
     model = module(args=args)

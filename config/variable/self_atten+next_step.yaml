@@ -4,7 +4,7 @@ paths:
   tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
-  batch_size: 4
+  batch_size: 8
   epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
@@ -17,7 +17,7 @@ training:
 rollout:
   if_rollout: True
   roll_step: 10
-  start_step: 0
+  start_step: 5
 
 model:
   spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']
@@ -34,8 +34,8 @@ model:
   # Self-atten
   patch_size: 4
   num_attention_heads: 8
-  hidden_size: 384
-  embed_dim: 384
+  hidden_size: 512
+  embed_dim: 512
   num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
