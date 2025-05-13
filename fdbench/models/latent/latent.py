@@ -90,8 +90,7 @@ class latent(nn.Module):
             self.steps = 1
 
     def forward(self, data, target, grid, creterion=None):
-        import pdb
-        pdb.set_trace()
+
         z = self.vq_ae.encode(data)
         out_lst = []
         z = z.squeeze()
