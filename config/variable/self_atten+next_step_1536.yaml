@@ -27,8 +27,8 @@ model:
   # Self-atten
   patch_size: 4
   num_attention_heads: 10
-  hidden_size: 1536
-  embed_dim: 1536
+  hidden_size: 1024
+  embed_dim: 1024
   num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
@@ -94,7 +94,7 @@ lr_scheduler:
   scheduler: 'CosineAnnealingWarmRestarts'
   step_size_up: 1000
   step_size_down: 1000
-  lr: 1.0e-4
+  lr: 8.0e-5
   lr_noise: null
   lr_noise_pct: 0.67
   lr_noise_std: 1.0
