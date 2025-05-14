@@ -19,6 +19,13 @@ Different resolutions (same dataset for train and test):
 - dr2: Reaction Diffusion 64x64 
 - dr4: Reaction Diffusion 32x32
 
+# Generalize3.csv
+
+Different rollout lengths (same dataset for train and test, CFD 128x128)
+- rollout_4
+- rollout_6
+- rollout_8
+- rollout_10
 
 # Generalize4.csv
 
