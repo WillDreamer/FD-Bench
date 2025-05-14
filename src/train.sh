@@ -20,9 +20,9 @@ TARGET="variable"
 # TARGET='flow'
 
 #! Important for log name
-# REMARK='Fourier_CNS_CosineAnnealingWarmRestarts'
-# REMARK='lambdalr_PDE_residual'
-REMARK='lambdalr_KF_rollout'
+# REMARK='SA_Residual_CosineAnnealingWarmRestarts'
+REMARK='lambdalr_DR'
+# REMARK='lambdalr_train_for_rollout'
 
 CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 if [ ! -f "$CONFIG_PATH" ]; then

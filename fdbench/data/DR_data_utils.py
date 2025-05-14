@@ -115,6 +115,8 @@ class DatasetSingle(Dataset):
         if self.tem_mod == 'auto_regressive':
             # shape [B, H, W, T, D]
             max_start = self.data.shape[-2] - self.window_size
+            if max_start>10:
+                max_start=10
             if max_start <= 0:
                 raise ValueError("Data length is too short for the given window size.")
             rand_idx = random.randint(0, max_start)
@@ -126,6 +128,8 @@ class DatasetSingle(Dataset):
         elif self.tem_mod in {'self_attn', 'node'}:
             # shape [B, H, W, T, D]
             max_start = self.data.shape[-2] - self.window_size
+            if max_start>10:
+                max_start=10
             if max_start <= 0:
                 raise ValueError("Data length is too short for the given window size.")
             rand_idx = random.randint(0, max_start)
@@ -134,7 +138,8 @@ class DatasetSingle(Dataset):
             return input_seq, target_seq, self.grid
         else:
             max_start = max(self.data.shape[-2] - 2 * self.window_size,0)
-            
+            if max_start>10:
+                max_start=10
             rand_idx = random.randint(0, max_start)
             # shape [B, H, W, T, D]
             if hasattr(self.args, "if_rollout") and self.args.if_rollout:

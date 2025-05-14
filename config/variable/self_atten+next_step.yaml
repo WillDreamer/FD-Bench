@@ -8,7 +8,7 @@ training:
   epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
-  eval_steps: 2000
+  eval_steps: 500
   start_epoch: 0
   seed: 42
   num_workers: 0
@@ -19,12 +19,14 @@ rollout:
   roll_step: 10
   start_step: 5
 
+residual:
+  if_pde_residual: True
+  if_coordinate: True
+
 model:
   spa_mod: 'self_atten'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'next_step'      #* choices: ['linear', ]
   pred_tgt: 'variable'
-  # if_pde_residual: True
-  # if_coordinate: True
   drop: 0.0
   drop_path: 0.1
   model_ema: false
@@ -32,10 +34,10 @@ model:
   model_ema_force_cpu: false
   
   # Self-atten
-  patch_size: 4
+  patch_size: 8
   num_attention_heads: 8
-  hidden_size: 512
-  embed_dim: 512
+  hidden_size: 384
+  embed_dim: 384
   num_layers: 12
   mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
   fno_bias: false
@@ -54,12 +56,12 @@ data:
   # in_chans: 4 
   # reduced_resolution: 4
 
-  # PDE_type: 'DR'
-  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
-  # data_set: '2D_diff-react_NA_NA.h5'
-  # input_size: 128
-  # in_chans: 2
-  # reduced_resolution: 1
+  PDE_type: 'DR'
+  data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  data_set: '2D_diff-react_NA_NA.h5'
+  input_size: 128
+  in_chans: 2
+  reduced_resolution: 1
 
   # PDE_type: 'Well'
   # well_dataset_name: "shear_flow"
@@ -69,15 +71,15 @@ data:
   # in_chans: 4
   # reduced_resolution: 2
 
-  PDE_type: 'KF'
-  data_path: '/wanghaixin/FNS-KF/'
-  data_set: 'FNS-KF.nc'
-  num_trajectories: -1
-  max_trajectories: 1000
-  max_num_time_steps: 3
-  input_size: 128
-  in_chans: 5
-  reduced_resolution: 1
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
 
   window_size: 1
   reduced_resolution_t: 1 

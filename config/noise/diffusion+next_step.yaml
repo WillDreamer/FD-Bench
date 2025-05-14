@@ -32,15 +32,15 @@ model:
   sample_method: "ddpm"
 
   # For Fourier
-  denoiser_type: "fourier"
-  denoiser_modes1: 24
-  denoiser_modes2: 24
-  denoiser_gamma:
-  denoiser_width: 64
-  denoiser_time_dim: 16
-  denoiser_theta: 10000
-  denoiser_out_chans: 4
-  denoiser_gamma: 1
+  # denoiser_type: "fourier"
+  # denoiser_modes1: 24
+  # denoiser_modes2: 24
+  # denoiser_gamma:
+  # denoiser_width: 64
+  # denoiser_time_dim: 16
+  # denoiser_theta: 10000
+  # denoiser_out_chans: 4
+  # denoiser_gamma: 1
 
   # # For conv
   # denoiser_type: "unet"
@@ -54,23 +54,22 @@ model:
   # denoiser_resamp_with_conv: True
 
   # For self-attention
-  # denoiser_type: "self_attention"
-  # patch_size: 8
-  # num_attention_heads: 6
-  # hidden_size: 768
-  # embed_dim: 768
-  # num_layers: 12
-  # mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
-  # fno_bias: false
-  # fno_blocks: 1
-  # fno_softshrink: 0.00
-  # double_skip: false
-  # checkpoint_activations: false
-  # ls_w: 4
-  # ls_dp_rank: 16
-  # in_chans_ratio: 4
-  # denoiser_theta: 10000
-
+  denoiser_type: "self_attention"
+  patch_size: 8
+  num_attention_heads: 6
+  hidden_size: 768
+  embed_dim: 768
+  num_layers: 12
+  mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
+  fno_bias: false
+  fno_blocks: 1
+  fno_softshrink: 0.00
+  double_skip: false
+  checkpoint_activations: false
+  ls_w: 4
+  ls_dp_rank: 16
+  in_chans_ratio: 4
+  denoiser_theta: 10000
 
 
 data:
@@ -120,7 +119,7 @@ optimizer:
   adam_epsilon: 1.0e-8
 
 lr_scheduler:
-  scheduler: 'CosineAnnealingWarmRestarts'
+  scheduler: 'lambda'
   lr: 5.0e-4
   step_size_up: 1000
   step_size_down: 1000

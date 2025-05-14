@@ -18,7 +18,7 @@ def compute_knn_graph(coords, k):
     
     return edge_index
 
-def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_new=None, is_train=True, k=20, num_workers=1, shuffle=True):
+def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_new=None, is_train=True, k=20, num_workers=1, shuffle=True,args={}):
     data_list = []
     first_iter = True
     # transform = VirtualNode()
@@ -71,14 +71,23 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
             first_iter = False
         
         if len(x.shape) == 4:
-            temporal_dim = x.shape[-2]
+            if hasattr(args, "if_rollout") and args.if_rollout:
+                temporal_dim = args.roll_step - args.start_step
+                x = x[:,:,args.start_step:args.roll_step]
+                y = y[:,:,args.start_step:args.roll_step]
+            else:
+                temporal_dim = x.shape[-2]
         else:
             temporal_dim = 1
 
         coords = grid.reshape(-1, 2)  # shape: [16384, 2]
         node_coords = coords[rand_idx]  # shape: [1000, 2]
-        x = x.reshape(-1, temporal_dim*all_var_dim)[rand_idx]
-        y = y.reshape(-1, temporal_dim*var_dim)[rand_idx]
+        if hasattr(args, "if_rollout") and args.if_rollout:
+            x = x.reshape(-1, temporal_dim, all_var_dim)[rand_idx]
+            y = y.reshape(-1, temporal_dim, var_dim)[rand_idx]
+        else:
+            x = x.reshape(-1, temporal_dim*all_var_dim)[rand_idx]
+            y = y.reshape(-1, temporal_dim*var_dim)[rand_idx]
 
         edge_index = compute_knn_graph(node_coords, k=k)
         

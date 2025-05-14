@@ -217,7 +217,7 @@ def main(args):
                    input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
                    
                    for roll_t in range(roll_step-start_t-1):
-                       target_test_t = input_test[...,roll_t+1,:].permute(0, 3, 1, 2)
+                       target_test_t = input_test[...,start_t+roll_t+1,:].permute(0, 3, 1, 2)
                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
                        input_test_t = outputs_t
                        outputs.append(outputs_t)

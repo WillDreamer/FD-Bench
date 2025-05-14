@@ -156,9 +156,9 @@ def main(args):
         sample_nodes = 1024
         rand_idx = torch.randperm(args.input_size ** 2)[:sample_nodes]  # Random select N nodes
         from fdbench.data.graph_data import get_graph_dataloader
-        data_loader_train, normalizer_new = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=None, is_train=True, k=args.neighbor)
-        data_loader_val, _ = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
-        data_loader_test, _ = get_graph_dataloader(test_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor)
+        data_loader_train, normalizer_new = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=None, is_train=True, k=args.neighbor,args=args)
+        data_loader_val, _ = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor,args=args)
+        data_loader_test, _ = get_graph_dataloader(test_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor,args=args)
     #<<<<<< =================================================================
     max_train_steps = int(args.epochs * len(data_loader_train))
 
@@ -276,11 +276,16 @@ def main(args):
             with accelerator.accumulate(model):
                 if args.tem_mod in {'next_step'}:
                     if hasattr(args, "if_rollout") and args.if_rollout:
-                        train_t = random.randint(0, samples.shape[-2]-2)
-                        samples = samples[...,train_t,:].permute(0, 3, 1, 2)
-                        targets = targets[...,train_t+1,:].permute(0, 3, 1, 2)
+                        
+                        if not args.spa_mod == 'graph':
+                            train_t = random.randint(0, samples.shape[-2]-2)
+                            samples.x = samples.x[...,train_t,:].permute(0, 3, 1, 2)
+                            targets = targets[...,train_t+1,:].permute(0, 3, 1, 2)
+                        else:
+                            train_t = random.randint(0, samples.x.shape[-2]-2)
+                            samples = samples[...,train_t,:].permute(0, 3, 1, 2)
+                            targets = targets[...,train_t+1,:].permute(0, 3, 1, 2)
                         outputs, loss = model(samples,targets,grid,criterion)
-                    
                     else:
                         if getattr(args, 'if_coordinate', False):
                             grid = grid.permute(0,3,1,2)
@@ -296,6 +301,7 @@ def main(args):
                     outputs, loss = model(samples,targets,grid,criterion)
                 
                 elif args.tem_mod == 'auto_regressive':
+                    
                     loss = 0
                     for tt in range(int(args.window_size) - int(args.initial_step)):
 
@@ -386,7 +392,7 @@ def main(args):
                                 input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
                                 
                                 for roll_t in range(roll_step-start_t-1):
-                                    target_test_t = input_test[...,roll_t+1,:].permute(0, 3, 1, 2)
+                                    target_test_t = input_test[...,start_t+roll_t+1,:].permute(0, 3, 1, 2)
                                     outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
                                     input_test_t = outputs_t
                                     outputs.append(outputs_t)
@@ -519,7 +525,7 @@ def main(args):
                                 input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
                                 
                                 for roll_t in range(roll_step-start_t-1):
-                                    target_test_t = input_test[...,roll_t+1,:].permute(0, 3, 1, 2)
+                                    target_test_t = input_test[...,start_t+roll_t+1,:].permute(0, 3, 1, 2)
                                     outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
                                     input_test_t = outputs_t
                                     outputs.append(outputs_t)

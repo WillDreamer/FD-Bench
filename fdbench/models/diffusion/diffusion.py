@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from .unet import UnetDenoiser
 from .fourier import FourierDenoiser
-from .self_attention import SADenoiser
+from .self_attention import self_atten
 
 class diffusion(nn.Module):
     def __init__(self, args):
@@ -27,7 +27,7 @@ class diffusion(nn.Module):
         elif args.denoiser_type == "fourier":
             self.model = FourierDenoiser(args)
         elif args.denoiser_type == "self_attention":
-            self.model = SADenoiser(args=args)
+            self.model = self_atten(args)
             
         self.device = None
 
@@ -69,7 +69,6 @@ class diffusion(nn.Module):
         t = torch.randint(low=0, high=self.timesteps, size=(target.shape[0],)).to(x.device)
 
         perturbed, epsilon = self.forward_diffusion(target, t)
-
 
         x = torch.concat([perturbed, x], dim = 1)
         pred_epsilon = self.model(x, t)
