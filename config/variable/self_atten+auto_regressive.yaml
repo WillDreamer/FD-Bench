@@ -85,7 +85,9 @@ data:
   reduced_resolution: 1
   reduced_resolution_t: 1 
   reduced_batch: 1
-  initial_step: 1
+  initial_step: 5
+  forecast_horizon: 5
+  window_size: 5
 
   
 optimizer:

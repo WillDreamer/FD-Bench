@@ -1,4 +1,4 @@
-name: stochastic-messagepassing-spdeode-rm-baseline
+name: stochastic-messagepassing-spdeode-rm-baseline-atten
 image: mosaicml/pytorch:latest-aws
 command: |-  
   cd home/mosaicml
@@ -178,7 +178,7 @@ command: |-
   pip install thop                    
 
   SPATIAL_REP="self_atten"
-  TEMPORAL_REP="auto_regressive"
+  TEMPORAL_REP="self_atten"
   TARGET="variable"
   CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
   REMARK='spde'

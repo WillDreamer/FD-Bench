@@ -56,12 +56,12 @@ data:
   # in_chans: 4 
   # reduced_resolution: 4
 
-  PDE_type: 'DR'
-  data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
-  data_set: '2D_diff-react_NA_NA.h5'
-  input_size: 128
-  in_chans: 2
-  reduced_resolution: 1
+  # PDE_type: 'DR'
+  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  # data_set: '2D_diff-react_NA_NA.h5'
+  # input_size: 128
+  # in_chans: 2
+  # reduced_resolution: 1
 
   # PDE_type: 'Well'
   # well_dataset_name: "shear_flow"
@@ -70,6 +70,18 @@ data:
   # input_size: 128
   # in_chans: 4
   # reduced_resolution: 2
+
+  PDE_type: 'SPDE' 
+  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  data_set: '0.mat' 
+  input_size: 128
+  in_chans: 1
+  reduced_resolution: 1
+  reduced_resolution_t: 1 
+  reduced_batch: 1
+  initial_step: 5
+  forecast_horizon: 5
+  window_size: 5
 
   # PDE_type: 'KF'
   # data_path: '/wanghaixin/FNS-KF/'
@@ -81,10 +93,10 @@ data:
   # in_chans: 5
   # reduced_resolution: 1
 
-  window_size: 1
-  reduced_resolution_t: 1 
-  reduced_batch: 1
-  initial_step: 1
+  # window_size: 1
+  # reduced_resolution_t: 1 
+  # reduced_batch: 1
+  # initial_step: 1
 
 optimizer:
   opt: 'adamw'
