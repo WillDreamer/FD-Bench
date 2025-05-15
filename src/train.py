@@ -1,276 +1,689 @@
 import argparse
-import datetime
-from re import I
+from argparse import Namespace
+import math
 import numpy as np
-import time
 import torch
-import torch.backends.cudnn as cudnn
-from torch.utils.tensorboard import SummaryWriter
 import os
 import json
 from pathlib import Path
-from timm.data import Mixup
-from timm.scheduler import create_scheduler
-from timm.optim import create_optimizer
-from timm.utils import NativeScaler, get_state_dict, ModelEma
-from functools import partial
-import torch.nn as nn
 import importlib
 import random
-from fdbench.utils import utils
-from fdbench.utils.metrics import *
-from engine import train_one_epoch, evaluate
+from copy import deepcopy
+import logging
+from collections import OrderedDict
+from accelerate import Accelerator
+from accelerate.logging import get_logger
+from accelerate.utils import ProjectConfiguration, set_seed
+
+from fdbench.utils.utils import *
+from fdbench.utils.metrics import metric_func
 import warnings
 warnings.filterwarnings('ignore')
 
-def tprint(*args, **kwargs):
-    """print with time"""
-    time_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f'[{time_str}]', *args, **kwargs)
+
+
+logger = get_logger(__name__)
+
+def create_logger(logging_dir):
+    """
+    Create a logger that writes to a log file and stdout.
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[\033[34m%(asctime)s\033[0m] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[logging.StreamHandler(), logging.FileHandler(f"{logging_dir}/log.txt")]
+    )
+    logger = logging.getLogger(__name__)
+    return logger
+
+@torch.no_grad()
+def update_ema(ema_model, model, decay=0.9999):
+    """
+    Step the EMA model towards the current model.
+    """
+    ema_params = OrderedDict(ema_model.named_parameters())
+    model_params = OrderedDict(model.named_parameters())
+
+    for name, param in model_params.items():
+        name = name.replace("module.", "")
+        # TODO: Consider applying only to params that require_grad to avoid small numerical changes of pos_embed
+        ema_params[name].mul_(decay).add_(param.data, alpha=1 - decay)
+
+
+def requires_grad(model, flag=True):
+    """
+    Set requires_grad flag for all parameters in a model.
+    """
+    for p in model.parameters():
+        p.requires_grad = flag
 
 def main(args):
+    
+    logger = get_logger(__name__)
+    logging_dir = Path(args.output_dir, args.tensorboard_dir)
+    accelerator_project_config = ProjectConfiguration(
+        project_dir=args.output_dir, logging_dir=logging_dir
+        )
 
-    utils.init_distributed_mode(args)
-    tprint(args)
-    # Tensorboard Initialization
-    if utils.is_main_process():
-        writer = SummaryWriter(
-            log_dir=args.tensorboard_dir+args.spa_mod+'_'+args.tem_mod,)
+    accelerator = Accelerator(
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        mixed_precision=args.mixed_precision,
+        log_with=args.report_to,
+        project_config=accelerator_project_config,
+    )
+    from datetime import datetime
+    current_time = datetime.now().strftime("%m%d-%H:%M")
 
-    # AutoResume
-    import sys
-    import warnings
-    warnings.filterwarnings("ignore", message="Argument interpolation should be")
-    sys.path.append(os.environ.get('SUBMIT_SCRIPTS', '.'))
-    AutoResume = None
-    try:
-        from userlib.auto_resume import AutoResume
-    except ImportError:
-        tprint(AutoResume)
+    if accelerator.is_main_process:
+        exp_name = "PDE_" + args.PDE_type + '_' + args.spa_mod + '_' +  args.tem_mod + '_' + args.pred_tgt
+        os.makedirs(args.output_dir, exist_ok=True)  # Make results folder (holds all experiment subfolders)
+        
+        save_dir = os.path.join(args.output_dir, (exp_name+'_'+args.remark+'_'+current_time))
+        os.makedirs(save_dir, exist_ok=True)
+        args_dict = vars(args)
+        # Save to a JSON file
+        json_dir = os.path.join(save_dir, "args.json")
+        with open(json_dir, 'w') as f:
+            json.dump(args_dict, f, indent=4)
+        checkpoint_dir = f"{save_dir}/checkpoints"  # Stores saved model checkpoints
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        logger = create_logger(save_dir)
+        logger.info(f"Experiment directory created at {save_dir}")
+    device = accelerator.device
+    if torch.backends.mps.is_available():
+        accelerator.native_amp = False    
+    if args.seed is not None:
+        set_seed(args.seed + accelerator.process_index)
+        torch.backends.cudnn.enabled = True
+        os.environ['PYTHONHASHSEED'] = str(args.seed)
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(args.seed)
+            torch.cuda.manual_seed_all(args.seed)
 
-    device = torch.device(args.device)
-
-    # fix the seed for reproducibility
-    seed = args.seed + utils.get_rank()
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    cudnn.benchmark = True
+    if accelerator.is_main_process:
+        logger.info(args)
+    
+    if args.allow_tf32:
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
 
     #>>>>>> ===============================Model Design==================================
-    module_name = 'fdbench.models.' + args.spa_mod
-    class_name = args.spa_mod
+    if args.pred_tgt == 'variable':
+        module_name = 'fdbench.models.' + args.spa_mod
+        class_name = args.spa_mod
+    elif args.pred_tgt == 'noise':
+        module_name = 'fdbench.models.diffusion'
+        class_name = 'diffusion'
+    elif args.pred_tgt == 'flow':
+        module_name = 'fdbench.models.flow'
+        class_name = 'flow'
+    
     module = getattr(importlib.import_module(module_name),class_name)
     model = module(args=args)
 
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad) 
-    n_parameters = count_parameters(model)/1e6
-    tprint("Number of Parameters:", n_parameters, "Mb")
+    if accelerator.is_main_process:
+        n_parameters = count_parameters(model)/(1024**2)
+        logger.info(model)
+        logger.info(f"Number of Parameters: {n_parameters} Mb")
+        
+    model = model.to(accelerator.device)
+    ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
+    requires_grad(ema, False)
     #<<<<<< =================================================================
 
     #>>>>>> =============================Data Reading==========================
     data_module_name = 'fdbench.data.' + args.PDE_type + '_data_utils'
-    data_module = getattr(importlib.import_module(data_module_name),'DatasetSingle')
+    data_module = getattr(importlib.import_module(data_module_name), 'DatasetSingle')
     train_data = data_module(args = args)
     normalizer = train_data.__normalizer__
     test_data = data_module(if_test=True,args = args,normalizer=normalizer)
     val_data = data_module(if_valid=True,args = args,normalizer=normalizer)
-    data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
-                                               num_workers=args.num_workers)
-    data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size//2,
-                                             num_workers=args.num_workers)
-    data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size//2,
-                                             num_workers=args.num_workers)
 
-        # if args.distributed:  
-    #     num_tasks = utils.get_world_size()
-    #     global_rank = utils.get_rank()
-    #     if args.repeated_aug:
-    #         sampler_train = RASampler(
-    #             dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True
-    #         )
-    #     else:
-    #         sampler_train = torch.utils.data.DistributedSampler(
-    #             dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True
-    #         )
-    #     if args.dist_eval:
-    #         if len(dataset_val) % num_tasks != 0:
-    #             print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
-    #                   'This will slightly alter validation results as extra duplicate entries are added to achieve '
-    #                   'equal num of samples per-process.')
-    #         sampler_val = torch.utils.data.DistributedSampler(
-    #             dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False)
-    #     else:
-    #         sampler_val = torch.utils.data.SequentialSampler(dataset_val)
-    # else:
-    #     sampler_train = torch.utils.data.RandomSampler(dataset_train)
-    #     sampler_val = torch.utils.data.SequentialSampler(dataset_val)
-
-    # data_loader_train = torch.utils.data.DataLoader(
-    #     dataset_train, sampler=sampler_train,
-    #     batch_size=args.batch_size,
-    #     num_workers=args.num_workers,
-    #     pin_memory=args.pin_mem,
-    #     drop_last=True,
-    # )
-
-    # data_loader_val = torch.utils.data.DataLoader(
-    #     dataset_val, sampler=sampler_val,
-    #     batch_size=int(1.5 * args.batch_size),
-    #     num_workers=args.num_workers,
-    #     pin_memory=args.pin_mem,
-    #     drop_last=False
-    # )
-    #<<<<<< =================================================================
-
-    mixup_fn = None
-    # mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
-    mixup_active = False
-    if mixup_active:
-        tprint('standard mix up')
-        mixup_fn = Mixup(
-            mixup_alpha=args.mixup, cutmix_alpha=args.cutmix, cutmix_minmax=args.cutmix_minmax,
-            prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
-            label_smoothing=args.smoothing, num_classes=args.nb_classes)
+    if not args.spa_mod == 'graph':
+        data_loader_train = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size,
+                            num_workers=args.num_workers)
+        data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size,
+                            num_workers=args.num_workers)
+        data_loader_val = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size,
+                            num_workers=args.num_workers)
     else:
-        tprint('mix up is not used')
+        sample_nodes = 1024
+        rand_idx = torch.randperm(args.input_size ** 2)[:sample_nodes]  # Random select N nodes
+        from fdbench.data.graph_data import get_graph_dataloader
+        data_loader_train, normalizer_new = get_graph_dataloader(train_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=None, is_train=True, k=args.neighbor,args=args)
+        data_loader_val, _ = get_graph_dataloader(val_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor,args=args)
+        data_loader_test, _ = get_graph_dataloader(test_data, rand_idx, batch_size=args.batch_size, normalizer=normalizer, normalizer_new=normalizer_new, is_train=False, k=args.neighbor,args=args)
+    #<<<<<< =================================================================
+    max_train_steps = int(args.epochs * len(data_loader_train))
 
-    model.to(device)
+    if args.opt == 'adamw':
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=args.lr,
+            betas=(args.adam_beta1, args.adam_beta2),
+            weight_decay=args.adam_weight_decay,
+            eps=args.adam_epsilon,)   
+    if args.scheduler == 'CosineAnnealing':
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs*2)
+    elif args.scheduler == 'CosineAnnealingWarmRestarts':
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=args.epochs//3, T_mult=2, eta_min=1e-8)
+    elif args.scheduler == 'step':
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.epochs, gamma=0.1)  # 根据需要调整参数
+    elif args.scheduler == 'cyc':
+        scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=args.lr//5, max_lr=args.lr,
+                                              mode = 'triangular2', gamma = 0.95,
+                                              step_size_up=args.step_size_up, step_size_down=args.step_size_down,cycle_momentum=False)  
 
-    model_ema = None
-    if args.model_ema:
-        # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
-        model_ema = ModelEma(
-            model,
-            decay=args.model_ema_decay,
-            device='cpu' if args.model_ema_force_cpu else '',
-            resume='')
+    elif args.scheduler == 'lambda':
+        from torch.optim.lr_scheduler import LambdaLR
+        warm_up_steps = int(0.1*max_train_steps)
+        def lr_lambda(current_step):
+            if current_step < warm_up_steps:
+                return float(current_step)/float(max(1, warm_up_steps))
+            progress = float(current_step - warm_up_steps) / float(max(1, max_train_steps - warm_up_steps))
+            return 0.5*(1+math.cos(math.pi*progress))
+        scheduler = LambdaLR(optimizer, lr_lambda)
+        
+    if hasattr(args, 'if_pde_residual') and args.if_pde_residual:
+        module = importlib.import_module("fdbench.utils.pde_utils")
+        residual_fn = getattr(module, f"pde_{args.PDE_type}")
 
-    model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
+    criterion = torch.nn.MSELoss() 
 
-    linear_scaled_lr = args.lr * args.batch_size * utils.get_world_size() / 512.0
-    args.lr = linear_scaled_lr
-    optimizer = create_optimizer(args, model_without_ddp)
-    loss_scaler = NativeScaler()
-    lr_scheduler, _ = create_scheduler(args, optimizer)
-    criterion = torch.nn.MSELoss()
+    # Prepare models for training:
+    update_ema(ema, model, decay=0)  # Ensure EMA is initialized with synced weights
+    model.train()  # important! This enables embedding dropout for classifier-free guidance
+    ema.eval()  # EMA model should always be in eval mode
 
-    output_dir = Path(args.output_dir)
-    if args.resume and os.path.exists(args.resume):
-        tprint("Resuming from checkpoint.")
-        if args.resume.startswith('https'):
-            checkpoint = torch.hub.load_state_dict_from_url(
-                args.resume, map_location='cpu', check_hash=True)
-        else:
-            checkpoint = torch.load(args.resume, map_location='cpu')
-        model_without_ddp.load_state_dict(checkpoint['model'])
-        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-            args.start_epoch = checkpoint['epoch'] + 1
-            if args.model_ema:
-                utils._load_checkpoint_for_ema(model_ema, checkpoint['model_ema'])
-            if 'scaler' in checkpoint:
-                loss_scaler.load_state_dict(checkpoint['scaler'])
-
-    if args.autoresume:
-        AutoResume.init()
-
-    if utils.is_main_process():
-        tprint(f"Start training for {args.epochs} epochs")
-    start_time = time.time()
-    for epoch in range(args.start_epoch, args.epochs):
-        if args.distributed:
-            data_loader_train.sampler.set_epoch(epoch)
-
-        train_stats = train_one_epoch(
-            model, criterion, data_loader_train,
-            optimizer, device, epoch, loss_scaler,
-            args.clip_grad, model_ema, mixup_fn,
-            use_amp = args.use_amp,
-            set_training_mode=args.finetune == ''  # keep in eval mode during finetuning
+    # resume:
+    global_step = 0
+    if args.resume_step > 0:
+        ckpt_name = str(args.resume_step).zfill(7) +'.pt'
+        ckpt = torch.load(
+            f'{os.path.join(args.output_dir, exp_name)}/checkpoints/{ckpt_name}',
+            map_location='cpu',
+            )
+        model.load_state_dict(ckpt['model'])
+        optimizer.load_state_dict(ckpt['opt'])
+        global_step = ckpt['steps']
+        ema.load_state_dict(ckpt['ema'])
+    
+    model, optimizer, data_loader_train, scheduler = accelerator.prepare(
+        model, optimizer, data_loader_train, scheduler
+    )
+    accelerator.register_for_checkpointing(scheduler)
+    if accelerator.is_main_process:
+        accelerator.init_trackers(
+            project_name=exp_name,  
         )
 
-        lr_scheduler.step(epoch)
+    from tqdm import tqdm
+    progress_bar = tqdm(
+        range(0, max_train_steps),
+        initial=global_step,
+        desc="Steps",
+        disable=not accelerator.is_local_main_process,
+    )
+    ##### Start Training
+    for epoch in range(args.start_epoch, args.epochs):
+        
+        #### =========1. Data Loading=========
+        for tr_id, batch in enumerate(data_loader_train):
 
-        if epoch > (args.epochs//2) and (epoch+1)%50==0 and args.output_dir:
-            checkpoint_paths = [output_dir / 'checkpoint_{}_ep{}.pth'.format(args.spa_mod,epoch)]
-            for checkpoint_path in checkpoint_paths:
-                if model_ema is not None:
-                    utils.save_on_master({
-                        'model': model_without_ddp.state_dict(),
-                        'optimizer': optimizer.state_dict(),
-                        'lr_scheduler': lr_scheduler.state_dict(),
-                        'epoch': epoch,
-                        'model_ema': get_state_dict(model_ema),
-                        'scaler': loss_scaler.state_dict(),
-                        'args': args,
-                    }, checkpoint_path)
-                else:
-                    utils.save_on_master({
-                        'model': model_without_ddp.state_dict(),
-                        'optimizer': optimizer.state_dict(),
-                        'lr_scheduler': lr_scheduler.state_dict(),
-                        'epoch': epoch,
-                        'scaler': loss_scaler.state_dict(),
-                        'args': args,
-                    }, checkpoint_path)
+            # Judge the data format, graph or grid data
+            if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                data = batch.to(device)
+                samples = data
+                targets = data.y
+                grid = getattr(data, 'grid', None)
+            else:
+                samples, targets, grid = batch
+                
+                # [B, H, W, D]
+                if len(samples.shape) == 4:
+                    samples = samples.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                    targets = targets.permute(0, 3, 1, 2).to(device, non_blocking=True)
 
-        if (epoch +1) % args.eval_step == 0: 
-            val_stats = evaluate(data_loader_val, model, device, args.use_amp, args)
-            test_stats = evaluate(data_loader_test, model, device, args.use_amp, args)
+                # [B, H, W, T, D]
+                elif len(samples.shape) == 5:
+                    samples = samples.to(device, non_blocking=True)
+                    targets = targets.to(device, non_blocking=True)
+                    H_field = samples.shape[1]
+                    W_field = samples.shape[2]
+                    B_field = samples.shape[0]
+                grid = grid.to(device) if grid is not None else None
 
+            model.train()
 
-            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                        **{f'test_{k}': v for k, v in test_stats.items()},
-                        **{f'val_{k}': v for k, v in val_stats.items()},
-                        'epoch': epoch}
+            # ## Monitor the memory usuage
+            # def print_layer_memory(name, backward=False):
+            #     def hook(module,input,output):
+            #         allocated = torch.cuda.memory_allocated() / 1024 ** 2
+            #         reserved = torch.cuda.memory_reserved() / 1024 ** 2
+            #         if backward:
+            #             logger.info(f"[{name}] after backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+            #         else:
+            #             logger.info(f"[{name}] before backward Allocated : {allocated:.2f} MB | Reserved : {reserved:.2f} MB")
+            #     return hook
 
-            if utils.is_main_process():
-                writer.add_scalar("train_lr", log_stats["train_lr"], log_stats["epoch"])
-                writer.add_scalar("train_loss", log_stats["train_loss"], log_stats["epoch"])
-                writer.add_scalar("test_loss", log_stats["test_loss"], log_stats["epoch"])
-                writer.add_scalar("test_rmse", log_stats["test_rmse"], log_stats["epoch"])
-                writer.add_scalar("test_nrmse", log_stats["test_nrmse"], log_stats["epoch"])
-                writer.add_scalar("test_frmse", log_stats["test_frmse"], log_stats["epoch"])
-                writer.add_scalar("val_rmse", log_stats["val_rmse"], log_stats["epoch"])
-                writer.add_scalar("val_loss", log_stats["val_loss"], log_stats["epoch"])
-                writer.add_scalar("val_nrmse", log_stats["val_nrmse"], log_stats["epoch"])
-                writer.add_scalar("val_frmse", log_stats["val_frmse"], log_stats["epoch"])
+            # if tr_id == 1 and epoch==0 and accelerator.is_main_process:
+            #     for name, module in model.named_modules():
+            #         module.register_forward_hook(print_layer_memory(name))
 
-            if args.output_dir and utils.is_main_process():
-                log_file_path = os.path.join(args.tensorboard_dir, f"{args.spa_mod}_{args.tem_mod}", "log.txt")
-                os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
-                with open(log_file_path, 'a') as f:  
-                    f.write(json.dumps(log_stats) + "\n")
+            #### =========2. Model Training=========
+            with accelerator.accumulate(model):
+                if args.tem_mod in {'next_step'}:
+                    # Whether it needs rollout
+                    if hasattr(args, "if_rollout") and args.if_rollout:
+                        
+                        # Rollout for grid data
+                        if not args.spa_mod == 'graph':
+                            train_t = random.randint(0, samples.shape[-2]-2)
+                            samples = samples[...,train_t,:].permute(0, 3, 1, 2)
+                            targets = targets[...,train_t+1,:].permute(0, 3, 1, 2)
+                        
+                        # Rollout for graph data
+                        else:
+                            train_t = random.randint(0, samples.x.shape[-2]-2)
+                            samples.x = samples.x[...,train_t,:]
+                            targets = targets[...,train_t+1,:]
+                        outputs, loss = model(samples,targets,grid,criterion)
+                    
+                    # Commonly we don't need to rollout
+                    else:
+                        # whether the grid is added in input
+                        if getattr(args, 'if_coordinate', False):
+                            grid = grid.permute(0,3,1,2)
+                            samples.requires_grad_(True)
+                            grid.requires_grad_(True)
+                            samples = torch.concat([samples,grid],dim=1)
+                        
+                        outputs, loss = model(samples,targets,grid,criterion)
+                
+                # 'self_atten' 'temporal_bundling' 'node' mode
+                # Here you are given k steps and predict k future steps
+                elif args.tem_mod in {'self_atten','temporal_bundling', 'node'}:
+                    samples = samples.permute(0, 3, 4, 1, 2)
+                    targets = targets.permute(0, 3, 4, 1, 2)
+                    outputs, loss = model(samples,targets,grid,criterion)
+                
+                # Here you are given k steps and predict one step further 
+                # Train in teacher-forcing way, k=`initial_step`, training window length is `window_size`
+                elif args.tem_mod == 'auto_regressive':
+                    loss = 0
+                    for tt in range(int(args.window_size) - int(args.initial_step)):
 
-        # # AutoResume
-        # if args.autoresume and AutoResume.termination_requested():
-        #     print("AutoResume Termination Requested. Exiting.")
-        #     if utils.is_main_process():
-        #         AutoResume.request_resume()            
-        #         return 0
-        #     else:
-        #         return 0
+                        sample_t = samples[...,tt:tt+args.initial_step,:].reshape(B_field,-1,H_field,W_field)
+                        target_t = samples[...,tt+args.initial_step,:].permute(0, 3, 1, 2)
+                        output_t, loss_batch = model(sample_t, target_t, grid, criterion)
+                        loss += loss_batch
 
+                # whether to add the PDE residual loss
+                if hasattr(args, 'if_pde_residual') and args.if_pde_residual:
+                    loss += 0.1*residual_fn(outputs,grid)
 
-    total_time = time.time() - start_time
-    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-    tprint('Training time {}'.format(total_time_str))
+                optimizer.zero_grad()
+                accelerator.backward(loss)
+                if accelerator.sync_gradients:
+                    params_to_clip = model.parameters()
+                    grad_norm = accelerator.clip_grad_norm_(params_to_clip, args.clip_grad)
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
+                current_lr = optimizer.param_groups[0]['lr']
+            
+                if accelerator.sync_gradients:
+                    update_ema(ema, model) # change ema function
+            
+            if accelerator.sync_gradients:
+                progress_bar.update(1)
+                global_step += 1   
 
+            #### =========3. CKPT Saving=========
+            if global_step % args.checkpointing_steps == 0 and global_step > (max_train_steps//2):
+                if accelerator.is_main_process:
+                    checkpoint = {
+                        "model": model.state_dict(),
+                        "ema": ema.state_dict(),
+                        "opt": optimizer.state_dict(),
+                        "args": args,
+                        "steps": global_step,}
+                   
+                    checkpoint_path = f"{checkpoint_dir}/{global_step:07d}.pt"
+                    torch.save(checkpoint, checkpoint_path)
+                    logger.info(f"Saved checkpoint to {checkpoint_path}")
+            
+            #### =========4. Model Testing=========
+            if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
+                model.eval()  # important! This disables randomized embedding dropout
+                
+                _err_RMSE_avg = 0
+                _err_nRMSE_avg = 0
+                _err_max_avg = 0
+                _err_csv_avg = 0
+                _err_BD_avg = 0
+                _err_F_avg = 0
+                with torch.no_grad():
+                    
+                    for batch in data_loader_val:
+                        
+                        # Judge the data format, graph or grid
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            data = batch.to(device)
+                            input_test = data
+                            target_test = data.y
+                            grid_test = getattr(data, 'grid', None)
+                        else:
+                            input_test, target_test, grid_test = batch
+                            input_test = input_test.to(device)
+                            target_test = target_test.to(device)
+
+                            # [B, H, W, D]
+                            if len(input_test.shape) == 4:
+                                input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                                target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            
+                            # [B, H, W, T, D]
+                            elif len(input_test.shape) == 5:
+                                input_test = input_test.to(device, non_blocking=True)
+                                target_test_raw = target_test.to(device, non_blocking=True)
+                                H_field = input_test.shape[1]
+                                W_field = input_test.shape[2]
+                                B_field = input_test.shape[0]
+                            grid_test = grid_test.to(device)
+                        
+                        # Whether it needs rollout
+                        if hasattr(args, "if_rollout") and args.if_rollout:
+                            if args.tem_mod in {'next_step'}:
+                                outputs = []
+                                if hasattr(args, "start_step"):
+                                    start_t = args.start_step
+                                else:
+                                    start_t = 0
+
+                                # Rollout for grid data  
+                                if not args.spa_mod == 'graph':
+                                    if args.roll_step == -1:
+                                        roll_step = input_test.shape[-2]
+                                    else:
+                                        roll_step = args.roll_step
+                                    input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
+                                    for roll_t in range(roll_step-start_t-1):
+                                        target_test_t = input_test[...,start_t+roll_t+1,:].permute(0, 3, 1, 2)
+                                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                                        input_test_t = outputs_t
+                                        outputs.append(outputs_t)
+                                    target_test = input_test[...,1+start_t:roll_step,:].permute(0,3,4,1,2)
+                                    outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
+                                
+                                # If graph data, operator on 'GlobalStorage' object
+                                else:
+                                    if args.roll_step == -1:
+                                        roll_step = input_test.x.shape[-2]
+                                    else:
+                                        roll_step = args.roll_step
+                                    input_test_t = input_test.clone()
+                                    input_test_t.x = input_test_t.x[...,start_t,:]
+                                    for roll_t in range(roll_step-start_t-1):
+
+                                        target_test_t = input_test.x[...,start_t+roll_t+1,:]
+                                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                                        input_test_t.x = outputs_t
+                                        outputs.append(outputs_t)
+                                    target_test = input_test.x[...,1+start_t:roll_step,:]
+                                    outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
+                        else:
+                            
+                            # Sampling operation for diffusion model
+                            if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                                if args.sample_method == "ddpm":
+                                    sample_fn = model.ddpm_sample
+                                else:
+                                    sample_fn = model.ddim_sample
+                                outputs, loss = sample_fn(input_test,target_test,grid,criterion)
+                            
+                            # Next-step prediction
+                            elif args.tem_mod in {'next_step'}:
+                                # whether the grid is added in input
+                                if getattr(args, 'if_coordinate', False):
+                                    grid_test = grid_test.permute(0,3,1,2)
+                                    input_test = torch.concat([input_test,grid_test],dim=1)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            
+                            # 'self_atten' 'temporal_bundling' 'node' mode
+                            # Here you are given k steps and predict k future steps
+                            elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
+                                input_test = input_test.permute(0, 3, 4, 1, 2)
+                                target_test = target_test.permute(0, 3, 4, 1, 2)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            
+                            # Here you are given k steps and predict one step further and then rollout
+                            # k = initial_step
+                            elif args.tem_mod == 'auto_regressive':
+                                rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                                predicted_outputs = []
+                                
+                                for tt in range(args.window_size - args.initial_step):
+                                    input_test = rolling_input.reshape(B_field, -1, H_field, W_field)
+                                    target_test = target_test_raw[..., tt+args.initial_step, :].permute(0, 3, 1, 2)
+                                    
+                                    output_test_t, _ = model(input_test, target_test, grid, criterion)
+                                    predicted_outputs.append(output_test_t.unsqueeze(1))  
+                                    rolling_input = torch.cat([
+                                        rolling_input[..., 1:, :],       
+                                        output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                                    ], dim=-2) 
+                                outputs = torch.cat(predicted_outputs, dim=1).contiguous()  # B [T] C H W
+                                target_test = target_test_raw[..., args.initial_step:, :].permute(0, 3, 4, 1, 2)
+                        
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            batch_size = batch.num_graphs
+                        else:
+                            batch_size = input_test.shape[0]
+                        #     outputs = outputs.unsqueeze(-1).unsqueeze(-1)
+                        #     # outputs, target_test, mask = remove_virtual_nodes(outputs, target_test, batch.ptr)
+                        
+                        # Evaluation for task metrics
+                        Lx, Ly, Lz = 1., 1., 1.
+                        _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
+                        = metric_func(outputs, target_test, batch_size, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+
+                        _err_RMSE_avg += _err_RMSE.item()
+                        _err_nRMSE_avg += _err_nRMSE.item()
+                        _err_max_avg += _err_Max.item()
+                        _err_csv_avg += _err_CSV.item()
+                        _err_F_avg += _err_F.item()
+                        _err_BD_avg += _err_BD.item()
+                    _err_RMSE_avg /= len(data_loader_val)
+                    _err_nRMSE_avg /= len(data_loader_val)
+                    _err_max_avg /= len(data_loader_val)
+                    _err_csv_avg /= len(data_loader_val)
+                    _err_F_avg /= len(data_loader_val)
+                    _err_BD_avg /= len(data_loader_val)
+                    logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, BD:{_err_BD_avg:.4f}, CSV:{_err_csv_avg:.4f}')
+                    val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg, 'val/BD':_err_BD_avg}
+                    accelerator.log(val_log, step=global_step)
+
+                    # calculate the computational cost metric
+                    if global_step == 10 and accelerator.is_main_process:
+                        from thop import profile
+                        target_model = model.module if hasattr(model, "module") else model
+                        if hasattr(args, "if_rollout") and args.if_rollout:
+                            if args.tem_mod in {'next_step'}:
+                                flops, params = profile(target_model, inputs=(input_test[:2,:,:,0,:].permute(0,3,1,2),target_test[:2,0],grid,criterion))
+                        else:
+                            if len(target_test.shape) < 5:
+                                flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
+                            elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
+                                flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
+                            elif args.tem_mod == 'auto_regressive':
+                                flops, params = profile(target_model, inputs=(rolling_input.reshape(B_field, -1, H_field, W_field)[:2],target_test_raw[..., 0, :].permute(0, 3, 1, 2)[:2],grid,criterion))
+                        gflops = flops / 1e9
+                        mem_alloc_MB = torch.cuda.memory_allocated(device) / (1024 ** 2)
+                        accelerator.log({
+                            "model/num_params": n_parameters,
+                            "model/GFlops": gflops,
+                            "model/memory_MB": mem_alloc_MB,
+                        }, step=global_step)
+            
+            # Repeat the validation process again for testing sets
+            if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
+                model.eval()  # important! This disables randomized embedding dropout
+                
+                _err_RMSE_avg = 0
+                _err_nRMSE_avg = 0
+                _err_max_avg = 0
+                _err_csv_avg = 0
+                _err_BD_avg = 0
+                _err_F_avg = 0
+                with torch.no_grad():
+                    for batch in data_loader_test:
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            data = batch.to(device)
+                            input_test = data
+                            target_test = data.y
+                            grid_test = getattr(data, 'grid', None)
+                        else:
+                            input_test, target_test, grid_test = batch
+                            if len(input_test.shape) == 4:
+                                input_test = input_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                                target_test = target_test.permute(0, 3, 1, 2).to(device, non_blocking=True)
+                            elif len(input_test.shape) == 5:
+                                # [B, H, W, T, D]
+                                input_test = input_test.to(device, non_blocking=True)
+                                target_test = target_test.to(device, non_blocking=True)
+                                H_field = input_test.shape[1]
+                                W_field = input_test.shape[2]
+                                B_field = input_test.shape[0]
+                        grid_test = grid_test.to(device) if grid_test is not None else None
+                        if hasattr(args, "if_rollout") and args.if_rollout:
+                            if args.tem_mod in {'next_step'}:
+                                outputs = []
+                                if hasattr(args, "start_step"):
+                                    start_t = args.start_step
+                                else:
+                                    start_t = 0
+                                if not args.spa_mod == 'graph':
+                                    if args.roll_step == -1:
+                                        roll_step = input_test.shape[-2]
+                                    else:
+                                        roll_step = args.roll_step
+                                    input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
+                                    for roll_t in range(roll_step-start_t-1):
+                                        target_test_t = input_test[...,start_t+roll_t+1,:].permute(0, 3, 1, 2)
+                                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                                        input_test_t = outputs_t
+                                        outputs.append(outputs_t)
+                                    target_test = input_test[...,1+start_t:roll_step,:].permute(0,3,4,1,2)
+                                    outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
+                                else:
+                                    if args.roll_step == -1:
+                                        roll_step = input_test.x.shape[-2]
+                                    else:
+                                        roll_step = args.roll_step
+                                    input_test_t = input_test.clone()
+                                    input_test_t.x = input_test_t.x[...,start_t,:]
+                                    for roll_t in range(roll_step-start_t-1):
+
+                                        target_test_t = input_test.x[...,start_t+roll_t+1,:]
+                                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                                        input_test_t.x = outputs_t
+                                        outputs.append(outputs_t)
+                                    target_test = input_test.x[...,1+start_t:roll_step,:]
+                                    outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
+                        else:
+                            if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                                if args.sample_method == "ddpm":
+                                    samp_algo = model.ddpm_sample
+                                else:
+                                    samp_algo = model.ddim_sample
+                                outputs, loss = samp_algo(input_test,target_test,grid,criterion)
+                            elif args.tem_mod in {'next_step'}:
+                                if getattr(args, 'if_coordinate', False):
+                                    grid_test = grid_test.permute(0,3,1,2)
+                                    input_test = torch.concat([input_test,grid_test],dim=1)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            elif args.tem_mod in {'self_atten','temporal_bundling','node'}:
+                                target_test = target_test.permute(0, 3, 4, 1, 2)
+                                input_test = input_test.permute(0, 3, 4, 1, 2)
+                                outputs, loss = model(input_test,target_test,grid,criterion)
+                            elif args.tem_mod == 'auto_regressive':
+                                rolling_input = input_test[..., :args.initial_step, :].clone()  # (B, H, W, initial_step, C)
+                                predicted_outputs = []
+                                
+                                for tt in range(args.window_size - args.initial_step):
+                                    input_test_t = rolling_input.reshape(B_field, -1, H_field, W_field)
+                                    target_test_t = input_test[..., tt+args.initial_step, :].permute(0,3,1,2)
+                                    
+                                    output_test_t, _ = model(input_test_t, target_test_t, grid, criterion)
+                                    predicted_outputs.append(output_test_t.unsqueeze(1))  
+                                    rolling_input = torch.cat([
+                                        rolling_input[..., 1:, :],       
+                                        output_test_t.permute(0,2,3,1).unsqueeze(-2)        
+                                    ], dim=-2) 
+                                outputs = torch.cat(predicted_outputs, dim=1).contiguous()
+                                target_test = input_test[..., args.initial_step:, :].permute(0, 3, 4, 1, 2).contiguous()
+                        
+                        if hasattr(batch, 'x') and hasattr(batch, 'y'):
+                            batch_size = batch.num_graphs
+                        else:
+                            batch_size = input_test.shape[0]
+                        #     outputs = outputs.unsqueeze(-1).unsqueeze(-1)
+                        #     # outputs, target_test, mask = remove_virtual_nodes(outputs, target_test, batch.ptr)
+                        
+                        Lx, Ly, Lz = 1., 1., 1.
+                        _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
+                        = metric_func(outputs, target_test, batch_size, if_mean=True, Lx=Lx, Ly=Ly, Lz=Lz)
+
+                        _err_RMSE_avg += _err_RMSE.item()
+                        _err_nRMSE_avg += _err_nRMSE.item()
+                        _err_max_avg += _err_Max.item()
+                        _err_csv_avg += _err_CSV.item()
+                        _err_F_avg += _err_F.item()
+                        _err_BD_avg += _err_BD.item()
+                    _err_RMSE_avg /= len(data_loader_test)
+                    _err_nRMSE_avg /= len(data_loader_test)
+                    _err_max_avg /= len(data_loader_test)
+                    _err_csv_avg /= len(data_loader_test)
+                    _err_F_avg /= len(data_loader_test)
+                    _err_BD_avg /= len(data_loader_test)
+                    logger.info(f'RMSE: {_err_RMSE_avg:.4f}, nRMSE: {_err_nRMSE_avg:.4f}, fRMSE:{_err_F_avg:.4f}, MAX-ERR:{_err_max_avg:.4f}, BD:{_err_BD_avg:.4f}, CSV:{_err_csv_avg:.4f}')
+                    test_log = {"test/test_RMSE": _err_RMSE_avg, "test/test_nRMSE": _err_nRMSE_avg, "test/fRMSE":_err_F_avg, 'test/MAX-ERR':_err_max_avg, 'test/CSV':_err_csv_avg, 'test/BD':_err_BD_avg}
+                    accelerator.log(test_log, step=global_step)
+
+            logs = {
+                "train/lr": current_lr,
+                "train/grad_norm": accelerator.gather(grad_norm).mean().detach().item(),
+                "train/loss": accelerator.gather(loss).mean().detach().item(),    
+            }
+            progress_bar.set_postfix(**logs)
+            accelerator.log(logs, step=global_step)
+        
+        scheduler.step()
+    accelerator.wait_for_everyone()
+    if accelerator.is_main_process:
+        logger.info("Done!")
+    accelerator.end_training()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Training Configuration")
     parser.add_argument("--config_file", type=str, required=True, help="Path to the configuration file")
+    parser.add_argument("--remark", type=str, default=' ', help="Training remark")
     default_args = parser.parse_args()
     
-    args = utils.get_config(config_path=default_args.config_file)
+    args = get_config(config_path=default_args.config_file)
+    args = Namespace(**vars(default_args), **vars(args))
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    ## ComplexData <-> DDP
+    if args.spa_mod == 'fourier' or args.spa_mod == 'frequency':
+        args.mixed_precision = "no"
+
     main(args) 
     

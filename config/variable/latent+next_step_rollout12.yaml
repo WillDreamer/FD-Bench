@@ -1,0 +1,125 @@
+paths:
+  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
+  report_to: 'wandb'    #* choices: ['wandb', 'tensorboard', 'all']
+  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+
+training:
+  batch_size: 32 # cannot be 1
+  epochs: 4000
+  resume_step: 0
+  checkpointing_steps: 2000
+  eval_steps: 2000
+  start_epoch: 0
+  seed: 42
+  num_workers: 0
+  pin_mem: true
+
+rollout:
+  if_rollout: True
+  roll_step: 12
+  start_step: 0
+
+model:
+  spa_mod: 'latent'  #* choices: ['self_atten', 'fourier', 'graph', 'latent']
+  tem_mod: 'next_step'      #* choices: ['linear', 'next_step']
+  pred_tgt: 'variable'
+  drop: 0.0
+  drop_path: 0.1
+  latent_dim: 16     # Latent dimension n_z (default: 4)
+
+  is_periodic: True
+  encoder_channels: [64, 64, 64, 128, 128]  # compression ratio: 16
+  fourier_resolutions: []  # truncate high-frequency components
+  encoder_res_blocks: 6
+  use_attn_enc: False
+  use_fa: True
+  decoder_channels: [128, 128, 64, 64, 64]
+  attn_resolutions: [32, 64]
+  decoder_res_blocks: 6
+  final_smoothing: False
+  attn_heads: 8
+  attn_dim: 512
+  disable_coarse_attn: False
+  prop_n_block: 6
+  prop_n_embd: 512
+  dilation: 1
+
+  # for resolution
+
+  latent_resolution: 16
+  Ly: 128
+  Lx: 128
+  resolution: 128
+
+  # Ly: 256
+  # Lx: 256
+  # resolution: 256
+  # latent_resolution: 32
+
+data:
+  PDE_type: 'CNS'      #* choices: ['CNS']
+  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  input_size: 128 
+  in_chans: 4
+  out_chans: 4 
+  reduced_resolution: 4
+  in_channels: 4   
+
+  # PDE_type: 'DR'
+  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  # data_set: '2D_diff-react_NA_NA.h5'
+  # input_size: 128
+  # in_chans: 2
+  # in_channels: 2  
+  # reduced_resolution: 1
+
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # in_channels: 5
+  # reduced_resolution: 1
+  
+  reduced_resolution_t: 1 
+  reduced_batch: 10
+  initial_step: 1
+  
+
+optimizer:
+  opt: 'adamw'
+  opt_eps: 1.0e-8
+  opt_betas: null
+  clip_grad: 1
+  momentum: 0.9
+  weight_decay: 0.05
+  adam_beta1: 0.9
+  adam_beta2: 0.999 
+  adam_weight_decay: 0
+  adam_epsilon: 1.0e-8
+
+
+lr_scheduler:
+  scheduler: 'lambda' #*'CosineAnnealingWarmRestarts','cyc'
+  step_size_up: 1000
+  step_size_down: 1000
+  lr: 1.0e-5
+  lr_noise: null
+  lr_noise_pct: 0.67
+  lr_noise_std: 1.0
+  warmup_lr: 1.0e-3
+  min_lr: 5.0e-4
+  decay_epochs: 30
+  warmup_epochs: 5
+  cooldown_epochs: 10
+  patience_epochs: 10
+  decay_rate: 0.1
+
+distribution:
+  gradient_accumulation_steps: 1
+  allow_tf32: True
+  mixed_precision: "fp16"
