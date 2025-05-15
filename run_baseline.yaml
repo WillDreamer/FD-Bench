@@ -177,7 +177,7 @@ command: |-
   pip install zipp     
   pip install thop                    
 
-  SPATIAL_REP="fourier"
+  SPATIAL_REP="self_atten"
   TEMPORAL_REP="auto_regressive"
   TARGET="variable"
   CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"

@@ -2,26 +2,25 @@ paths:
   output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
   tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
-
 training:
+  batch_size: 16
   epochs: 4000
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
   start_epoch: 0
   seed: 42
+  num_workers: 0
   pin_mem: true
-
 model:
-  spa_mod: 'self_atten'  
-  tem_mod: 'node'      
+  spa_mod: 'self_atten' 
+  tem_mod: 'node'     
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
   model_ema: false
   model_ema_decay: 0.99996
   model_ema_force_cpu: false
-  
   # Self-atten
   patch_size: 8
   num_attention_heads: 8
@@ -36,35 +35,27 @@ model:
   checkpoint_activations: false
   ls_w: 4
   ls_dp_rank: 16
-
 data:
   # PDE_type: 'CNS'      #* choices: ['CNS']
-  # batch_size: 128
   # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
   # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
-  # input_size: 128 
-  # in_chans: 4 
+  # input_size: 128
+  # in_chans: 4
   # reduced_resolution: 4
   # initial_step: 5
   # forecast_horizon: 5
-  # window_size: 10
-  # num_workers: 0
-
+  # window_size: 5
   # auto-regressive is given 5 steps, predict next steps and then roll-out for next 5 steps
   # ode is given 5 steps, directlty predict next 5 steps
-
   # PDE_type: 'DR'
-  # batch_size: 32
   # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
   # data_set: '2D_diff-react_NA_NA.h5'
   # input_size: 128
   # in_chans: 2
   # reduced_resolution: 1
-  # initial_step: 5
-  # forecast_horizon: 5
-  # window_size: 10
-  # num_workers: 0
-
+  # # initial_step: 5
+  # # forecast_horizon: 5
+  # window_size: 5
   # PDE_type: 'Well'
   # well_dataset_name: "shear_flow"
   # data_path: '/wanghaixin/well/datasets/'
@@ -72,25 +63,30 @@ data:
   # input_size: 128
   # in_chans: 4
   # reduced_resolution: 2
-  # num_workers: 0
+  # PDE_type: 'KF'
+  # data_path: '/wanghaixin/FNS-KF/'
+  # data_set: 'FNS-KF.nc'
+  # num_trajectories: -1
+  # max_trajectories: 1000
+  # max_num_time_steps: 3
+  # input_size: 128
+  # in_chans: 5
+  # reduced_resolution: 1
+  # # initial_step: 5
+  # # forecast_horizon: 5
+  # window_size: 5
+  # reduced_resolution_t: 1
+  # reduced_batch: 1
 
-  PDE_type: 'KF'
-  batch_size: 16
-  data_path: '/wanghaixin/FNS-KF/'
-  data_set: 'FNS-KF.nc'
-  num_trajectories: -1
-  max_trajectories: 1000
-  max_num_time_steps: 3
+  PDE_type: 'SPDE' 
+  data_path: '/home/mosaicml/FD-Bench/'                  #* your path to data
+  data_set: '0.mat' 
   input_size: 128
-  in_chans: 5
+  in_chans: 1
   reduced_resolution: 1
-  initial_step: 5
-  forecast_horizon: 5
-  window_size: 10
-  num_workers: 0
-
   reduced_resolution_t: 1 
   reduced_batch: 1
+  initial_step: 1
 
 optimizer:
   opt: 'adamw'
@@ -100,11 +96,9 @@ optimizer:
   momentum: 0.9
   weight_decay: 0.05
   adam_beta1: 0.9
-  adam_beta2: 0.999 
+  adam_beta2: 0.999
   adam_weight_decay: 0
   adam_epsilon: 1.0e-8
-
-
 lr_scheduler:
   lr: 5.0e-4
   scheduler: 'lambda'
@@ -120,7 +114,6 @@ lr_scheduler:
   cooldown_epochs: 10
   patience_epochs: 10
   decay_rate: 0.1
-
 distribution:
   gradient_accumulation_steps: 1
   allow_tf32: True
