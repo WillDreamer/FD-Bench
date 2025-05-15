@@ -300,6 +300,7 @@ def main(args):
                         
                         # Rollout for grid data
                         if not args.spa_mod == 'graph':
+                            print(f"samples.shape: {samples.shape}")
                             train_t = random.randint(0, samples.shape[-2]-2)
                             samples = samples[...,train_t,:].permute(0, 3, 1, 2)
                             targets = targets[...,train_t+1,:].permute(0, 3, 1, 2)
