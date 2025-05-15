@@ -32,6 +32,30 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 
+class Swish(nn.Module):
+    """
+    Swish activation function
+    """
+    def __init__(self, beta=1):
+        super(Swish, self).__init__()
+        self.beta = beta
+
+    def forward(self, x):
+        return x * torch.sigmoid(self.beta*x)
+
+class FinalLayer(nn.Module):
+    """
+    The final layer of SiT.
+    """
+    def __init__(self, hidden_size, time_window, out_channels):
+        super().__init__()
+        self.linear = nn.Linear(hidden_size, time_window * out_channels, bias=True)
+
+    def forward(self, x):
+        
+        x = self.linear(x)
+
+        return x
 
 class SpectralConv1d(nn.Module):
     def __init__(self, in_channels, out_channels, modes1):
@@ -198,6 +222,8 @@ class FNO2d(nn.Module):
         self.width = args.width
         self.padding = 2 # pad the domain if input is non-periodic
         in_chans = initial_step*num_channels + 2 if getattr(args, 'if_coordinate', False) else initial_step*num_channels
+        self.pred_var = num_channels
+        self.args = args
         self.fc0 = nn.Linear(in_chans, self.width)
 
         self.conv0 = SpectralConv2d_fast(self.width, self.width, self.modes1, self.modes2)
@@ -209,13 +235,51 @@ class FNO2d(nn.Module):
         self.w2 = nn.Conv2d(self.width, self.width, 1)
         self.w3 = nn.Conv2d(self.width, self.width, 1)
 
-        self.fc1 = nn.Linear(self.width, 128)
-        self.fc2 = nn.Linear(128, num_channels)
+
+        if args.tem_mod == 'temporal_bundling':
+            self.forecast_horizon = args.window_size
+            self.time_window = args.window_size
+            conv_params = {
+                5:  (1, 1, 1, 1),  
+            }
+            if self.time_window in conv_params:
+                in_ker_size, stride_bund, out_ker_size, out_stride = conv_params[self.time_window]
+                self.output_mlp = nn.Sequential(
+                    nn.Conv1d(1, 8, in_ker_size, stride=stride_bund),
+                    Swish(),  
+                    nn.Conv1d(8, 1, out_ker_size, stride=out_stride)
+                )
+            self.final_layer = FinalLayer(args.width,self.time_window,args.in_chans)
+        
+        elif args.tem_mod in ['node']:
+            self.forecast_horizon = args.forecast_horizon
+            self.time_window = args.window_size
+            self.decoding_mlp = nn.Sequential(nn.Linear(args.width, args.width),
+                                              Swish(),
+                                              nn.Linear(args.width, 1),
+                                              Swish()
+                                              )
+            # ODEINT derivative network
+            self.derivative_net = nn.Sequential(nn.Linear(args.width, args.width),
+                                                Swish(),
+                                                nn.Linear(args.width, args.width),
+                                                Swish()
+                                                )
+            self.final_layer = FinalLayer(args.width,1,args.in_chans)
+        
+        else:
+            self.fc1 = nn.Linear(self.width, 128)
+            self.fc2 = nn.Linear(128, num_channels)
 
     def forward(self, x, target, grid, creterion=None):
         # x dim = [b, x1, x2, t*v]
         if len(x.shape) == 5:
-            x = x.reshape(x.shape[0],x.shape[1],x.shape[2],-1)
+            if self.args.tem_mod in {'temporal_bundling','node'}:
+                x = x.permute(0,3,4,1,2)
+                x = x.reshape(x.shape[0],x.shape[1],x.shape[2],-1)
+                x = x.permute(0,3,1,2)
+            else:
+                x = x.reshape(x.shape[0],x.shape[1],x.shape[2],-1)
         x = x.permute(0, 2, 3, 1)
         x = self.fc0(x)
         x = x.permute(0, 3, 1, 2)
@@ -244,11 +308,48 @@ class FNO2d(nn.Module):
 
         x = x[..., :-self.padding, :-self.padding] # Unpad the tensor
         x = x.permute(0, 2, 3, 1)
+
+        if self.args.tem_mod == 'temporal_bundling':
+            
+            dt = torch.cumsum(torch.ones(1, self.time_window, 1, device=x.device), dim=1).repeat(1,1,self.pred_var)
+            # [batch*n_nodes, hidden_dim] -> 1DCNN([batch*n_nodes, 1, hidden_dim]) -> [batch*n_nodes, time_window]
+            x = x.reshape(-1,x.shape[-1])
+            diff = self.output_mlp(x[:, None]).squeeze(1)
+            diff = self.final_layer(diff).reshape(-1, self.time_window, self.pred_var)
+
+            u_last = self.final_layer(x).reshape(-1, self.time_window, self.pred_var)
+            out = u_last + dt * diff
+            x = out.reshape(-1,self.args.input_size,self.args.input_size,self.time_window, self.pred_var)
+            x = x.permute(0,3,4,1,2)
         
-        x = self.fc1(x)
-        x = F.gelu(x)
-        x = self.fc2(x)
-        x = x.permute(0, 3, 1, 2)
+        elif self.args.tem_mod == 'node':
+
+            # from torchdiffeq import odeint
+            from torchdiffeq import odeint_adjoint as odeint
+            
+            class ODEFunc(nn.Module):
+                def __init__(self, derivative_net):
+                    super().__init__()
+                    self.net = derivative_net
+
+                def forward(self, t, y):
+                    return self.net(y)
+            ode_func = ODEFunc(self.derivative_net)
+
+            
+            t = torch.linspace(0, 1, self.forecast_horizon + 1).to(x.device)
+            pred_z = odeint(ode_func, x, t, method='dopri5')
+            # Remove the initial state, permute to [batch*seq_len, time, features]
+            pred_z = (pred_z[1:]).permute(1, 0, 2, 3,4) 
+
+            x = self.final_layer(pred_z).permute(0,1,4,2,3)
+        
+        else:
+        
+            x = self.fc1(x)
+            x = F.gelu(x)
+            x = self.fc2(x)
+            x = x.permute(0, 3, 1, 2)
 
         loss = creterion(x, target)
         
@@ -381,7 +482,7 @@ class fourier:
 
         if args.tem_mod == 'next_step':
             base_cls = FNO2d
-        elif args.tem_mod == 'auto_regressive':
+        elif args.tem_mod in {'auto_regressive','node','temporal_bundling'}:
             base_cls = FNO2d
         else:
             raise ValueError(f"Unsupported temporal_mod: {args.tem_mod}")

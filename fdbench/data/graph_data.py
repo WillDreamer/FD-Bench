@@ -71,12 +71,8 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
             first_iter = False
         
         if len(x.shape) == 4:
-            if hasattr(args, "if_rollout") and args.if_rollout:
-                temporal_dim = args.roll_step - args.start_step
-                x = x[:,:,args.start_step:args.roll_step]
-                y = y[:,:,args.start_step:args.roll_step]
-            else:
-                temporal_dim = x.shape[-2]
+            
+            temporal_dim = x.shape[-2]
         else:
             temporal_dim = 1
 

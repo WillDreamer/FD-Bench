@@ -364,8 +364,8 @@ class self_atten(nn.Module):
         D_in = x.shape[1]
         half = D_in // 2
 
-        cond = x[:,:half]
-        x = x[:,half:] 
+        cond = x[:,half:]
+        x =  x[:,:half]
         # print(f"x: {x.shape}")
         # print(f"cond: {cond.shape}")
         B = x.shape[0]
@@ -385,10 +385,9 @@ class self_atten(nn.Module):
         temb = temb.unsqueeze(1)
         # print(f"temb: {temb.shape}")
 
-        x = x + self.cross_cond(query = x, key = cond, value = cond) + temb
+        x = x + self.cross_cond(query = cond, key = x, value = x) + temb
         # print(f"x: {x.shape}")
         # exit()
-
 
         if not self.config.checkpoint_activations:
             for blk in self.blocks:

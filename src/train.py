@@ -58,6 +58,9 @@ def requires_grad(model, flag=True):
     for p in model.parameters():
         p.requires_grad = flag
 
+def unwrap_model(model):
+    return model.module if hasattr(model, "module") else model
+
 def main(args):
     
     logger = get_logger(__name__)
@@ -233,7 +236,9 @@ def main(args):
     ##### Start Training
     for epoch in range(args.start_epoch, args.epochs):
         
-        #### =========1. Data Loading=========
+        #### ===================================================================
+        #### =========1. Data Loading===========================================
+        #### ===================================================================
         for tr_id, batch in enumerate(data_loader_train):
 
             # Judge the data format, graph or grid data
@@ -276,7 +281,9 @@ def main(args):
             #     for name, module in model.named_modules():
             #         module.register_forward_hook(print_layer_memory(name))
 
-            #### =========2. Model Training=========
+            #### ===================================================================
+            #### =======================2. Model Training===========================
+            #### ===================================================================
             with accelerator.accumulate(model):
                 if args.tem_mod in {'next_step'}:
                     # Whether it needs rollout
@@ -325,6 +332,7 @@ def main(args):
                         loss += loss_batch
 
                 # whether to add the PDE residual loss
+                
                 if hasattr(args, 'if_pde_residual') and args.if_pde_residual:
                     loss += 0.1*residual_fn(outputs,grid)
 
@@ -344,7 +352,9 @@ def main(args):
                 progress_bar.update(1)
                 global_step += 1   
 
-            #### =========3. CKPT Saving=========
+            #### ===================================================================
+            #### =========3. CKPT Saving============================================
+            #### ===================================================================
             if global_step % args.checkpointing_steps == 0 and global_step > (max_train_steps//2):
                 if accelerator.is_main_process:
                     checkpoint = {
@@ -358,7 +368,9 @@ def main(args):
                     torch.save(checkpoint, checkpoint_path)
                     logger.info(f"Saved checkpoint to {checkpoint_path}")
             
-            #### =========4. Model Testing=========
+            #### ===================================================================
+            #### =========4. Model Testing============================================
+            #### ===================================================================
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
                 
@@ -368,6 +380,7 @@ def main(args):
                 _err_csv_avg = 0
                 _err_BD_avg = 0
                 _err_F_avg = 0
+                
                 with torch.no_grad():
                     
                     for batch in data_loader_val:
@@ -433,18 +446,28 @@ def main(args):
 
                                         target_test_t = input_test.x[...,start_t+roll_t+1,:]
                                         outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
-                                        input_test_t.x = outputs_t
                                         outputs.append(outputs_t)
+
+                                        outputs_t = outputs_t.reshape(batch_size,sample_nodes,-1)
+                                        outputs_t = torch.cat([outputs_t,outputs_t,outputs_t],dim=-1)
+                                        input_test_t.x = outputs_t
+                                        
                                     target_test = input_test.x[...,1+start_t:roll_step,:]
                                     outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
                         else:
                             
                             # Sampling operation for diffusion model
                             if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                                
                                 if args.sample_method == "ddpm":
-                                    sample_fn = model.ddpm_sample
+                                    sample_fn = unwrap_model(model).ddpm_sample
                                 else:
-                                    sample_fn = model.ddim_sample
+                                    sample_fn = unwrap_model(model).ddim_sample
+                                outputs, loss = sample_fn(input_test,target_test,grid,criterion)
+                            
+                            elif args.spa_mod == "flow":
+                                
+                                sample_fn = unwrap_model(model).euler_sample
                                 outputs, loss = sample_fn(input_test,target_test,grid,criterion)
                             
                             # Next-step prediction
@@ -509,13 +532,19 @@ def main(args):
                     val_log = {"val/val_RMSE": _err_RMSE_avg, "val/val_nRMSE": _err_nRMSE_avg, "val/fRMSE":_err_F_avg, 'val/MAX-ERR':_err_max_avg, 'val/CSV':_err_csv_avg, 'val/BD':_err_BD_avg}
                     accelerator.log(val_log, step=global_step)
 
+
                     # calculate the computational cost metric
                     if global_step == 10 and accelerator.is_main_process:
                         from thop import profile
                         target_model = model.module if hasattr(model, "module") else model
                         if hasattr(args, "if_rollout") and args.if_rollout:
                             if args.tem_mod in {'next_step'}:
-                                flops, params = profile(target_model, inputs=(input_test[:2,:,:,0,:].permute(0,3,1,2),target_test[:2,0],grid,criterion))
+                                if not args.spa_mod == 'graph':
+                                    flops, params = profile(target_model, inputs=(input_test[:2,:,:,0,:].permute(0,3,1,2),target_test[:2,0],grid,criterion))
+                                else:
+                                    batch_thre = input_test.x.shape[0]*2/batch_size
+                                    input_test.x = input_test.x[:batch_thre,0,:]
+                                    flops, params = profile(target_model, inputs=(input_test,target_test[:batch_thre,0],grid,criterion))
                         else:
                             if len(target_test.shape) < 5:
                                 flops, params = profile(target_model, inputs=(input_test[:2],target_test[:2],grid,criterion))
@@ -531,7 +560,9 @@ def main(args):
                             "model/memory_MB": mem_alloc_MB,
                         }, step=global_step)
             
-            # Repeat the validation process again for testing sets
+            #### ===================================================================
+            #### Repeat the validation process again for testing sets
+            #### ===================================================================
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
                 
@@ -592,17 +623,26 @@ def main(args):
 
                                         target_test_t = input_test.x[...,start_t+roll_t+1,:]
                                         outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
-                                        input_test_t.x = outputs_t
                                         outputs.append(outputs_t)
+                                        
+                                        outputs_t = outputs_t.reshape(batch_size,sample_nodes,-1)
+                                        outputs_t = torch.cat([outputs_t,outputs_t,outputs_t],dim=-1)
+                                        input_test_t.x = outputs_t
+                                        
                                     target_test = input_test.x[...,1+start_t:roll_step,:]
                                     outputs = torch.cat([x.unsqueeze(1) for x in outputs], dim=1)  
                         else:
                             if args.spa_mod == "diffusion" or args.spa_mod == "graph_diffusion":
+                                
                                 if args.sample_method == "ddpm":
-                                    samp_algo = model.ddpm_sample
+                                    samp_algo = unwrap_model(model).ddpm_sample
                                 else:
-                                    samp_algo = model.ddim_sample
+                                    samp_algo = unwrap_model(model).ddim_sample
                                 outputs, loss = samp_algo(input_test,target_test,grid,criterion)
+                            elif args.spa_mod == "flow":
+                                
+                                sample_fn = unwrap_model(model).euler_sample
+                                outputs, loss = sample_fn(input_test,target_test,grid,criterion)
                             elif args.tem_mod in {'next_step'}:
                                 if getattr(args, 'if_coordinate', False):
                                     grid_test = grid_test.permute(0,3,1,2)

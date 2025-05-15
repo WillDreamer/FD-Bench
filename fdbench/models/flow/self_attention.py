@@ -340,7 +340,7 @@ class SiT(nn.Module):
         for i, block in enumerate(self.blocks):
             x = block(x, t_embed)                      # (N, T, D)
         
-        x = self.final_layer(x, c, if_time=True)                # (N, T, patch_size ** 2 * out_channels)
+        x = self.final_layer(x, t_embed, if_time=True)                # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x, cls=True) # (N, C, H, W), (64, 4, 128, 128)
         
         return x
