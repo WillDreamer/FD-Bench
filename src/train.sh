@@ -24,7 +24,7 @@ TARGET="variable"
 # REMARK='SA_diffusion_CosineAnnealingWarmRestarts'
 REMARK='lambdalr_DR_Residual'
 
-CONFIG_PATH="/wanghaixin/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
+CONFIG_PATH="/home/mosaicml/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 if [ ! -f "$CONFIG_PATH" ]; then
     echo "Error: The modular combination ${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml does not exist!"
     exit 1

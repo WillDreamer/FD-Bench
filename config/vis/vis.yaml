@@ -1,6 +1,6 @@
 paths:
-  output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
-  tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
+  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 data:
   tem_mod: 'next_step' 

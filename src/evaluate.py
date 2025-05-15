@@ -269,7 +269,7 @@ def main(args):
                 from matplotlib.backends.backend_pdf import PdfPages
                 from einops import rearrange 
                 import matplotlib.pyplot as plt
-                vis_pdf_path = os.path.join('/wanghaixin/FD-Bench/vis', args.exp_name + '.pdf')
+                vis_pdf_path = os.path.join('/home/mosaicml/FD-Bench/vis', args.exp_name + '.pdf')
                 pdf = PdfPages(vis_pdf_path)
                 
                 fontdict = {

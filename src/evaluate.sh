@@ -1,7 +1,7 @@
 SPATIAL_REP='self_atten'
 TEMPORAL_REP="next_step"
 TARGET="variable"
-EXP_NAME="/wanghaixin/FD-Bench/exps/PDE_CNS_self_atten_next_step_variable_lambdalr_0509-20:22"
+EXP_NAME="/home/mosaicml/FD-Bench/exps/PDE_CNS_self_atten_next_step_variable_lambdalr_0509-20:22"
 RESUME_STEP=28000
 
 IF_ROLLOUT=True

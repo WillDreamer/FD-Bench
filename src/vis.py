@@ -35,7 +35,7 @@ def main(args):
                 from matplotlib.backends.backend_pdf import PdfPages
                 from einops import rearrange 
                 import matplotlib.pyplot as plt
-                vis_pdf_path = os.path.join('/wanghaixin/FD-Bench/vis', args.exp_name + '.pdf')
+                vis_pdf_path = os.path.join('/home/mosaicml/FD-Bench/vis', args.exp_name + '.pdf')
                 pdf = PdfPages(vis_pdf_path)
                 
                 fontdict = {
@@ -82,7 +82,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Testing Configuration")
-    parser.add_argument("--config_file", type=str, default='/wanghaixin/FD-Bench/config/vis/vis.yaml', help="Path to the configuration file")
+    parser.add_argument("--config_file", type=str, default='/home/mosaicml/FD-Bench/config/vis/vis.yaml', help="Path to the configuration file")
     parser.add_argument("--remark", type=str, default=' ', help="Training remark")
     parser.add_argument("--exp_name", type=str, default='vis_CNS', help="Training remark")
     default_args = parser.parse_args()

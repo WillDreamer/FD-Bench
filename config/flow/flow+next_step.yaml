@@ -1,6 +1,6 @@
 paths:
-  output_dir: '/wanghaixin/FD-Bench/exps'
-  tensorboard_dir: '/wanghaixin/FD-Bench/runs'
+  output_dir: '/home/mosaicml/FD-Bench/exps'
+  tensorboard_dir: '/home/mosaicml/FD-Bench/runs'
   autoresume: false
   resume: false
   report_to: 'wandb'

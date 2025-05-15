@@ -1,7 +1,7 @@
 paths:
-  output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
+  output_dir: '/home/mosaicml/FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: wandb    #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: '/home/mosaicml/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   epochs: 4000
