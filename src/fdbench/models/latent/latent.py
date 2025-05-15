@@ -90,6 +90,7 @@ class latent(nn.Module):
             self.steps = 1
 
     def forward(self, data, target, grid, creterion=None):
+
         z = self.vq_ae.encode(data)
         out_lst = []
         if len(z) != 1:

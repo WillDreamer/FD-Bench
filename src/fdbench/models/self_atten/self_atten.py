@@ -4,17 +4,18 @@ from functools import partial
 from collections import OrderedDict
 from copy import Error, deepcopy
 from re import S
+# from numpy.lib.arraypad import pad
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.layers import DropPath, to_2tuple, trunc_normal_
 import torch.fft
 from torch.nn.modules.container import Sequential
 from torch.utils.checkpoint import checkpoint_sequential
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
+
 from .afno2d import AFNO2D
 from .bfno2d import BFNO2D
 from .ls import AttentionLS
@@ -45,6 +46,16 @@ class Mlp(nn.Module):
         x = self.drop(x)
         return x
 
+class Swish(nn.Module):
+    """
+    Swish activation function
+    """
+    def __init__(self, beta=1):
+        super(Swish, self).__init__()
+        self.beta = beta
+
+    def forward(self, x):
+        return x * torch.sigmoid(self.beta*x)
 
 class Block(nn.Module):
     def __init__(self, dim, mlp_ratio=4., drop=0., drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, h=14, w=8, use_fno=False, use_blocks=False, args={}):
@@ -152,7 +163,24 @@ class DownLayer(nn.Module):
         x = x.reshape(B, -1, self.dim_out)
         return x
 
+class FinalLayer(nn.Module):
+    """
+    The final layer of SiT.
+    """
+    def __init__(self, hidden_size, patch_size, out_channels):
+        super().__init__()
+        self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
 
+    def forward(self, x):
+        
+        x = self.linear(x)
+
+        return x
+
+
+
+
+### Main function for self-atten
 class self_atten(nn.Module):
     def __init__(self, img_size=128, patch_size=4, in_chans=4,
                  embed_dim=256, depth=12,
@@ -179,28 +207,16 @@ class self_atten(nn.Module):
         """
         super().__init__()
 
+        self.config = args
         img_size = args.input_size
         patch_size = args.patch_size
-        in_chans = args.in_chans
-        embed_dim = args.hidden_size
+        # in_chans = args.in_chans
+        in_chans = args.in_chans + 2 if getattr(args, 'if_coordinate', False) else args.in_chans
+        out_chans = args.in_chans
+        embed_dim = args.hidden_size 
         depth = args.num_layers
-        
-        self.config = args
-
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
-
-        self.patch_embed = PatchEmbed(
-                img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
-        self.unpatch = UnpatchEmbed(
-                img_size=img_size, patch_size=patch_size, out_chans=in_chans, embed_dim=embed_dim)
-        num_patches = self.patch_embed.num_patches
-
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim))
-        self.pos_drop = nn.Dropout(p=drop_rate)
-
-        h = img_size // patch_size
-        w = h // 2 + 1
 
         if uniform_drop:
             print('using uniform droppath with expect rate', drop_path_rate)
@@ -208,7 +224,88 @@ class self_atten(nn.Module):
         else:
             print('using linear droppath with expect rate', drop_path_rate * 0.5)
             dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-        # dpr = [drop_path_rate for _ in range(depth)]  # stochastic depth decay rule
+        
+        if self.config.tem_mod in ['self_atten']:
+            self.forecast_horizon = args.forecast_horizon
+            patch_dim = in_chans * patch_size ** 2
+            self.patch_embed = nn.Sequential(
+                Rearrange('b t c (h p1) (w p2) -> b t (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
+                nn.Linear(patch_dim, embed_dim),
+            )
+            self.unpatch = Rearrange('b t (h w) (c p1 p2) -> b t c (h p1) (w p2)', p1=patch_size, p2=patch_size, h=img_size//patch_size)
+            grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
+            num_patches = grid_size[0] * grid_size[1]
+        
+        elif self.config.tem_mod in ['temporal_bundling']:
+            patch_dim = in_chans * patch_size ** 2
+            self.patch_embed = nn.Sequential(
+                Rearrange('b t c (h p1) (w p2) -> b t (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
+                nn.Linear(patch_dim, embed_dim),)
+            self.unpatch = Rearrange('b t (h w) (c p1 p2) -> b t c (h p1) (w p2)', p1=patch_size, p2=patch_size, h=img_size//patch_size)
+            grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
+            num_patches = grid_size[0] * grid_size[1]
+
+            self.forecast_horizon = args.window_size
+            self.time_window = args.window_size
+            self.latent_dim=32
+            
+            conv_params = {
+                5:  (23, 3, 5, 1)}
+                
+            if self.time_window in conv_params:
+                in_ker_size, stride_bund, out_ker_size, out_stride = conv_params[self.time_window]
+                self.output_mlp = nn.Sequential(
+                    nn.Conv1d(1, 8, in_ker_size, stride=stride_bund),
+                    Swish(),  
+                    nn.Conv1d(8, 1, out_ker_size, stride=out_stride),
+                )
+            self.final_layer = FinalLayer(self.latent_dim, patch_size, in_chans)
+        
+        elif self.config.tem_mod in ['node']:
+            self.forecast_horizon = args.forecast_horizon
+            patch_dim = in_chans * patch_size ** 2
+            self.patch_embed = nn.Sequential(
+                Rearrange('b t c (h p1) (w p2) -> b t (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
+                nn.Linear(patch_dim, embed_dim),
+            )
+            self.unpatch = Rearrange('b t (h w) (c p1 p2) -> b t c (h p1) (w p2)', p1=patch_size, p2=patch_size, h=img_size//patch_size)
+            grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
+            num_patches = grid_size[0] * grid_size[1]
+            self.decoding_mlp = nn.Sequential(nn.Linear(embed_dim, embed_dim),
+                                              Swish(),
+                                              nn.Linear(embed_dim, 1),
+                                              Swish()
+                                              )
+            # ODEINT derivative network
+            self.derivative_net = nn.Sequential(nn.Linear(embed_dim, embed_dim),
+                                                Swish(),
+                                                nn.Linear(embed_dim, self.embed_dim),
+                                                Swish()
+                                                )
+            self.final_layer = FinalLayer(embed_dim, patch_size, in_chans)
+        
+        elif self.config.tem_mod in ['auto_regressive']:
+            patch_dim = args.initial_step * in_chans * patch_size ** 2
+            self.patch_embed = nn.Sequential(
+                Rearrange('b (t c) (h p1) (w p2) -> b (h w) (t p1 p2 c)', p1 = patch_size, p2 = patch_size, t=args.initial_step),
+                nn.Linear(patch_dim, embed_dim),
+            )
+            self.unpatch = UnpatchEmbed(
+                img_size=img_size, patch_size=patch_size, out_chans=out_chans, embed_dim=embed_dim)
+            grid_size = tuple([s // p for s, p in zip(to_2tuple(img_size), to_2tuple(patch_size))])
+            num_patches = grid_size[0] * grid_size[1]
+        
+        else:
+            self.patch_embed = PatchEmbed(
+                img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
+            self.unpatch = UnpatchEmbed(
+                img_size=img_size, patch_size=patch_size, out_chans=out_chans, embed_dim=embed_dim)
+            num_patches = self.patch_embed.num_patches
+
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim))
+        self.pos_drop = nn.Dropout(p=drop_rate)
+        h = img_size // patch_size
+        w = h // 2 + 1
         
         self.blocks = nn.ModuleList([
             Block(
@@ -218,9 +315,17 @@ class self_atten(nn.Module):
                 args = self.config)
             for i in range(depth)])
         
+        if self.config.tem_mod in ['self_atten']:
+            self.temporal_blocks = nn.ModuleList([
+                Block(
+                    dim=embed_dim, mlp_ratio=mlp_ratio,
+                    drop=drop_rate, drop_path=dpr[i], norm_layer=norm_layer, 
+                    h=h, w=w, use_fno=use_fno, use_blocks=use_blocks,
+                    args = self.config)
+                for i in range(depth//2)])
+            self.final_layer = FinalLayer(embed_dim, patch_size, in_chans)
+        
         self.norm = norm_layer(embed_dim)
-
-        # Representation layer
         if representation_size:
             self.num_features = representation_size
             self.pre_logits = nn.Sequential(OrderedDict([
@@ -255,19 +360,80 @@ class self_atten(nn.Module):
         return {'pos_embed', 'cls_token'}
 
     def forward_features(self, x):
+
+
         B = x.shape[0]
         x = self.patch_embed(x)
         x = x + self.pos_embed
-        x = self.pos_drop(x)
 
+        if self.config.tem_mod in {'self_atten','temporal_bundling','node'}:
+            b, ts, seq_len, _ = x.shape
+            x = rearrange(x, 'b t n d -> (b t) n d')
+        
+        ## Must do spatial self-attention
+        x = self.pos_drop(x)
         if not self.config.checkpoint_activations:
             for blk in self.blocks:
                 x = blk(x)
         else:
             x = checkpoint_sequential(self.blocks, 4, x)
-
         x = self.norm(x)
+
+        if self.config.tem_mod == 'self_atten':
+            x = rearrange(x, '(b t) n d -> (b n) t d',t=ts)
+            
+            # temporal attention 
+            for tem_blk in self.temporal_blocks:
+                x = tem_blk(x)
+                
+            x = self.norm(x)
+            x = rearrange(x, '(b n) t d -> b t n d',t=ts,b=b)
+            x = self.final_layer(x)
+        
+        elif self.config.tem_mod == 'temporal_bundling':
+
+            x = rearrange(x, '(b t) n d -> b t n d',t=ts)[:, -1, :, :]
+            x = rearrange(x, 'b n d -> (b n) d')
+
+            dt = torch.cumsum(torch.ones(1, self.time_window, 1, device=x.device), dim=1).repeat(1,1,self.latent_dim)
+            # [batch*n_nodes, hidden_dim] -> 1DCNN([batch*n_nodes, 1, hidden_dim]) -> [batch*n_nodes, time_window]
+            diff = self.output_mlp(x[:, None]).squeeze(1)
+            diff = diff.reshape(-1, self.time_window, self.latent_dim)
+
+            u_last = x[:, -self.latent_dim:] 
+            u_last = u_last.unsqueeze(1) 
+            x = u_last + dt * diff
+
+            x = rearrange(x, '(b n) t d -> b t n d',b=b)
+            x = self.final_layer(x)
+            # x = x.reshape(-1, self.time_window*self.pred_var)  
+            
+
+        elif self.config.tem_mod == 'node':
+
+            # from torchdiffeq import odeint
+            from torchdiffeq import odeint_adjoint as odeint
+            
+            class ODEFunc(nn.Module):
+                def __init__(self, derivative_net):
+                    super().__init__()
+                    self.net = derivative_net
+
+                def forward(self, t, y):
+                    return self.net(y)
+            ode_func = ODEFunc(self.derivative_net)
+            
+            x = rearrange(x, '(b t) n d -> b t n d',t=ts)[:, -1, :, :].reshape(-1, x.size(-1))
+            t = torch.linspace(0, 1, self.forecast_horizon + 1).to(x.device)
+            pred_z = odeint(ode_func, x, t, method='dopri5')
+            # Remove the initial state, permute to [batch*seq_len, time, features]
+            pred_z = (pred_z[1:]).permute(1, 0, 2) 
+            x = rearrange(pred_z, '(b n) t d -> b t n d',n=seq_len)
+            x = self.final_layer(x)
+
+
         x = self.unpatch(x)
+
         return x
 
     def forward(self, x, target, grid, criterion=None):
@@ -315,6 +481,30 @@ def checkpoint_filter_fn(state_dict, model):
     return out_dict
 
 if __name__ == '__main__':
-    a = torch.randn((1,4,128,128))
-    model = self_atten()
-    print(model(a).shape)
+    args = {
+        "patch_size": 4,
+        "num_attention_heads": 8,
+        "hidden_size": 768,
+        "embed_dim": 768,
+        "num_layers": 12,
+        "mixing_type": "sa",  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
+        "fno_bias": False,
+        "fno_blocks": 1,
+        "fno_softshrink": 0.00,
+        "double_skip": False,
+        "checkpoint_activations": False,
+        "ls_w": 4,
+        "ls_dp_rank": 16,
+        "input_size": 128,
+        "in_chans": 4,
+        "reduced_resolution": 4,
+        "initial_step": 5,
+        "forecast_horizon": 5,
+        "tem_mod": "self_atten"
+    }
+    from argparse import Namespace
+    args = Namespace(**args)
+    # [B,C,H,W] or [B,T,C,H,W]
+    a = torch.randn((1,5,4,128,128))
+    model = self_atten(args=args)
+    print(model(a,a,None,torch.nn.MSELoss())[0].shape)

@@ -18,21 +18,34 @@ def compute_knn_graph(coords, k):
     
     return edge_index
 
-def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_new=None, is_train=True, k=20, num_workers=1, shuffle=True):
+def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_new=None, is_train=True, k=20, num_workers=1, shuffle=True,args={}):
     data_list = []
     first_iter = True
     # transform = VirtualNode()
     train_mean, train_std = normalizer
     dataset.data = (dataset.data * train_std) + train_mean
     if is_train:
-        new_mean = dataset.data.mean(dim=(0, 1, 2, 3), keepdim=True)
-        new_std = dataset.data.std(dim=(0, 1, 2, 3), keepdim=True)
-        new_std = torch.where(new_std == 0, torch.ones_like(new_std), new_std)
-        dataset.data = (dataset.data - new_mean) / new_std
+        if isinstance(dataset.data, torch.Tensor):
+            new_mean = dataset.data.mean(dim=(0, 1, 2, 3), keepdim=True)
+            new_std = dataset.data.std(dim=(0, 1, 2, 3), keepdim=True)
+            new_std = torch.where(new_std == 0, torch.ones_like(new_std), new_std)
+            dataset.data = (dataset.data - new_mean) / new_std
+        elif isinstance(dataset.data, np.ndarray):
+            new_mean = np.mean(dataset.data, axis=(0, 1, 2, 3), keepdims=True)
+            new_std = np.std(dataset.data, axis=(0, 1, 2, 3), keepdims=True)
+            new_std = np.where(new_std == 0, 1.0, new_std)
+            dataset.data = (dataset.data - new_mean) / new_std
+        else:
+            raise TypeError(f"Unsupported data type {type(dataset.data)} for normalization.")
     else:
         new_mean, new_std = normalizer_new
-        dataset.data = (dataset.data - new_mean) / new_std
-    
+        if isinstance(dataset.data, torch.Tensor):
+            dataset.data = (dataset.data - new_mean) / new_std
+        elif isinstance(dataset.data, np.ndarray):
+            dataset.data = (dataset.data - new_mean) / new_std
+        else:
+            raise TypeError(f"Unsupported data type {type(dataset.data)} for normalization.")
+
     for i in range(len(dataset)):
         x, y, grid = dataset[i]
         var_dim = x.shape[-1]
@@ -58,14 +71,19 @@ def get_graph_dataloader(dataset, rand_idx, batch_size, normalizer, normalizer_n
             first_iter = False
         
         if len(x.shape) == 4:
+            
             temporal_dim = x.shape[-2]
         else:
             temporal_dim = 1
 
         coords = grid.reshape(-1, 2)  # shape: [16384, 2]
         node_coords = coords[rand_idx]  # shape: [1000, 2]
-        x = x.reshape(-1, temporal_dim*all_var_dim)[rand_idx]
-        y = y.reshape(-1, temporal_dim*var_dim)[rand_idx]
+        if hasattr(args, "if_rollout") and args.if_rollout:
+            x = x.reshape(-1, temporal_dim, all_var_dim)[rand_idx]
+            y = y.reshape(-1, temporal_dim, var_dim)[rand_idx]
+        else:
+            x = x.reshape(-1, temporal_dim*all_var_dim)[rand_idx]
+            y = y.reshape(-1, temporal_dim*var_dim)[rand_idx]
 
         edge_index = compute_knn_graph(node_coords, k=k)
         

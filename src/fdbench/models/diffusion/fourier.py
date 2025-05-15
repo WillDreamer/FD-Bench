@@ -65,7 +65,7 @@ class FourierDenoiser(nn.Module):
         self.gamma = args.denoiser_gamma
         self.width = args.denoiser_width
         self.padding = 2 # pad the domain if input is non-periodic
-        num_channels = args.denoiser_in_chans
+        num_channels = args.in_chans * 2
         self.fc0 = nn.Linear(num_channels+args.denoiser_time_dim, self.width)
         # input channel is 12: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
 
@@ -101,7 +101,7 @@ class FourierDenoiser(nn.Module):
         x = x.permute(0, 3, 1, 2)
         
         # Pad tensor with boundary condition
-        # x = F.pad(x, [0, self.padding, 0, self.padding])
+        x = F.pad(x, [0, self.padding, 0, self.padding])
 
         x1 = self.conv0(x)
         x2 = self.w0(x)
@@ -130,5 +130,4 @@ class FourierDenoiser(nn.Module):
         x = self.fc2(x)
         x = x.permute(0, 3, 1, 2)
         
-        exit()
         return x

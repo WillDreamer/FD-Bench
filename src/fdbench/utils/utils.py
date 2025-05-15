@@ -16,6 +16,7 @@ import os
 import yaml
 from argparse import Namespace
 
+
 def tprint(*args, **kwargs):
     """print with time"""
     time_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -308,3 +309,4 @@ def batch_index_select(x, idx):
         return out
     else:
         raise NotImplementedError
+
