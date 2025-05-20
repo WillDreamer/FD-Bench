@@ -156,11 +156,12 @@ class DatasetSingle(Dataset):
         
         else:
             max_start = max(self.data.shape[1] - 2 * self.window_size,0)
-            
+            if max_start>10:
+                max_start=10
             rand_idx = random.randint(0, max_start)
             input_seq_gt = torch.cat([input_seq, self.forcing.unsqueeze(0).repeat(self.data.shape[1],1,1,1)], dim=1)
             if hasattr(self.args, "if_rollout") and self.args.if_rollout:
-                input_seq = input_seq_gt[rand_idx : rand_idx + self.window_size, :]
+                input_seq = input_seq_gt[0:self.window_size, :]
                 input_seq = input_seq.permute(2,3,0,1)
                 return input_seq, input_seq, self.grid
             else:

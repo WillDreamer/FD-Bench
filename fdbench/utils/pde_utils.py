@@ -46,14 +46,11 @@ def pde_DR(outs, grid, d1=1e-3, d2=5e-3, k=5e-3):
 
     def grad(f, wrt):
         return torch.autograd.grad(f.sum(), wrt, create_graph=True, retain_graph=True)[0]
-    import pdb
-    pdb.set_trace()
+    
     # First derivatives
     u1_grad = grad(u1, grid)
     u2_grad = grad(u2, grid)
 
-    u1_t = u1_grad[:, 2:3]
-    u2_t = u2_grad[:, 2:3]
 
     # Spatial gradients
     u1_x = u1_grad[:, 0:1]
@@ -75,11 +72,15 @@ def pde_DR(outs, grid, d1=1e-3, d2=5e-3, k=5e-3):
     reaction2 = u1 - u2
 
     # PDE residuals
-    eq1 = u1_t - d1 * lap_u1 - reaction1
-    eq2 = u2_t - d2 * lap_u2 - reaction2
+    eq1 = d1 * lap_u1 + reaction1
+    eq2 = d2 * lap_u2 + reaction2
 
-    # Optional: return residuals separately
-    return eq1 + eq2
+    mse = torch.nn.MSELoss()
+    zeros = lambda var: torch.zeros_like(var, dtype=torch.float32, device=var.device)
+    loss = (
+        mse(eq1, zeros(eq1)) +
+        mse(eq2, zeros(eq2)) )
+    return loss
 
 
 

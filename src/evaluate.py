@@ -303,7 +303,7 @@ def main(args):
                             # 输出预测
                             axes[idx].imshow(input_test[i, :, :, k, j].numpy(), cmap='coolwarm')
                             axes[idx].axis('off')
-                            axes[idx].set_title(f'Sample {i+1}, Step {k+1}, Ch {j+1}',fontdict=fontdict)
+                            # axes[idx].set_title(f'Sample {i+1}, t = {k+1}, C = {j+1}',fontdict=fontdict)
 
                             # Ground Truth
                             axes[idx + (len(axes) // 2)].imshow(targets[i, :, :, k, j].numpy(), cmap='coolwarm')
