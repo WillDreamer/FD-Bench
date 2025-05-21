@@ -1,17 +1,12 @@
 import argparse
 from argparse import Namespace
-import datetime
-import math
 import numpy as np
 import torch
 import os
-import json
 from pathlib import Path
 import importlib
 import random
-from copy import deepcopy
 import logging
-from collections import OrderedDict
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import ProjectConfiguration, set_seed
@@ -72,24 +67,6 @@ def align_and_load_state_dict(model, state_dict, strict=False, verbose=True):
     # Step 3: Load the state_dict
     model.load_state_dict(filtered_state_dict, strict=strict)
 
-# def align_and_load_state_dict(model, state_dict):
-#     model_keys = list(model.state_dict().keys())
-#     ckpt_keys = list(state_dict.keys())
-
-#     model_has_module = any(k.startswith('module.') for k in model_keys)
-#     ckpt_has_module = any(k.startswith('module.') for k in ckpt_keys)
-
-#     if model_has_module and not ckpt_has_module:
-
-#         print("Model expects 'module.' prefix but checkpoint does not have it. Adding prefix...")
-#         state_dict = {f'module.{k}': v for k, v in state_dict.items()}
-#     elif not model_has_module and ckpt_has_module:
-#         print("Checkpoint has 'module.' prefix but model does not expect it. Removing prefix...")
-#         state_dict = {k[len('module.'):]: v for k, v in state_dict.items()}
-#     else:
-#         print("No prefix adjustment needed.")
-
-#     model.load_state_dict(state_dict)
 
 def main(args):
     
@@ -143,7 +120,6 @@ def main(args):
     train_data = data_module(args = args)
     normalizer = train_data.__normalizer__
     test_data = data_module(if_test=True,args = args,normalizer=normalizer)
-    # test_data = data_module(if_testid=True,args = args,normalizer=normalizer)
 
     if not args.spa_mod == 'graph':
         data_loader_test = torch.utils.data.DataLoader(test_data, batch_size=args.batch_size,
@@ -286,7 +262,10 @@ def main(args):
                     targets = rearrange(target_test, "B T C H W -> B H W T C").detach().cpu()
 
                 for i in range(min(input_test.size(0), 4)):
-                    T = input_test.size(-2)
+                    if len(outputs.shape) == 4:
+                        T = 1
+                    else:
+                        T = input_test.size(-2)
                     C = input_test.size(-1)
                     fig, axes = plt.subplots(2 * T, C, figsize=(16, 9))
 
@@ -308,7 +287,7 @@ def main(args):
                             # Ground Truth
                             axes[idx + (len(axes) // 2)].imshow(targets[i, :, :, k, j].numpy(), cmap='coolwarm')
                             axes[idx + (len(axes) // 2)].axis('off')
-                            axes[idx + (len(axes) // 2)].set_title(f'GT {i+1}, Step {k+1}, Ch {j+1}',fontdict=fontdict)
+                            # axes[idx + (len(axes) // 2)].set_title(f'GT {i+1},  t={k+1}, C={j+1}',fontdict=fontdict)
 
                     plt.tight_layout(pad=0.5, w_pad=2, h_pad=2)
                     pdf.savefig(fig, dpi=300)
