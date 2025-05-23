@@ -270,11 +270,12 @@ class DatasetSingle(Dataset):
         
         else:
             max_start = max(self.data.shape[-2] - 2 * self.window_size,0)
-            rand_idx = random.randint(0, max_start)
+            
             if hasattr(self.args, "if_rollout") and self.args.if_rollout:
-                input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
+                input_seq = self.data[idx, ..., :self.window_size, :]
                 return input_seq, input_seq, self.grid
             else:
+                rand_idx = random.randint(0, max_start)
                 input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
                 target_seq = self.data[idx, ..., rand_idx + self.window_size : rand_idx + 2 * self.window_size, :]
                 if self.window_size == 1:

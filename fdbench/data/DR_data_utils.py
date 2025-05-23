@@ -143,7 +143,7 @@ class DatasetSingle(Dataset):
             rand_idx = random.randint(0, max_start)
             # shape [B, H, W, T, D]
             if hasattr(self.args, "if_rollout") and self.args.if_rollout:
-                input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]
+                input_seq = self.data[idx, ..., :self.window_size, :]
                 return input_seq, input_seq, self.grid
             else:
                 input_seq = self.data[idx, ..., rand_idx : rand_idx + self.window_size, :]

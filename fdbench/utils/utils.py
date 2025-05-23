@@ -1,10 +1,4 @@
-# Copyright (c) 2015-present, Facebook, Inc.
-# All rights reserved.
-"""
-Misc functions, including distributed helpers.
 
-Mostly copy-paste from torchvision references.
-"""
 import io
 import os
 import time
@@ -27,22 +21,20 @@ def remove_virtual_nodes(output, batch_y, batch_ptr):
     device = output.device
     num_nodes = output.size(0)
 
-    virtual_node_indices = batch_ptr[1:] - 1  # 每个图的最后一个节点
+    virtual_node_indices = batch_ptr[1:] - 1  
     mask = torch.ones(num_nodes, dtype=torch.bool, device=device)
-    mask[virtual_node_indices] = False  # 去掉虚拟节点
+    mask[virtual_node_indices] = False  
 
     output_clean = output[mask]
     y_clean = batch_y[mask]
     return output_clean, y_clean, mask
 
 def load_config(config_path):
-    """加载YAML配置文件"""
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     return config
 
 def update_config(config, updates):
-    """更新配置"""
     for k, v in updates.items():
         if isinstance(v, dict):
             config[k] = update_config(config.get(k, {}), v)
@@ -51,7 +43,6 @@ def update_config(config, updates):
     return config
 
 def config_to_args(config):
-    """将配置字典转换为Namespace对象"""
     args = Namespace()
     for category in config:
         for key, value in config[category].items():
@@ -59,7 +50,6 @@ def config_to_args(config):
     return args
 
 def get_config(config_path=None, config_updates=None):
-    """获取完整配置"""
         
     config = load_config(config_path)
         

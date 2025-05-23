@@ -1,8 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 from .self_attention import SADenoiser
+
+def mean_flat(x):
+    """
+    Take the mean over all non-batch dimensions.
+    """
+    return torch.mean(x, dim=list(range(1, len(x.size()))))
 
 def expand_t_like_x(t, x_cur):
     """Function to reshape time t to broadcastable dimension of x
@@ -74,12 +81,11 @@ def euler_sampler(
                 model_input = x_cur
                 condition_ = condition
                 # y_cur = y            
-            kwargs = dict()
-            time_input = torch.ones(model_input.size(0)).to(device=device, dtype=torch.float64) * t_cur
+            time_input = torch.ones(model_input.size(0)).to(device=device, dtype=torch.float64)* t_cur
             # print(condition.shape,model_input.shape)
             d_cur = model(
-                model_input.to(dtype=_dtype), time_input.to(dtype=_dtype),condition=condition_, **kwargs
-                )[0].to(torch.float64)
+                model_input.to(dtype=_dtype), time_input.to(dtype=_dtype),condition=condition_,
+                ).to(torch.float64)
             if cfg_scale > 1. and t_cur <= guidance_high and t_cur >= guidance_low:
                 d_cur_cond, d_cur_uncond = d_cur.chunk(2)
                 d_cur = d_cur_uncond + cfg_scale * (d_cur_cond - d_cur_uncond)                
@@ -93,13 +99,12 @@ def euler_sampler(
                 else:
                     model_input = x_next
                     # y_cur = y
-                kwargs = dict()
                 time_input = torch.ones(model_input.size(0)).to(
                     device=model_input.device, dtype=torch.float64
                     ) * t_next
                 d_prime = model(
-                    model_input.to(dtype=_dtype), time_input.to(dtype=_dtype), **kwargs
-                    )[0].to(torch.float64)
+                    model_input.to(dtype=_dtype), time_input.to(dtype=_dtype)
+                    ).to(torch.float64)
                 if cfg_scale > 1.0 and t_cur <= guidance_high and t_cur >= guidance_low:
                     d_prime_cond, d_prime_uncond = d_prime.chunk(2)
                     d_prime = d_prime_uncond + cfg_scale * (d_prime_cond - d_prime_uncond)
@@ -141,8 +146,6 @@ class SILoss:
         return alpha_t, sigma_t, d_alpha_t, d_sigma_t
 
     def __call__(self, model, images, raw_image, model_kwargs=None, zs=None):
-        if model_kwargs == None:
-            model_kwargs = {}
         # sample timesteps
         if self.weighting == "uniform":
             time_input = torch.rand((images.shape[0], 1, 1, 1))
@@ -163,8 +166,8 @@ class SILoss:
         model_input = alpha_t * images + sigma_t * noises
         model_target = d_alpha_t * images + d_sigma_t * noises
 
-        model_output = model(x = model_input, t=time_input.flatten(),condition=condition, **model_kwargs)
-        denoising_loss = mean_flat((model_output - model_target) ** 2)
+        model_output = model(x = model_input, t=time_input.flatten(),condition=condition)
+        denoising_loss = mean_flat((model_output - model_target) ** 2).mean()
 
         return model_output,denoising_loss
 
@@ -190,6 +193,7 @@ class flow(nn.Module):
     
     def euler_sample(self, x, target, grid, criterion=None):
         sample_input = torch.randn_like(target, device=target.device)
+        
         samples = euler_sampler(
             self.model, 
             sample_input, 

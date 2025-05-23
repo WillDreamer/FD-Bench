@@ -5,7 +5,7 @@ paths:
 
 training:
   batch_size: 32 # cannot be 1
-  epochs: 4000
+  epochs: 500
   resume_step: 0
   checkpointing_steps: 2000
   eval_steps: 2000
@@ -13,6 +13,11 @@ training:
   seed: 42
   num_workers: 0
   pin_mem: true
+
+rollout:
+  if_rollout: True
+  roll_step: 20
+  start_step: 5
 
 model:
   spa_mod: 'latent'  #* choices: ['self_atten', 'fourier', 'graph', 'latent']
@@ -41,24 +46,33 @@ model:
 
   # for resolution
 
-  # latent_resolution: 16
-  # Ly: 128
-  # Lx: 128
-  # resolution: 128
+  latent_resolution: 16
+  Ly: 128
+  Lx: 128
+  resolution: 128
 
-  Ly: 256
-  Lx: 256
-  resolution: 256
-  latent_resolution: 32
+  # Ly: 256
+  # Lx: 256
+  # resolution: 256
+  # latent_resolution: 32
 
 data:
+  # PDE_type: 'CNS'      #* choices: ['CNS']
+  # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
+  # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  # input_size: 128 
+  # in_chans: 4
+  # out_chans: 4 
+  # reduced_resolution: 4
+  # in_channels: 4   
+
   PDE_type: 'CNS'      #* choices: ['CNS']
   data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
-  data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
+  data_set: '2D_CFD_Rand_M0.1_Eta0.1_Zeta0.1_periodic_128_Train.hdf5'       #* file_name
   input_size: 128 
-  in_chans: 4
+  in_chans: 4 
   out_chans: 4 
-  reduced_resolution: 2
+  reduced_resolution: 1
   in_channels: 4   
 
   # PDE_type: 'DR'

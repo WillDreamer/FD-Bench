@@ -20,5 +20,4 @@ def display_directory_tree(directory):
     build_tree(directory, tree)
     console.print(tree)
 
-# 调用函数
-display_directory_tree('/home/whx/FD-Bench')
+display_directory_tree('./FD-Bench')

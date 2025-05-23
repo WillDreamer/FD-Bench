@@ -6,8 +6,8 @@ paths:
   report_to: 'wandb'
 
 training:
-  batch_size: 96
-  epochs: 30000
+  batch_size: 48
+  epochs: 40000
   resume_step: 0
   checkpointing_steps: 5000
   eval_steps: 2000
@@ -42,37 +42,38 @@ model:
   # denoiser_out_chans: 4
   # denoiser_gamma: 1
 
-  # # For conv
-  # denoiser_type: "unet"
-  # denoiser_ch: 256
-  # denoiser_out_ch: 4
-  # denoiser_ch_mult: [1, 1, 2, 2]
-  # denoiser_num_res_blocks: 1
-  # denoiser_attn_resolutions: [16,]
-  # denoiser_dropout: 0.0
-  # denoiser_in_channels: 8
-  # denoiser_resamp_with_conv: True
+  # For conv
+  denoiser_type: "unet"
+  denoiser_ch: 256
+  denoiser_out_ch: 5
+  denoiser_ch_mult: [1, 1, 2, 2]
+  denoiser_num_res_blocks: 1
+  denoiser_attn_resolutions: [16,]
+  denoiser_dropout: 0.0
+  denoiser_in_channels: 10
+  denoiser_resamp_with_conv: True
 
-  # For self-attention
-  denoiser_type: "self_attention"
-  patch_size: 8
-  num_attention_heads: 6
-  hidden_size: 768
-  embed_dim: 768
-  num_layers: 12
-  mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
-  fno_bias: false
-  fno_blocks: 1
-  fno_softshrink: 0.00
-  double_skip: false
-  checkpoint_activations: false
-  ls_w: 4
-  ls_dp_rank: 16
-  in_chans_ratio: 4
-  denoiser_theta: 10000
+  # # For self-attention
+  # denoiser_type: "self_attention"
+  # patch_size: 8
+  # num_attention_heads: 6
+  # hidden_size: 768
+  # embed_dim: 768
+  # num_layers: 12
+  # mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
+  # fno_bias: false
+  # fno_blocks: 1
+  # fno_softshrink: 0.00
+  # double_skip: false
+  # checkpoint_activations: false
+  # ls_w: 4
+  # ls_dp_rank: 16
+  # in_chans_ratio: 4
+  # denoiser_theta: 10000
 
 
 data:
+
   PDE_type: 'CNS'      #* choices: ['CNS']
   data_path: 'your_path'                #* your path to data
   data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5' #* file_name
@@ -82,6 +83,7 @@ data:
   reduced_resolution: 4
   denoiser_time_dim: 8
 
+
   # PDE_type: 'DR'
   # data_path: 'your_path'
   # data_set: '2D_diff-react_NA_NA.h5'
@@ -89,6 +91,7 @@ data:
   # in_chans: 2
   # reduced_resolution: 1
   # denoiser_time_dim: 4
+
 
   # PDE_type: 'KF'
   # data_path: 'your_path'
@@ -100,6 +103,7 @@ data:
   # in_chans: 5
   # reduced_resolution: 1
   # denoiser_time_dim: 10
+
 
   window_size: 1
   reduced_resolution_t: 1 
@@ -119,8 +123,8 @@ optimizer:
   adam_epsilon: 1.0e-8
 
 lr_scheduler:
-  scheduler: 'lambda'
-  lr: 5.0e-4
+  scheduler: 'CosineAnnealingWarmRestarts'
+  lr: 1.0e-4
   step_size_up: 1000
   step_size_down: 1000
   lr_noise: null
