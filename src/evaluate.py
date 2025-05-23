@@ -246,54 +246,71 @@ def main(args):
                 from einops import rearrange 
                 import matplotlib.pyplot as plt
                 vis_pdf_path = os.path.join('/wanghaixin/FD-Bench/vis', args.exp_name + '.pdf')
-                pdf = PdfPages(vis_pdf_path)
                 
                 fontdict = {
                     'fontsize': 16,
                     'fontweight': 'bold',  #  'normal', 'bold', 'light'
-                    'family': 'serif',     # 'sans-serif', 'monospace', etc.
                 }
 
                 if len(outputs.shape) == 4:
-                    input_test = rearrange(outputs, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
+                    pred = rearrange(outputs, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
                     targets = rearrange(target_test, "B C H W -> B H W C").detach().cpu().unsqueeze(-2)
                 elif len(outputs.shape) == 5:
-                    input_test = rearrange(outputs, "B T C H W -> B H W T C").detach().cpu()
+                    pred = rearrange(outputs, "B T C H W -> B H W T C").detach().cpu()
                     targets = rearrange(target_test, "B T C H W -> B H W T C").detach().cpu()
 
-                for i in range(min(input_test.size(0), 4)):
-                    if len(outputs.shape) == 4:
-                        T = 1
-                    else:
-                        T = input_test.size(-2)
-                    C = input_test.size(-1)
-                    fig, axes = plt.subplots(2 * T, C, figsize=(16, 9))
 
-                    # 安全处理 axes
-                    if isinstance(axes, plt.Axes):
-                        axes = np.array([axes])
-                    else:
-                        axes = np.array(axes).flatten()
+                if len(pred.shape) == 4:
+                    T = 1
+                else:
+                    T = pred.size(-2)
+                C = pred.size(-1)
 
-                    for j in range(C):
-                        for k in range(T):
-                            idx = k * C + j
+                # 新的行、列
+                nrows = C
+                ncols = 3 * T
+                inch_per_subplot = 3
+                fig, axes = plt.subplots(
+                    nrows=nrows, ncols=ncols,
+                    figsize=(inch_per_subplot * ncols, inch_per_subplot * nrows),
+                    dpi=500
+                )
 
-                            # 输出预测
-                            axes[idx].imshow(input_test[i, :, :, k, j].numpy(), cmap='coolwarm')
-                            axes[idx].axis('off')
-                            # axes[idx].set_title(f'Sample {i+1}, t = {k+1}, C = {j+1}',fontdict=fontdict)
+                fontdict = {
+                    'fontsize': 16,
+                    'fontweight': 'normal',
+                    'family': 'serif',
+                }
 
-                            # Ground Truth
-                            axes[idx + (len(axes) // 2)].imshow(targets[i, :, :, k, j].numpy(), cmap='coolwarm')
-                            axes[idx + (len(axes) // 2)].axis('off')
-                            # axes[idx + (len(axes) // 2)].set_title(f'GT {i+1},  t={k+1}, C={j+1}',fontdict=fontdict)
+                for j in range(C):          # 行索引：通道
+                    for k in range(T):      # 时间步
+                        # 列索引：预测、GT、残差 分别沿着时间维度排列
+                        col_pred = k
+                        col_gt   = T + k
+                        col_res  = 2*T + k
 
-                    plt.tight_layout(pad=0.5, w_pad=2, h_pad=2)
-                    pdf.savefig(fig, dpi=300)
-                    plt.close(fig)
+                        # 1) Prediction
+                        ax = axes[j, col_pred]
+                        ax.imshow(pred[0, :, :, k, j].detach().cpu().numpy(), cmap='viridis')
+                        ax.axis('off')
+                        ax.set_title(f'Prediction t={k+1}, C={j+1}', fontdict=fontdict)
 
-                pdf.close()
+                        # 2) Ground Truth
+                        ax = axes[j, col_gt]
+                        ax.imshow(targets[0, :, :, k, j].detach().cpu().numpy(), cmap='viridis')
+                        ax.axis('off')
+                        ax.set_title(f'GT t={k+1}, C={j+1}', fontdict=fontdict)
+
+                        # 3) Residual
+                        residuals = targets - pred
+                        ax = axes[j, col_res]
+                        ax.imshow(residuals[0, :, :, k, j].detach().cpu().numpy(), cmap='viridis')
+                        ax.axis('off')
+                        ax.set_title(f'Residual t={k+1}, C={j+1}', fontdict=fontdict)
+
+                plt.tight_layout()
+                plt.savefig(vis_pdf_path,bbox_inches='tight',pad_inches=0.1, dpi=500)
+                plt.close()
 
             Lx, Ly, Lz = 1., 1., 1.
             _err_RMSE, _err_nRMSE, _err_CSV, _err_Max, _err_BD, _err_F \
@@ -328,8 +345,6 @@ if __name__ == '__main__':
     parser.add_argument("--remark", type=str, default=' ', help="Training remark")
     parser.add_argument("--exp_name", type=str, default=' ', help="Training remark")
     parser.add_argument("--resume_step", type=int, default=10000, help="Training remark")
-    parser.add_argument("--roll_step", type=int, default=-1, help="Training remark")
-    parser.add_argument("--if_rollout", type=bool, default=False, help="Training remark")
     default_args = parser.parse_args()
     
     args = get_config(config_path=default_args.config_file)
