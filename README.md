@@ -15,7 +15,7 @@ conda create -n fdbench python=3.10
 pip install -r requirements.txt
 ```
 
-All our experiments are based on 8 $\times$ A6000 (40G).
+All our experiments are based on 8 $\times$ A6000 (48G).
 
 ---
 
@@ -24,7 +24,7 @@ All our experiments are based on 8 $\times$ A6000 (40G).
 To install FD-Bench in editable mode:
 
 ```bash
-git clone https://github.com/WillDreamer/FD-Bench.git
+git clone https://github.com/xxxxx/FD-Bench.git
 cd FD-Bench
 pip install -e .
 ```
@@ -35,6 +35,8 @@ pip install -e .
 
 Our benchmark is validated on various types of PDE from multiple data sources.
 - For `CNS` (compressible N-S Equation) data, we follow the setting of [**PDEBench**](https://github.com/pdebench/PDEBench).
+- For `DR` (diffusion-reaction Equation) data, we follow the setting of [**PDEBench**](https://github.com/pdebench/PDEBench).
+- For `KF` (incompressible N-S Equation ) data, we follow the setting of [**Posiden**](https://huggingface.co/collections/camlab-ethz/poseidon-downstream-tasks-664fa237cd6b0c097971ef14).
 
 ---
 
@@ -43,7 +45,7 @@ Our benchmark is validated on various types of PDE from multiple data sources.
 ```
 FD-Bench/
 ├── setup.py               # Installation setup script
-├── ckpt/                  # Pretrained checkpoints and logs
+├── exps/                  # Pretrained checkpoints and logs
 │   ├── checkpoint_afno_last.pth
 │   └── log.txt
 ├── runs/                  # Output of model runs (e.g., logs, checkpoints)
@@ -132,7 +134,7 @@ If you add your own model within this benchmark framework, you should:
 
 
 ### 🤝  Collaboration
-Feel free to open issues or submit pull requests for improvements and bug fixes. Contributions are welcome! Drop me a line at `whx@cs.ucla.edu'📮📮📮
+Feel free to open issues or submit pull requests for improvements and bug fixes. Contributions are welcome! Drop me a line at `xxxx'📮📮📮
 
 ---
 
