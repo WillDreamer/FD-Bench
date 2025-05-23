@@ -68,14 +68,14 @@ data:
 
   # PDE_type: 'Well'
   # well_dataset_name: "shear_flow"
-  # data_path: '/wanghaixin/well/datasets/'
+  # data_path: 'your_path'
   # data_set: 'shear_flow_Reynolds_1e5_Schmidt_1e1.hdf5'
   # input_size: 128
   # in_chans: 4
   # reduced_resolution: 2
 
   # PDE_type: 'KF'
-  # data_path: '/wanghaixin/FNS-KF/'
+  # data_path: 'your_path'
   # data_set: 'FNS-KF.nc'
   # num_trajectories: -1
   # max_trajectories: 1000
