@@ -1,7 +1,7 @@
 paths:
-  output_dir: '/wanghaixin/FD-Bench/exps'  #* your path to save exp log and ckpt
+  output_dir: 'your_path/FD-Bench/exps'  #* your path to save exp log and ckpt
   report_to: wandb   #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: '/wanghaixin/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  tensorboard_dir: 'your_path/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 320
@@ -46,21 +46,21 @@ model:
 
 data:
   # PDE_type: 'CNS'      
-  # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
+  # data_path: 'your_path/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
   # data_set: '2D_CFD_Rand_M0.1_Eta1e-08_Zeta1e-08_periodic_512_Train.hdf5'       #* file_name
   # input_size: 128 
   # in_chans: 4 
   # reduced_resolution: 4
 
   # PDE_type: 'CNS'      #* choices: ['CNS']
-  # data_path: '/wanghaixin/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
+  # data_path: 'your_path/PDEBench/data/2D/CFD/2D_Train_Rand/'                  #* your path to data
   # data_set: '2D_CFD_Rand_M0.1_Eta0.1_Zeta0.1_periodic_128_Train.hdf5'       #* file_name
   # input_size: 128 
   # in_chans: 4 
   # reduced_resolution: 1
   
   # PDE_type: 'DR'
-  # data_path: '/wanghaixin/PDEBench/data/2D/diffusion-reaction/'
+  # data_path: 'your_path/PDEBench/data/2D/diffusion-reaction/'
   # data_set: '2D_diff-react_NA_NA.h5'
   # input_size: 128
   # in_chans: 2
@@ -68,14 +68,14 @@ data:
 
   # PDE_type: 'Well'
   # well_dataset_name: "shear_flow"
-  # data_path: '/wanghaixin/well/datasets/'
+  # data_path: 'your_path/well/datasets/'
   # data_set: 'shear_flow_Reynolds_1e5_Schmidt_1e1.hdf5'
   # input_size: 128
   # in_chans: 4
   # reduced_resolution: 2
 
   PDE_type: 'KF'
-  data_path: '/wanghaixin/FNS-KF/'
+  data_path: 'your_path/FNS-KF/'
   data_set: 'FNS-KF.nc'
   num_trajectories: -1
   max_trajectories: 1000
