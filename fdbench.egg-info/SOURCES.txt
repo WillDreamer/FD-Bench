@@ -1,7 +1,0 @@
-LICENSE
-README.md
-setup.py
-fdbench.egg-info/PKG-INFO
-fdbench.egg-info/SOURCES.txt
-fdbench.egg-info/dependency_links.txt
-fdbench.egg-info/top_level.txt
