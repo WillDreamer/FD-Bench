@@ -82,7 +82,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Testing Configuration")
-    parser.add_argument("--config_file", type=str, default='/wanghaixin/FD-Bench/config/vis/vis.yaml', help="Path to the configuration file")
+    parser.add_argument("--config_file", type=str, default='your_path/FD-Bench/config/vis/vis.yaml', help="Path to the configuration file")
     parser.add_argument("--remark", type=str, default=' ', help="Training remark")
     parser.add_argument("--exp_name", type=str, default='vis_CNS', help="Training remark")
     default_args = parser.parse_args()
