@@ -1,7 +1,4 @@
-# This code snippet is modified from: https://github.com/microsoft/pdearena/blob/main/pdearena/modules/conditioned/fourier_cond.py
 
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.
 import torch
 from torch import nn
 from fdbench.models.latent.modules.cond_utils import ConditionedBlock

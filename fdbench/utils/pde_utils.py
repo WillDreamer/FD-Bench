@@ -1,35 +1,6 @@
 import numpy as np
 import torch
 
-
-# def reaction_1(u1, u2):
-#     k = 5e-3
-
-#     return u1 - (u1 * u1 * u1) - k - u2
-# def reaction_2(u1, u2):
-#     return u1 - u2
-
-# def pde_DR(y,x):
-#     d1 = 1e-3
-#     d2 = 5e-3
-
-#     du1_xx = dde.grad.hessian(y, x, i=0, j=0, component=0)
-#     du1_yy = dde.grad.hessian(y, x, i=1, j=1, component=0)
-#     du2_xx = dde.grad.hessian(y, x, i=0, j=0, component=1)
-#     du2_yy = dde.grad.hessian(y, x, i=1, j=1, component=1)
-
-#     # TODO: check indices of jacobian
-#     du1_t = dde.grad.jacobian(y, x, i=0, j=2)
-#     du2_t = dde.grad.jacobian(y, x, i=1, j=2)
-
-#     u1 = y[:,0].unsqueeze(1)
-#     u2 = y[:,1].unsqueeze(1)
-
-#     eq1 = du1_t - reaction_1(u1, u2) - d1 * (du1_xx + du1_yy)
-#     eq2 = du2_t - reaction_2(u1, u2) - d2 * (du2_xx + du2_yy)
-
-#     return eq1 + eq2
-
 def pde_DR(outs, grid, d1=1e-3, d2=5e-3, k=5e-3):
     """
     Reaction-Diffusion system PDE residuals

@@ -282,9 +282,9 @@ def main(args):
                     'family': 'serif',
                 }
 
-                for j in range(C):          # 行索引：通道
-                    for k in range(T):      # 时间步
-                        # 列索引：预测、GT、残差 分别沿着时间维度排列
+                for j in range(C):          
+                    for k in range(T):     
+                        
                         col_pred = k
                         col_gt   = T + k
                         col_res  = 2*T + k

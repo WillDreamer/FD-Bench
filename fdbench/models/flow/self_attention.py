@@ -1,11 +1,3 @@
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# GLIDE: https://github.com/openai/glide-text2im
-# MAE: https://github.com/facebookresearch/mae/blob/main/models_mae.py
-# --------------------------------------------------------
-
 import torch
 import torch.nn as nn
 import numpy as np
@@ -18,7 +10,6 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from functools import partial
-import pdb
 
 
 def build_mlp(hidden_size, projector_dim, z_dim):
@@ -325,8 +316,6 @@ class SiT(nn.Module):
         t: (N,) tensor of diffusion timesteps
         y: (N,) tensor of class labels
         """
-        #* cross-atten
-        # x: (64, 4, 128, 128)
         
         x = self.x_embedder(x, self.pos_embed)  # (N, T, D), where T = H * W / patch_size ** 2
         if condition is not None:
@@ -341,15 +330,11 @@ class SiT(nn.Module):
             x = block(x, t_embed)                      # (N, T, D)
         
         x = self.final_layer(x, t_embed, if_time=True)                # (N, T, patch_size ** 2 * out_channels)
-        x = self.unpatchify(x, cls=True) # (N, C, H, W), (64, 4, 128, 128)
+        x = self.unpatchify(x, cls=True) # (N, C, H, W)
         
         return x
 
 
-#################################################################################
-#                   Sine/Cosine Positional Embedding Functions                  #
-#################################################################################
-# https://github.com/facebookresearch/mae/blob/main/util/pos_embed.py
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False, extra_tokens=0):
     """
@@ -400,10 +385,6 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
     emb = np.concatenate([emb_sin, emb_cos], axis=1)  # (M, D)
     return emb
 
-
-#################################################################################
-#                                   SiT Configs                                  #
-#################################################################################
 
 def SADenoiser(args):
     return SiT(args=args)
