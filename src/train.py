@@ -79,7 +79,10 @@ def main(args):
     current_time = datetime.now().strftime("%m%d-%H:%M")
 
     if accelerator.is_main_process:
-        exp_name = "PDE_" + args.PDE_type + '_' + args.spa_mod + '_' +  args.tem_mod + '_' + args.pred_tgt
+        if not args.if_public_library:        
+            exp_name = "PDE_" + args.PDE_type + '_' + args.spa_mod + '_' +  args.tem_mod + '_' + args.pred_tgt
+        else:
+            exp_name = "PDE_" + args.PDE_type + '_' + args.pub_model_name
         os.makedirs(args.output_dir, exist_ok=True)  # Make results folder (holds all experiment subfolders)
         
         save_dir = os.path.join(args.output_dir, (exp_name+'_'+args.remark+'_'+current_time))
@@ -135,7 +138,6 @@ def main(args):
         # Take Neuraloperator FNO for example
         model = module(n_modes=args.n_modes, hidden_channels=args.hidden_channels,
                 in_channels=args.in_chans, out_channels=args.out_chans)
-    
 
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad) 
@@ -735,8 +737,9 @@ if __name__ == '__main__':
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     ## ComplexData <-> DDP
-    if args.spa_mod == 'fourier' or args.spa_mod == 'frequency':
-        args.mixed_precision = "no"
+    if not args.if_public_library:
+        if args.spa_mod == 'fourier' or args.spa_mod == 'frequency':
+            args.mixed_precision = "no"
         
 
     main(args) 

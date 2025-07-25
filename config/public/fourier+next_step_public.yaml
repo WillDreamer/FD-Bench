@@ -1,7 +1,7 @@
 paths:
-  output_dir: 'your_path/FD-Bench/exps'  #* your path to save exp log and ckpt
-  report_to: wandb   #* choices: ['wandb', 'tensorboard', 'all']
-  tensorboard_dir: 'your_path/FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
+  output_dir: 'FD-Bench/exps'  #* your path to save exp log and ckpt
+  report_to: tensorboard   #* choices: ['wandb', 'tensorboard', 'all']
+  tensorboard_dir: 'FD-Bench/runs/' #* path to save logs, if `report_to=tensorboard`
 
 training:
   batch_size: 320
@@ -20,8 +20,13 @@ rollout:
   start_step: 5
 
 model:
-  n_modes: (16, 16)
-  hidden_channels: 64
+  spa_mod: 'fourier'  
+  tem_mod: 'next_step'      
+  pred_tgt: 'variable'
+  n_modes: [24, 24]
+  hidden_channels: 256
+  width: 48
+  n_layers: 12
 
 
 data:
@@ -56,7 +61,7 @@ data:
   # reduced_resolution: 2
 
   PDE_type: 'KF'
-  data_path: 'your_path/FNS-KF/'
+  data_path: '/wanghaixin/FNS-KF/'
   data_set: 'FNS-KF.nc'
   num_trajectories: -1
   max_trajectories: 1000
