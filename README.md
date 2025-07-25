@@ -126,11 +126,20 @@ export WANDB_API_KEY="xxx"
 
 ## 🔥  Contributing
 
-### 🚀  Extension
+### 🚀  Model Extension
 If you add your own model within this benchmark framework, you should:
 - Add a folder under `models` with the name **your_module**.
 - Create `module.py` under `FD-Bench/fdbench/models/your_module`
 - Output the `output` and `loss` within the *forward* function in your model class.
+
+### 🏠  Build from Public Library
+For example, if you want to use the model from public library such as `neuraloperator`, you can:
+
+```bash
+
+git submodule add https://github.com/neuraloperator/neuraloperator.git fdbench/models/neuraloperator
+git submodule update --init --recursive
+```
 
 
 ### 🤝  Collaboration
