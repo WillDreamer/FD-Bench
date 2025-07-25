@@ -115,18 +115,27 @@ def main(args):
         torch.backends.cudnn.allow_tf32 = True
 
     #>>>>>> ===============================Model Design==================================
-    if args.pred_tgt == 'variable':
-        module_name = 'fdbench.models.' + args.spa_mod
-        class_name = args.spa_mod
-    elif args.pred_tgt == 'noise':
-        module_name = 'fdbench.models.diffusion'
-        class_name = 'diffusion'
-    elif args.pred_tgt == 'flow':
-        module_name = 'fdbench.models.flow'
-        class_name = 'flow'
+    if not args.if_public_library:
+        if args.pred_tgt == 'variable':
+            module_name = 'fdbench.models.' + args.spa_mod
+            class_name = args.spa_mod
+        elif args.pred_tgt == 'noise':
+            module_name = 'fdbench.models.diffusion'
+            class_name = 'diffusion'
+        elif args.pred_tgt == 'flow':
+            module_name = 'fdbench.models.flow'
+            class_name = 'flow'
     
-    module = getattr(importlib.import_module(module_name),class_name)
-    model = module(args=args)
+        module = getattr(importlib.import_module(module_name),class_name)
+        model = module(args=args)
+    else:
+        module_name = args.pub_module_name
+        class_name = args.pub_model_name
+        module = getattr(importlib.import_module(module_name), class_name)
+        # Take Neuraloperator FNO for example
+        model = module(n_modes=args.n_modes, hidden_channels=args.hidden_channels,
+                in_channels=args.in_chans, out_channels=args.out_chans)
+    
 
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad) 
@@ -715,6 +724,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Training Configuration")
     parser.add_argument("--config_file", type=str, required=True, help="Path to the configuration file")
     parser.add_argument("--remark", type=str, default=' ', help="Training remark")
+    parser.add_argument("--if_public_library", type=bool, default=False, help="Public repository")
+    parser.add_argument("--pub_module_name", type=str, default="neuralop.models", help="Public repository's name")
+    parser.add_argument("--pub_model_name", type=str, default="FNO", help="Public model's name")
+    
     default_args = parser.parse_args()
     
     args = get_config(config_path=default_args.config_file)
@@ -724,6 +737,7 @@ if __name__ == '__main__':
     ## ComplexData <-> DDP
     if args.spa_mod == 'fourier' or args.spa_mod == 'frequency':
         args.mixed_precision = "no"
+        
 
     main(args) 
     
