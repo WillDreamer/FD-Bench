@@ -315,7 +315,8 @@ def main(args):
                         if not args.if_public_library:
                             outputs, loss = model(samples,targets,grid,criterion)
                         else:
-                            outputs = model(samples)
+                            grid = grid[:samples.shape[0]]
+                            outputs = model(torch.concat([samples,grid.permute(0,3,1,2)],dim=1))
                             loss = criterion(outputs,targets)
                             
                     
@@ -446,9 +447,10 @@ def main(args):
                                     for roll_t in range(roll_step-start_t-1):
                                         target_test_t = input_test[...,start_t+roll_t+1,:].permute(0, 3, 1, 2)
                                         if not args.if_public_library:
-                                            outputs_t, loss = model(input_test_t,target_test_t,grid,criterion)
+                                            outputs_t, loss = model(input_test_t,target_test_t,grid_test,criterion)
                                         else:
-                                            outputs_t = model(input_test_t)
+                                            grid_test = grid_test[:input_test_t.shape[0]]
+                                            outputs_t = model(torch.concat([input_test_t,grid_test.permute(0,3,1,2)],dim=1))
                                             loss = criterion(outputs_t,target_test_t)
                                          
                                         input_test_t = outputs_t
@@ -471,7 +473,8 @@ def main(args):
                                         if not args.if_public_library:
                                             outputs_t, loss = model(input_test_t,target_test_t,grid,criterion)
                                         else:
-                                            outputs_t = model(input_test_t)
+                                            grid = grid[:input_test_t.shape[0]]
+                                            outputs_t = model(torch.concat([input_test_t,grid.permute(0,3,1,2)],dim=1))
                                             loss = criterion(outputs_t,target_test_t)
                                         outputs.append(outputs_t)
 
@@ -570,7 +573,9 @@ def main(args):
                                     if not args.if_public_library:
                                         flops, params = profile(target_model, inputs=(input_test[:2,:,:,0,:].permute(0,3,1,2),target_test[:2,0],grid,criterion))
                                     else:
-                                        flops, params = profile(target_model, inputs=(input_test[:2,:,:,0,:].permute(0,3,1,2)))
+                                        
+                                        inputs_ = torch.concat([input_test[:,:,:,0,:].permute(0,3,1,2),grid[:].permute(0,3,1,2)],dim=1)
+                                        flops, params = profile(target_model, inputs=(inputs_,))
                                 else:
                                     batch_thre = input_test.x.shape[0]*2/batch_size
                                     input_test.x = input_test.x[:batch_thre,0,:]
@@ -637,7 +642,12 @@ def main(args):
                                     input_test_t = input_test[...,start_t,:].permute(0, 3, 1, 2)
                                     for roll_t in range(roll_step-start_t-1):
                                         target_test_t = input_test[...,start_t+roll_t+1,:].permute(0, 3, 1, 2)
-                                        outputs_t, loss = model(input_test_t,target_test_t,grid,criterion) 
+                                        if not args.if_public_library:
+                                            outputs_t, loss = model(input_test_t,target_test_t,grid_test,criterion)
+                                        else:
+                                            grid_test = grid_test[:input_test_t.shape[0]]
+                                            outputs_t = model(torch.concat([input_test_t,grid_test.permute(0,3,1,2)],dim=1))
+                                            loss = criterion(outputs_t,target_test_t) 
                                         input_test_t = outputs_t
                                         outputs.append(outputs_t)
                                     target_test = input_test[...,1+start_t:roll_step,:].permute(0,3,4,1,2)
