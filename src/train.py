@@ -311,7 +311,13 @@ def main(args):
                             train_t = random.randint(0, samples.x.shape[-2]-2)
                             samples.x = samples.x[...,train_t,:]
                             targets = targets[...,train_t+1,:]
-                        outputs, loss = model(samples,targets,grid,criterion)
+                            
+                        if not args.if_public_library:
+                            outputs, loss = model(samples,targets,grid,criterion)
+                        else:
+                            outputs = model(samples)
+                            loss = criterion(outputs,targets)
+                            
                     
                     # Commonly we don't need to rollout
                     else:
