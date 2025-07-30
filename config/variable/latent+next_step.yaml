@@ -25,31 +25,48 @@ model:
   pred_tgt: 'variable'
   drop: 0.0
   drop_path: 0.1
-  latent_dim: 16     # Latent dimension n_z (default: 4)
+  
+  latent_dim: 16                     # Dimensionality of the latent (compressed) representation space n_z
 
-  is_periodic: True
-  encoder_channels: [64, 64, 64, 128, 128]  # compression ratio: 16
-  fourier_resolutions: []  # truncate high-frequency components
-  encoder_res_blocks: 6
-  use_attn_enc: False
-  use_fa: True
-  decoder_channels: [128, 128, 64, 64, 64]
-  attn_resolutions: [32, 64]
-  decoder_res_blocks: 6
-  final_smoothing: False
-  attn_heads: 8
-  attn_dim: 512
-  disable_coarse_attn: False
-  prop_n_block: 6
-  prop_n_embd: 512
-  dilation: 1
+  is_periodic: True                  # Whether the spatial domain is periodic (e.g., for periodic boundary conditions)
 
-  # for resolution
+  encoder_channels: [64, 64, 64, 128, 128]  # Convolutional channel sizes in encoder; determines compression ratio
 
-  latent_resolution: 16
-  Ly: 128
-  Lx: 128
-  resolution: 128
+  fourier_resolutions: []           # Resolutions (frequencies) to retain; high frequencies are truncated if specified
+
+  encoder_res_blocks: 6             # Number of residual blocks in the encoder
+
+  use_attn_enc: False               # Whether to use attention layers in the encoder module
+
+  use_fa: True                      # Whether to use Fourier Attention or Frequency-aware modules (if available)
+
+  decoder_channels: [128, 128, 64, 64, 64]  # Channel sizes used in the decoder to reconstruct high-resolution outputs
+
+  attn_resolutions: [32, 64]        # Spatial resolutions at which attention is applied (multi-scale attention)
+
+  decoder_res_blocks: 6            # Number of residual blocks in the decoder
+
+  final_smoothing: False           # Whether to apply final smoothing (e.g., low-pass filter) to the output
+
+  attn_heads: 8                    # Number of heads in multi-head attention layers
+
+  attn_dim: 512                    # Dimensionality of attention embeddings
+
+  disable_coarse_attn: False       # Whether to disable coarse-resolution attention layers to save computation
+
+  prop_n_block: 6                  # Number of propagation blocks in the latent space dynamics model (e.g., for latent evolution)
+
+  prop_n_embd: 512                 # Embedding dimension used in the propagation module (e.g., transformer in latent space)
+
+  dilation: 1                      # Dilation factor for convolutional layers; controls receptive field
+
+  latent_resolution: 16            # Spatial resolution of the latent feature map (usually reduced from input resolution)
+
+  Ly: 128                          # Height (y-axis) of the input/output spatial grid
+
+  Lx: 128                          # Width (x-axis) of the input/output spatial grid
+
+  resolution: 128                  # Base spatial resolution for both height and width (assumes square domain if Lx == Ly)
 
   # Ly: 256
   # Lx: 256

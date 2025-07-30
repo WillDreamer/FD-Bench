@@ -1,10 +1,10 @@
 # FD-Bench/train.sh
 #!/bin/bash
 
-SPATIAL_REP='self_atten'
+# SPATIAL_REP='self_atten'
 # SPATIAL_REP="graph"
 # SPATIAL_REP='latent'
-# SPATIAL_REP='fourier'
+SPATIAL_REP='fourier'
 # SPATIAL_REP='conv'
 # SPATIAL_REP='diffusion'
 # SPATIAL_REP='flow'
@@ -24,7 +24,7 @@ TARGET="variable"
 # REMARK='SA_diffusion_CosineAnnealingWarmRestarts'
 REMARK='lambdalr_Rollout_20'
 
-CONFIG_PATH="your_path/FD-Bench/config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
+CONFIG_PATH="config/${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml"
 if [ ! -f "$CONFIG_PATH" ]; then
     echo "Error: The modular combination ${TARGET}/${SPATIAL_REP}+${TEMPORAL_REP}.yaml does not exist!"
     exit 1
@@ -33,10 +33,9 @@ fi
 export WANDB_ENTITY="FD-Bench"
 export WANDB_PROJECT="${WANDB_ENTITY}_${TARGET}"
 export WANDB_NAME="${SPATIAL_REP}_${TEMPORAL_REP}_${REMARK}"
-export WANDB_API_KEY="xxxxxxxxxx"
+export WANDB_API_KEY="ba70fcbc92808cc7a1750dd80ac3908295e6854f"
 
 # 运行训练
-cd your_path/FD-Bench
 /root/anaconda3/bin/accelerate launch --main_process_port 29514 src/train.py \
     --config_file "$CONFIG_PATH" \
     --remark "$REMARK" \

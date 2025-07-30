@@ -14,18 +14,17 @@ training:
   pin_mem: true
 
 model:
-  spa_mod: 'conv'  #* choices: ['self_atten', 'fourier', 'graph']
-  tem_mod: 'auto_regressive'      #* choices: ['next_step', 'auto_regressive']
-  pred_tgt: 'variable'
-  drop: 0.0
-  drop_path: 0.1
-  
- # CNO
-  size: 128 
-  N_layers: 4
-  N_res: 4
-  N_res_neck: 8
-  channel_multiplier: 32
+  spa_mod: 'conv'                 # Spatial module type. Options: ['self_atten', 'fourier', 'graph']
+  tem_mod: 'auto_regressive'     # Temporal prediction mode. Options: ['next_step', 'auto_regressive']
+  pred_tgt: 'variable'           # Prediction target type (e.g., predict a specific variable or full field)
+  drop: 0.0                      # Dropout rate applied to feature layers
+  drop_path: 0.1                 # Drop path rate for stochastic depth regularization
+
+  size: 128                      # Input spatial resolution (assumed to be square)
+  N_layers: 4                    # Number of convolutional or operator layers
+  N_res: 4                       # Number of residual blocks in each layer
+  N_res_neck: 8                  # Number of residual blocks in the neck (between encoder and decoder)
+  channel_multiplier: 32         # Base number of channels multiplied to form layer widths
   
 data:
   # PDE_type: 'CNS'      #* choices: ['CNS']

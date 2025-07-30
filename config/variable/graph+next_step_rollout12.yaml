@@ -18,15 +18,20 @@ model:
   spa_mod: 'graph'  #* choices: ['self_atten', 'fourier', 'graph']
   tem_mod: 'next_step'      #* choices: ['linear', 'next_step']
   pred_tgt: 'variable'
-  drop: 0.0
-  drop_path: 0.1
-  neighbor: 30
-  time_window: 20
-  hidden_features: 256
-  hidden_layer: 8
-  checkpoint_activations: false
-  ls_w: 4
-  ls_dp_rank: 16
+  
+  drop: 0.0                  # Dropout rate applied to MLP or GNN layers (0.0 means no dropout)
+  drop_path: 0.1             # Drop path rate used for stochastic depth regularization in deep architectures
+
+  neighbor: 30              # Number of nearest neighbors used to construct the graph topology for each node
+  time_window: 20           # Temporal window length used as input to the model for learning spatiotemporal dependencies
+
+  hidden_features: 256      # Hidden dimension size for node embeddings or MLPs within the GNN layers
+  hidden_layer: 8           # Number of hidden layers used in the GNN encoder or graph convolution block
+
+  checkpoint_activations: false  # Whether to enable activation checkpointing for memory-efficient training (trades memory for compute)
+
+  ls_w: 4                   # Weight for auxiliary supervision or loss scaling (context-specific; often used in label smoothing or deep supervision)
+  ls_dp_rank: 16            # Rank for low-rank projection in distributed linear-scaling methods or linearized attention (context-specific)
 
 rollout:
   if_rollout: True

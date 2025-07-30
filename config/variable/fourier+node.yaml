@@ -19,22 +19,25 @@ model:
   spa_mod: 'fourier'  
   tem_mod: 'node'      
   pred_tgt: 'variable'
-  drop: 0.0
-  drop_path: 0.1
-  
-  modes1: 24
-  modes2: 24
-  width: 48
-  
-  fno_bias: false
-  fno_blocks: 1
-  fno_softshrink: 0.00
-  double_skip: false
-  hidden_size: 256
-  num_layers: 12
-  checkpoint_activations: false
-  ls_w: 4
-  ls_dp_rank: 16
+  drop: 0.0                  # Dropout rate applied to feature layers (0.0 means no dropout)
+  drop_path: 0.1             # Drop path rate for stochastic depth, used to regularize deep networks
+
+  modes1: 24                 # Number of Fourier modes to keep in the first spatial dimension
+  modes2: 24                 # Number of Fourier modes to keep in the second spatial dimension
+  width: 64                  # Width of the hidden representation (number of channels) in the model
+
+  fno_bias: false            # Whether to use bias in the Fourier layers of the FNO (Fourier Neural Operator)
+  fno_blocks: 1              # Number of repeated FNO blocks used in the model
+  fno_softshrink: 0.00       # Soft shrinkage coefficient for Fourier coefficients (0 disables shrinkage)
+
+  double_skip: false         # Whether to use double skip connections (both residual and dense skip)
+  hidden_size: 512           # Dimensionality of hidden states in fully connected or attention-based modules
+  num_layers: 12             # Total number of layers in the model (e.g., transformer or MLP layers)
+
+  checkpoint_activations: false  # Whether to use activation checkpointing to save memory during training
+
+  ls_w: 4                    # Loss weighting factor for label smoothing or auxiliary supervision (depending on usage)
+  ls_dp_rank: 16             # Low-rank dimension used in linear-scaling approximation (e.g., for large-scale matrix ops)
 
 data:
   # PDE_type: 'CNS'      

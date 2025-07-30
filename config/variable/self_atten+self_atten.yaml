@@ -24,20 +24,25 @@ model:
   model_ema_decay: 0.99996
   model_ema_force_cpu: false
   
-  # Self-atten
-  patch_size: 8
-  num_attention_heads: 8
-  hidden_size: 512
-  embed_dim: 512
-  num_layers: 8
-  mixing_type: 'sa'  # choices: ['afno', 'sa', 'ls', 'gfn', 'bfno']
-  fno_bias: false
-  fno_blocks: 1
-  fno_softshrink: 0.00
-  double_skip: false
-  checkpoint_activations: false
-  ls_w: 4
-  ls_dp_rank: 16
+  patch_size: 8                       # Size of each input patch (e.g., 8x8) for tokenization in vision-style attention models
+  num_attention_heads: 8              # Number of attention heads in multi-head self-attention layers
+  hidden_size: 512                    # Size of hidden representations in feedforward and projection layers
+  embed_dim: 512                      # Dimensionality of the embedding space for each patch/token
+  num_layers: 8                       # Number of stacked attention (Transformer) layers
+  mixing_type: 'sa'                   # Feature mixing operator type. 
+                                      # Options:
+                                      # - 'sa': self-attention,
+                                      # - 'afno': adaptive Fourier neural operator,
+                                      # - 'ls': low-rank softmax,
+                                      # - 'gfn': graph Fourier network,
+                                      # - 'bfno': block Fourier operator
+  fno_bias: false                     # Whether to include bias in Fourier Neural Operator layers
+  fno_blocks: 1                       # Number of FNO blocks used in each mixing stage (if applicable)
+  fno_softshrink: 0.00                # Soft shrinkage factor for high-frequency Fourier coefficients (0 disables it)
+  double_skip: false                 # Whether to apply both additive and concatenated skip connections in residual blocks
+  checkpoint_activations: false       # Whether to use activation checkpointing to reduce memory usage during training
+  ls_w: 4                             # Loss weighting factor (e.g., for auxiliary loss terms or label smoothing)
+  ls_dp_rank: 16                      # Rank for low-rank approximations in attention layers or projection heads
 
 data:
   # PDE_type: 'CNS'      #* choices: ['CNS']
