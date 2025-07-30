@@ -573,7 +573,11 @@ def main(args):
                                     if not args.if_public_library:
                                         flops, params = profile(target_model, inputs=(input_test[:2,:,:,0,:].permute(0,3,1,2),target_test[:2,0],grid,criterion))
                                     else:
+<<<<<<< HEAD
                                         grid = grid[:input_test.shape[0]]
+=======
+                                        
+>>>>>>> 828fbb96bf9d578a27f52c28cc0322119a07c2be
                                         inputs_ = torch.concat([input_test[:,:,:,0,:].permute(0,3,1,2),grid[:].permute(0,3,1,2)],dim=1)
                                         flops, params = profile(target_model, inputs=(inputs_,))
                                 else:

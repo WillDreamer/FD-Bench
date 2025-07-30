@@ -63,6 +63,29 @@ You can explore all variants under this [collection](https://huggingface.co/coll
 
 ---
 
+## 🤗  Hugging Face Datasets
+
+We provide several fluid dynamics datasets hosted on [🤗 Hugging Face Datasets](https://huggingface.co/RuoyanLi1). To load them:
+
+```bash
+pip install datasets
+```
+
+Then in your script:
+
+```python
+from datasets import load_dataset
+
+# Example: load the Advection2 dataset
+ds = load_dataset("RuoyanLi1/FD-Bench-Advection2")
+```
+
+No Hugging Face token or authentication is required to access these datasets.
+
+You can explore all variants under this [collection](https://huggingface.co/collections/RuoyanLi1/fd-bench-682656c7c5e940f8eb850c55).
+
+---
+
 ## 📖  Directory Structure
 
 ```
