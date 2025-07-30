@@ -61,11 +61,10 @@ You can explore all variants under this [collection](https://huggingface.co/coll
 
 ---
 
----
 
 ## 🤗  Hugging Face Datasets
 
-We provide several fluid dynamics datasets hosted on [🤗 Hugging Face Datasets](https://huggingface.co/RuoyanLi1). To load them:
+We provide several fluid dynamics datasets hosted on [🤗 Hugging Face Datasets](https://huggingface.co/xxxx). To load them:
 
 ```bash
 pip install datasets
@@ -77,12 +76,10 @@ Then in your script:
 from datasets import load_dataset
 
 # Example: load the Advection2 dataset
-ds = load_dataset("RuoyanLi1/FD-Bench-Advection2")
+ds = load_dataset("xxxxxx/FD-Bench-Advection2")
 ```
 
 No Hugging Face token or authentication is required to access these datasets.
-
-You can explore all variants under this [collection](https://huggingface.co/collections/RuoyanLi1/fd-bench-682656c7c5e940f8eb850c55).
 
 ---
 
@@ -154,7 +151,7 @@ The default setting starts with distributed training with multiple GPUs. Note th
 
 - For `TARGET = PDE Residual`, there is no specific yaml. You need to add `if_pde_residual: True` and `if_coordinate: True` in the yaml file. Then it will find the corresponding residual loss in `fdbench/utils/pde_utils.py`. For example, add these two args in `self_atten+next_step.yaml`, it will add the PDE residual loss.
 
----
+
 
 ### 🔝  Checkpoints and Logs
 
