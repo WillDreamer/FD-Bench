@@ -4,7 +4,7 @@ export CUDA_VISIBLE_DEVICES=7
 export OMP_NUM_THREADS=10
 export MKL_NUM_THREADS=10
 
-python main.py \
+python run_fno_dis.py \
     --exp_name "TGV/run0" \
     --seed 0 \
     --dataset_root "" \
