@@ -5,7 +5,7 @@ export OMP_NUM_THREADS=5
 export MKL_NUM_THREADS=5
 
 
-python main.py \
+python run_fno_solver.py \
     --exp_name "NS1000/run2" \
     --seed 0 \
     --dataset_root "" \
