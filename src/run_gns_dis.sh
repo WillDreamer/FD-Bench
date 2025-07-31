@@ -2,7 +2,7 @@
 
 export CUDA_VISIBLE_DEVICES=7
 
-python main.py \
+python run_gns_dis.py \
     --exp_name "TGV/run0" \
     --seed 0 \
     --dataset_root "" \
