@@ -41,7 +41,7 @@ Our benchmark is validated on various types of PDE from multiple data sources.
 
 ## 🤗  Hugging Face Datasets
 
-We provide several fluid dynamics datasets hosted on [🤗 Hugging Face Datasets]([https://huggingface.co/xxxx](https://huggingface.co/collections/RuoyanLi1/fd-bench-682656c7c5e940f8eb850c55)). To load them:
+We provide several fluid dynamics datasets hosted on [🤗 Hugging Face Datasets](https://huggingface.co/collections/RuoyanLi1/fd-bench-682656c7c5e940f8eb850c55). To load them:
 
 ```bash
 pip install datasets
