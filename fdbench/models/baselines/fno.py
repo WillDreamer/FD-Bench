@@ -51,7 +51,7 @@ class SpectralConv2d_fast(nn.Module):
 ################################################################
 
 class FNO2d(nn.Module):
-    def __init__(self, modes1, modes2, width, in_chans=1, out_chans=1):
+    def __init__(self, args={}):
         super(FNO2d, self).__init__()
 
         """
@@ -61,13 +61,13 @@ class FNO2d(nn.Module):
         Output shape: (batch_size, time_steps=1, channels=C_out, height=H, width=W)
         """
 
-        self.modes1 = modes1  # Number of Fourier modes in x direction
-        self.modes2 = modes2  # Number of Fourier modes in y direction
-        self.width = width
+        self.modes1 = args.modes1  # Number of Fourier modes in x direction
+        self.modes2 = args.modes2  # Number of Fourier modes in y direction
+        self.width = args.width
         self.padding = 2  # Padding for non-periodic input, can be adjusted
 
-        self.C_in = in_chans
-        self.C_out = out_chans
+        self.C_in = args.in_chans
+        self.C_out = args.out_chans
 
         self.fc0 = nn.Linear(self.C_in + 2, self.width)  # Input channels + 2 coordinates (x, y)
 
@@ -144,20 +144,24 @@ class FNO2d(nn.Module):
 
 if __name__ == '__main__':
 
-    modes1 = 16   # Adjusted modes, should be less than or equal to H/2
-    modes2 = 16   # Adjusted modes, should be less than or equal to W/2
-    width = 64    # Width of the neural network
+    class Args:
+        pass
+
+    args = Args()
+    args.modes1 = 16   # Adjusted modes, should be less than or equal to H/2
+    args.modes2 = 16   # Adjusted modes, should be less than or equal to W/2
+    args.width = 64    # Width of the neural network
     batch_size = 1  # You can adjust the batch size as needed
 
     T = 1         # Time steps, remains 1 as per your data
-    C_in = 4      # Input channels, adjusted to 1
-    C_out = 4     # Output channels, adjusted to 1
+    args.in_chans = 4      # Input channels, adjusted to 1
+    args.out_chans = 4     # Output channels, adjusted to 1
     H, W = 128, 128  # Height and Width of the input, adjusted to 128 x 128
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = FNO2d(modes1, modes2, width, in_chans=C_in, out_chans=C_out).to(device)
+    model = FNO2d(args).to(device)
 
-    x = torch.randn(batch_size, T, C_in, H, W).to(device)
+    x = torch.randn(batch_size, T, args.in_chans, H, W).to(device)
     print("Input shape:", x.shape)
     # Forward pass
     output = model(x)

@@ -130,8 +130,7 @@ def main(args):
         class_name = args.pub_model_name
         module = getattr(importlib.import_module(module_name), class_name)
 
-        model = module(n_modes=args.n_modes, hidden_channels=args.hidden_channels,
-                in_channels=args.in_chans, out_channels=args.out_chans)
+        model = module(args=args)
     else:
         if args.pred_tgt == 'variable':
             module_name = 'fdbench.models.' + args.spa_mod
