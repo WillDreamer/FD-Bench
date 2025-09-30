@@ -51,7 +51,7 @@ class SpectralConv2d_fast(nn.Module):
 ################################################################
 
 class FNO2d(nn.Module):
-    def __init__(self, modes1, modes2, width, C_in=1, C_out=1):
+    def __init__(self, modes1, modes2, width, in_chans=1, out_chans=1):
         super(FNO2d, self).__init__()
 
         """
@@ -66,8 +66,8 @@ class FNO2d(nn.Module):
         self.width = width
         self.padding = 2  # Padding for non-periodic input, can be adjusted
 
-        self.C_in = C_in
-        self.C_out = C_out
+        self.C_in = in_chans
+        self.C_out = out_chans
 
         self.fc0 = nn.Linear(self.C_in + 2, self.width)  # Input channels + 2 coordinates (x, y)
 
@@ -155,7 +155,7 @@ if __name__ == '__main__':
     H, W = 128, 128  # Height and Width of the input, adjusted to 128 x 128
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = FNO2d(modes1, modes2, width, C_in=C_in, C_out=C_out).to(device)
+    model = FNO2d(modes1, modes2, width, in_chans=C_in, out_chans=C_out).to(device)
 
     x = torch.randn(batch_size, T, C_in, H, W).to(device)
     print("Input shape:", x.shape)

@@ -387,7 +387,7 @@ def main(args):
                     logger.info(f"Saved checkpoint to {checkpoint_path}")
             
             #### ===================================================================
-            #### =========4. Model Testing============================================
+            #### =========4. Model Testing==========================================
             #### ===================================================================
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
@@ -596,7 +596,7 @@ def main(args):
                         }, step=global_step)
             
             #### ===================================================================
-            #### Repeat the validation process again for testing sets
+            #### =========5. Model validation=======================================
             #### ===================================================================
             if global_step == 10 or (global_step % args.eval_steps == 0 and global_step > 0) or global_step==max_train_steps:
                 model.eval()  # important! This disables randomized embedding dropout
