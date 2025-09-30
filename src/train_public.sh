@@ -15,10 +15,9 @@ fi
 export WANDB_ENTITY="FD-Bench"
 export WANDB_PROJECT="${WANDB_ENTITY}_Public"
 export WANDB_NAME="${MODULE_NAME}_${MODEL_NAME}_${REMARK}"
-export WANDB_API_KEY="ba70fcbc92808cc7a1750dd80ac3908295e6854f"
+export WANDB_API_KEY="xxxxxxx"
 
-# 运行训练
-/root/anaconda3/bin/accelerate launch --main_process_port 29514 src/train.py \
+accelerate launch --main_process_port 29514 src/train.py \
     --config_file "$CONFIG_PATH" \
     --remark "$REMARK" \
     --if_public_library "$IF_PUBLIC_LIBRARY" \
