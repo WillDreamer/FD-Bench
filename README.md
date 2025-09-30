@@ -72,7 +72,7 @@ No Hugging Face token or authentication is required to access these datasets.
 - `TEMPORAL_REP`: Temporal representation (choices include *next_step*, *n-ode* and so on).
 - `TARGET`: Prediction target of the model (choices include *physical variable*, *random noise* *flow field*.
 
-2. Model configurations are stored in the `config/` directory. You can modify `TARGET/SPATIAL_REP+TEMPORAL_REP.yaml` to adjust model hyperparameters, architecture, or training settings.
+2. Model configurations are stored in the `FD-Bench/config/` directory. You can modify `FD-Bench/config/TARGET/SPATIAL_REP+TEMPORAL_REP.yaml` to adjust model hyperparameters, architecture, or training settings.
 
 3. Run the following command to train a model:
 
