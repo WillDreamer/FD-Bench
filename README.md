@@ -77,7 +77,7 @@ No Hugging Face token or authentication is required to access these datasets.
 3. Run the following command to train a model:
 
 ```bash
-bash src/train.sh
+bash src/train_modular.sh
 ```
 
 ⚠️ Some notices
@@ -91,11 +91,7 @@ Examples
 
 - If you want to run the vanilla `FNO' model, you can set the variable in `train.sh` as:
 ```bash
-SPATIAL_REP='fourier'
-
-TEMPORAL_REP="next_step"
-
-TARGET="variable"
+bash src/train_modular.sh --spatial fourier --temporal next_step --target variable 
 ```
 
 ---
