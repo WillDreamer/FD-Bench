@@ -15,7 +15,7 @@ FD-Bench is the most fair and comprehensive framework for benchmarking and train
 Dependencies are listed in **requirements.txt**. You can install them using the following command:
 
 ```bash
-git clone https://github.com/xxxxx/FD-Bench.git
+git clone https://github.com/WillDreamer/FD-Bench.git
 cd FD-Bench
 
 conda create -n fdbench python=3.10 -y
@@ -56,7 +56,7 @@ Then in your script:
 from datasets import load_dataset
 
 # Example: load the Advection2 dataset
-ds = load_dataset("xxxxxx/FD-Bench-Advection2")
+ds = load_dataset("RuoyanLi1/FD-Bench-Advection2")
 ```
 
 No Hugging Face token or authentication is required to access these datasets.
@@ -191,7 +191,7 @@ If you add your own model within this benchmark framework, you should:
 
 
 ### 🤝  Collaboration
-Feel free to open issues or submit pull requests for improvements and bug fixes. Contributions are welcome! Drop me a line at `xxxx'📮📮📮
+Feel free to open issues or submit pull requests for improvements and bug fixes. Contributions are welcome! Drop me a line at `whx@ucla.edu'📮📮📮
 
 ---
 
